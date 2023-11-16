@@ -23,6 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
     $yearCondition = "WHERE visible = 0";
   }
 
+  if($theYear == 'Select Works')
+  {
+    $yearCondition = "WHERE visible = 1 AND isSelectWork  = 1";
+  }
+
   if($theYear == '2020')
   {
     $yearCondition = "WHERE visible = 1 AND medium = 'Illustration' AND (year = 2020 OR year = 2019)";
