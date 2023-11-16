@@ -1,0 +1,48 @@
+    <a href="#"  class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenPainting')">Painting</a>
+    <br>
+
+    <div id="hiddenPainting" class="hiddenLinkStuff">
+      <br>
+      <a href="#" onclick="getWorksInformation('Fixed Motion')">Fixed Motion</a>
+      <br>
+      <a href="#" onclick="getWorksInformation('Tape Diaries')">Tape Diaries</a>
+      <br>
+      <a href="#" onclick="getWorksInformation('Force')">Force</a>
+      <br>
+      <a href="#" onclick="getWorksInformation('Drip')">Drip</a>
+      <br>
+      <a href="#" onclick="getWorksInformation('Where is my mind?')">Where is my mind?</a>
+      <br>
+    </div>
+    <br>
+    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenIllustration')">Illustration</a>
+    <br>
+    <div id="hiddenIllustration" class="hiddenLinkStuff">
+      <br>
+      <a href="#" onclick="getWorksInformation(2023)">2023</a>
+      <br>
+      <a href="#" onclick="getWorksInformation(2021)">2021-2022</a>
+      <br>
+      <a href="#" onclick="getWorksInformation(2020)">2019-2020</a>
+      <br>
+    </div>
+    <br>
+    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenCollage')">Collage</a>
+    <br>
+    <div id="hiddenCollage" class="hiddenLinkStuff">
+      <br>
+      <a href="#" onclick="getWorksInformation('Leaves / Petals')">Leaves / Petals</a>
+      <br>
+    </div>
+    <br>
+
+    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenPhotoVideo')">Photo & Video</a>
+    <br>
+    <div id="hiddenPhotoVideo" class="hiddenLinkStuff">
+      <br>
+      <a href="#" onclick="openFlowerVideo()">In conversation with a flower</a>
+      <br>
+      <a href="#" onclick="getWorksInformation('Recyclart')">Recyclart</a>
+      <br>
+    </div>
+    <br>

@@ -35,60 +35,10 @@ header('Content-Type: text/html; charset=UTF-8');
     <br>
     <br>
 
-    <a href="#"  class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenPainting')">Painting</a>
-    <br>
+    <a href="#" class="mainLinkGenres" onclick="getWorksInformation('Select Works')">Select Works</a>
 
-    <div id="hiddenPainting" class="hiddenLinkStuff">
-      <br>
-      <a href="#" onclick="getWorksInformation('Fixed Motion')">Fixed Motion</a>
-      <br>
-      <a href="#" onclick="getWorksInformation('Tape Diaries')">Tape Diaries</a>
-      <br>
-      <a href="#" onclick="getWorksInformation('Force')">Force</a>
-      <br>
-      <a href="#" onclick="getWorksInformation('Drip')">Drip</a>
-      <br>
-      <a href="#" onclick="getWorksInformation('Where is my mind?')">Where is my mind?</a>
-      <br>
-      <!-- <a href="#" onclick="getWorksInformation('Portraits')">Portraits</a>
-      <br> -->
-    </div>
-    <br>
-    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenIllustration')">Illustration</a>
-    <br>
-    <div id="hiddenIllustration" class="hiddenLinkStuff">
-      <br>
-      <a href="#" onclick="getWorksInformation(2023)">2023</a>
-      <br>
-      <a href="#" onclick="getWorksInformation(2021)">2021-2022</a>
-      <br>
-      <a href="#" onclick="getWorksInformation(2020)">2019-2020</a>
-      <br>
-    </div>
-    <br>
-    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenCollage')">Collage</a>
-    <br>
-    <div id="hiddenCollage" class="hiddenLinkStuff">
-      <br>
-      <a href="#" onclick="getWorksInformation('Leaves / Petals')">Leaves / Petals</a>
-      <br>
-    </div>
-    <br>
+    <br><br>
 
-    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenPhotoVideo')">Photo & Video</a>
-    <br>
-    <div id="hiddenPhotoVideo" class="hiddenLinkStuff">
-      <!-- <br> -->
-      <!-- <a href="#" onclick="getWorksInformation('Mise en scene')">Mise en scene</a>
-      <br>
-      <a href="#" onclick="getWorksInformation('Paris')">Paris</a> -->
-      <br>
-      <a href="#" onclick="openFlowerVideo()">In conversation with a flower</a>
-      <br>
-      <a href="#" onclick="getWorksInformation('Recyclart')">Recyclart</a>
-      <br>
-    </div>
-    <br>
     <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenAbout')">About</a>
     <br>
     <div id="hiddenAbout" class="hiddenLinkStuff">
@@ -96,11 +46,12 @@ header('Content-Type: text/html; charset=UTF-8');
       <a href="#" onclick="openInfo()">Bio</a>
       <br>
       <a href="mailto: ambarvelasco3@yahoo.com">Contact</a>
-      <!-- <br>
-      <a href="cv2022.pdf" target="_blank">CV</a> -->
       <br>
     </div>
     <br>
+
+      <a class="mainLinkGenres" href="https://www.instagram.com/ambar_velasc0/" target="_blank">Instagram</a>
+
   </div>
   <div id="imagesAndContent" class="imagesAndContent">
 
