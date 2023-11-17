@@ -17,6 +17,16 @@
   /* max-height: 600px; */
 }
 
+#worksList {
+    border: 2px solid #333; /* Change the color and thickness as desired */
+    padding: 10px; /* Add some padding inside the border */
+    list-style-type: none; /* Optionally remove the default list item bullets */
+    max-height: 300px; /* Set a maximum height */
+    overflow-y: auto; /* Enable scrolling if the list is long */
+    margin: 20px 0; /* Add some margin around the list */
+}
+
+
 .img-container img {
   width: 100%; /* Make the image fill the container width */
   height: auto; /* Allow the height to adjust based on the image aspect ratio */

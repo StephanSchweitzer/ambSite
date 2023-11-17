@@ -14,6 +14,7 @@ if ($_SESSION["ambar"] != "connected")
    <meta charset="utf-8">
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="../ambar.css"> -->
 
    <script src="../js/projectAdminFunctions.js"></script>
 
@@ -28,6 +29,15 @@ if ($_SESSION["ambar"] != "connected")
    .card {
      cursor: pointer;
    }
+
+    #worksList {
+            border: 2px solid #333; /* Solid border with a dark color */
+            padding: 10px; /* Padding inside the border */
+            list-style-type: none; /* Remove default list bullets */
+            max-height: 300px; /* Maximum height of the list */
+            overflow-y: auto; /* Scrollbar for overflow content */
+            margin: 20px 0; /* Margin around the list */
+        }
   </style>
  </head>
  <body>
@@ -151,8 +161,8 @@ if ($_SESSION["ambar"] != "connected")
             <div id="worksInProject">
                 <ul id="worksList"></ul>
 
-                <button id="addWork">Add Work</button>
-                <button id="removeWork">Remove Selected Work</button>
+                <button type="button" id="addWork" onclick="addWorkToProject()">Add Work</button>
+                <button type="button" id="removeWork" onclick="removeWorks()">Remove Selected Work</button>
             </div>
 
             <br>

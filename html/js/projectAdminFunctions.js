@@ -324,14 +324,14 @@ function getThenPopulateWorks()
 function populateWorksList(works) {
 
 	console.log(works);
-	
+
     const worksList = document.getElementById('worksList');
     worksList.innerHTML = ''; // Clear existing list
 
     works.forEach(work => {
         const listItem = document.createElement('li');
         listItem.textContent = work.name; // or work.title
-        listItem.setAttribute('workId', work.id);
+        listItem.setAttribute('data-work-id', work.id);
 
         // Optional: Add a checkbox or another way to select works
         const checkbox = document.createElement('input');
@@ -344,7 +344,9 @@ function populateWorksList(works) {
 }
 
 function addWorkToProject(work) {
-    // Logic to add a work to the project
+        const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
+        const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id'));
+        console.log(workIds);
 }
 
 function removeSelectedWorks() {
@@ -357,10 +359,10 @@ function removeSelectedWorks() {
 }
 
 // // Event Listeners for Add/Remove buttons
-// document.getElementById('addWork').addEventListener('click', () => {
-//     // Logic to select a work to add
-//     // Example: addWorkToProject(selectedWork);
-// });
+//document.getElementById('addWork').addEventListener('click', () => {
+    // Logic to select a work to add
+    // Example: addWorkToProject(selectedWork);
+//});
 
 // document.getElementById('removeWork').addEventListener('click', removeSelectedWorks);
 
