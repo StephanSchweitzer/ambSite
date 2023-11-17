@@ -37,7 +37,7 @@ if ($_SESSION["ambar"] != "connected")
      <br>
      <h1 class="display-1 text-primary" style="text-align:center;">Picture admin page</h1>
      <br>
-     <a href="mainAdmin.php"><button type="submit" class="btn btn-primary">Main Admin Page</button></a>
+     <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
 
      <br><br>
    </div>
@@ -45,8 +45,9 @@ if ($_SESSION["ambar"] != "connected")
 
        <div class="container" style="background-color:white;">
      <br>
-     <button type="button" class="btn btn-primary" onclick="getAllWorks(0)">See all unselected works</button>
-     <button type="button" class="btn btn-primary" onclick="getAllWorks('invisible')">See Deleted Works</button>
+    <button type="button" class="btn btn-secondary" onclick="getAllWorks('Select Works')">See all selected works</button>
+     <button type="button" class="btn btn-secondary" onclick="getAllWorks(0)">See all unselected works</button>
+     <button type="button" class="btn btn-dark" onclick="getAllWorks('invisible')">See Deleted Works</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Post Work</button>
      <br><br>
 
@@ -148,13 +149,13 @@ if ($_SESSION["ambar"] != "connected")
              </div>
 
              <div class="form-group">
-              <label>Include this included in "Select Works" ?</label>
+              <label>Include this image in "Select Works" ?</label>
               <div class="form-check">
-                <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="SelectWorksYesEdit" value="true">
+                <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="selectWorksYesEdit" value="true">
                 <label class="form-check-label" for="SelectWorksYesEdit">Include</label>
               </div>
               <div class="form-check">
-                <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="SelectWorksNoEdit" value="false">
+                <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="selectWorksNoEdit" value="false">
                 <label class="form-check-label" for="SelectWorksNoEdit">Don't include</label>
               </div>
             </div>

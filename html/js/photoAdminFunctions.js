@@ -40,6 +40,7 @@ function insertData(data)
     let orderOfDisplay = item.orderOfDisplay;
     let carousel = item.carousel;
     let visible = item.visible;
+    let isSelectWork = item.isSelectWork;
 
     // Create a Bootstrap card div element with the data
     let card = $('<div>').addClass('card shadow-grow mb-4');
@@ -72,7 +73,7 @@ function insertData(data)
 
     // Open modal with inputs filled when the photo is clicked
     card.click(function() {
-      openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible);
+      openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork);
     });
 
     // Append the card to the existingPhotoInformation element
@@ -80,8 +81,9 @@ function insertData(data)
   });
 }
 
-function openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible) {
+function openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork) {
 
+  console.log(isSelectWork);
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete post</button>';
 
   if (visible == 0)
@@ -95,6 +97,8 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   var openAvailableNo = document.getElementById('availableNoEdit');
   var openCarouselYes = document.getElementById('carouselYesEdit');
   var openCarouselNo = document.getElementById('carouselNoEdit');
+  var openSelectWorksYes = document.getElementById('selectWorksYesEdit');
+  var openSelectWorksNo = document.getElementById('selectWorksNoEdit');
 
   // Set the values of the modal inputs
   $('#photoId').val(id);
@@ -146,6 +150,15 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   else
   {
     openCarouselNo.checked = true;
+  }
+
+  if (isSelectWork == 1)
+  {
+    openSelectWorksYes.checked = true;
+  }
+  else
+  {
+    openSelectWorksNo.checked = true;
   }
 
   // Open the Bootstrap modal

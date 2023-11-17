@@ -126,7 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   $query = "SELECT workId, fileLocation, name,
                     desc2, desc3, medium,
                     color, isAvailable, year,
-                    orderOfDisplay, carousel
+                    orderOfDisplay, carousel,
+                    isSelectWork
             FROM    allWorks $yearCondition
             ORDER BY orderOfDisplay DESC";
 
@@ -136,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                       workId, fileLocation, name,
                       desc2, desc3, medium,
                       color, isAvailable, year,
-                      orderOfDisplay
+                      orderOfDisplay, isSelectWork
               FROM    allWorks
               WHERE carousel = 1
               ORDER BY orderOfDisplay DESC";;
@@ -161,7 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
       'availability' => $result[$i][7],
       'creationYear' => $result[$i][8],
       'orderOfDisplay' => $result[$i][9],
-      'carousel' => $result[$i][10]
+      'carousel' => $result[$i][10],
+      'isSelectWork' => $result[$i][11]
     );
 
     array_push($data, $singleEntry);
