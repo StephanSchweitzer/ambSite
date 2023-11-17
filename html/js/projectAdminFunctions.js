@@ -172,11 +172,11 @@ console.log(formData);
     data: formData,
     success: function(response) {
 
-      getAllWorks(pageNumber);
+      getProjects(pageNumber);
 
       console.log('Data updated successfully!');
       console.log(formData);
-      $('#photoUpdateModal').modal('hide');
+      $('#projectUpdateModal').modal('hide');
 
       // You can perform additional actions here
     },

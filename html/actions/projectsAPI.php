@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $orderOfDisplay = $_PATCH['orderOfDisplay'];
   $active = $_PATCH['active'];
 
-  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = $orderOfDisplay WHERE id = ?";
+  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = ? WHERE id = ?";
 
   $theArray = array($title, $description, $active, $orderOfDisplay, $id);
   
