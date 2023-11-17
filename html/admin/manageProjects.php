@@ -147,7 +147,7 @@ if ($_SESSION["ambar"] != "connected")
              </div>
 
              <div class="form-group">
-               <label for="photoCreationYear">Display Order / Position</label>
+               <label for="editOrderOfDisplay">Display Order / Position</label>
                <input type="text" class="form-control" id="editOrderOfDisplay" >
              </div>
 

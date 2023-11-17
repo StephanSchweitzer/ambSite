@@ -104,11 +104,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $id = $_PATCH['id'];
   $title = $_PATCH['title'];
   $description = $_PATCH['description'];
+  $orderOfDisplay = $_PATCH['orderOfDisplay'];
   $active = $_PATCH['active'];
 
-  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ? WHERE id = ?";
+  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = $orderOfDisplay WHERE id = ?";
 
-  $theArray = array($title, $description, $active, $id);
+  $theArray = array($title, $description, $active, $orderOfDisplay, $id);
   
   // echo json_encode($theArray);
   // die;

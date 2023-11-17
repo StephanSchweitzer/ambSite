@@ -2,7 +2,6 @@ var pageNumber = 0;
 
 function getProjects(activity)
 {
-  pageNumber = activity;
   yearData = {
     activity: activity
   }
@@ -123,12 +122,8 @@ function createProject() {
   postData.append('active', projectInt);
   postData.append('orderOfDisplay', $('#postOrderOfDisplay').val());
 
-// console.log(postData);
-//   // var fileInput = $('#photoPostUpload')[0].files[0];
-//   // postData.append('photo', fileInput);
-//   return;
 
-document.getElementById('uploadWorkButton').disabled = true;
+	document.getElementById('uploadWorkButton').disabled = true;
 
   $.ajax({
     url: '../actions/projectsAPI.php',
@@ -152,54 +147,27 @@ document.getElementById('uploadWorkButton').disabled = true;
 function updateWork()
 {
   // Get the form data
-  let isColor = $('input[name=isColorEdit]:checked').val(); // Retrieve the selected radio button value
-  let isAvailable = $('input[name=isAvailableEdit]:checked').val(); // Retrieve the selected radio button value
-  let isCarousel = $('input[name=isCarouselEdit]:checked').val(); // Retrieve the selected radio button value
-  let isSelectWork = $('input[name=isSelectWorksEdit]:checked').val(); // Retrieve the selected radio button value
+  let isActive = $('input[name=editIsActivePost]:checked').val(); // Retrieve the selected radio button value
 
+  let activeInt = 1;
 
-  let colorInt = 1;
-  let availableInt = 1;
-  let carouselInt = 1;
-  let selectWorkInt = 1;
-
-  if (isColor != 'true')
+  if (isActive != 'true')
   {
-        colorInt = 0;
-  }
-
-  if (isAvailable != 'true')
-  {
-        availableInt = 0;
-  }
-
-  if (isCarousel != 'true')
-  {
-        carouselInt = 0;
-  }
-
-  if (isSelectWork != 'true')
-  {
-        selectWorkInt = 0;
+        activeInt = 0;
   }
 
   var formData = {
-    id: $('#photoId').val(),
-    name: $('#photoName').val(),
-    firstDescription: $('#photoFirstDescription').val(),
-    secondDescription: $('#photoSecondDescription').val(),
-    medium: $('#photoMedium').val(),
-    isColor: colorInt,
-    availability: availableInt,
-    creationYear: $('#photoCreationYear').val(),
-    orderOfDisplay : $('#updateOrderOfDisplay').val(),
-    carousel : carouselInt,
-    selectWork : selectWorkInt
+    id: $('#projectId').val(),
+    title: $('#editProjectTitle').val(),
+    description: $('#editProjectDescription').val(),
+    orderOfDisplay: $('#editOrderOfDisplay').val(),
+    active : activeInt
   };
+
 console.log(formData);
   // Send the form data via AJAX
   $.ajax({
-    url: '../actions/picturesAPI.php',
+    url: '../actions/projectsAPI.php',
     type: 'PATCH',
     data: formData,
     success: function(response) {
