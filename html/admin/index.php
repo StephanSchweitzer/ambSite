@@ -24,7 +24,9 @@ if ($_SESSION["ambar"] != "connected")
      <br>
      <h1 class="display-1 text-primary" style="text-align:center;">Main admin page</h1>
      <br>
-     <a href="pictureAdmin.php"><button type="submit" class="btn btn-primary">Change Pictures</button></a>
+     <a href="pictureAdmin.php"><button type="submit" class="btn btn-info">Change Pictures</button></a>
+      <a href="projectsAdmin.php"><button type="submit" class="btn btn-info">Manage Projects</button></a>
+
 
 
 
