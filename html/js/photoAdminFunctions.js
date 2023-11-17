@@ -117,6 +117,9 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   }
 }
 
+  //let projectsAsMenuItems = getProjectsAsMenuItems();
+
+
   //$('#photoIsColor').val(isColor);
   //var isColor = document.querySelector('input[name="isColor"]:checked').value;
 
@@ -363,4 +366,39 @@ function restoreWork()
       }
     });
   }
+}
+
+function getProjectsAsMenuItems()
+{
+  let dropDownOptionsText = "";
+    yearData = 
+    $.ajax({
+    url: "../actions/projectsAPI.php",
+    type: "GET",
+    data: { activity: 'active' },
+    dataType: "json",
+    success: function(data) {
+      console.log(data);
+      //insertData(data);
+      dropDownOptionsText = makeProjectsDropDownText(data);
+      console.log(dropDownOptionsText);
+    },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+    return dropDownOptionsText;
+}
+
+function makeProjectsDropDownText(projects)
+{
+  let finalText = "";
+
+  projects.forEach(project => {
+    if(project.deleted === 0) { // Assuming 'deleted' is used to mark soft-deleted projects
+      finalText += `<option value="${project.id}">${project.title}</option>`;
+    }
+  });
+
+  return finalText;
 }

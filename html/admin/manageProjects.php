@@ -22,7 +22,7 @@ if ($_SESSION["ambar"] != "connected")
 
    <meta charset="utf-8">
    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
-   <title>Picture Admin page</title>
+   <title>Project Admin page</title>
 
    <style>
    .card {
@@ -145,6 +145,18 @@ if ($_SESSION["ambar"] != "connected")
                  <label class="form-check-label" for="editActiveNoPost">Inactive</label>
                </div>
              </div>
+             
+             <br>
+
+            <div id="worksInProject">
+                <ul id="worksList"></ul>
+
+                <button id="addWork">Add Work</button>
+                <button id="removeWork">Remove Selected Work</button>
+            </div>
+
+            <br>
+            <br>
 
              <div class="form-group">
                <label for="editOrderOfDisplay">Display Order / Position</label>

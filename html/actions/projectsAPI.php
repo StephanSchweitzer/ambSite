@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   }
 
 
-  $query = "SELECT id, title, description, orderOfDisplay, active
+  $query = "SELECT id, title, description, orderOfDisplay, active, deleted
             FROM    projects $activityCondition
             ORDER BY orderOfDisplay DESC";
 
@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
       'description' => $result[$i][2],
       'orderOfDisplay' => $result[$i][3],
       'active' => $result[$i][4],
+      'deleted' => $result[$i][5]
     );
 
     array_push($data, $singleEntry);
@@ -148,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 
   $id = $_DELETE['id'];
 
-  $theQuery = "UPDATE projects SET active = 0 WHERE id = ?";
+  $theQuery = "UPDATE projects SET deleted = 1 WHERE id = ?";
   //echo $theQuery;
 
   $theArray = array($id);

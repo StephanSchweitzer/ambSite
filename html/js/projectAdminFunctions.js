@@ -2,6 +2,7 @@ var pageNumber = 'active';
 
 function getProjects(activity)
 {
+	pageNumber = activity;
   yearData = {
     activity: activity
   }
@@ -32,6 +33,7 @@ function insertData(data)
     let description = item.description;
     let orderOfDisplay = item.orderOfDisplay;
     let active = item.active;
+    let deleted = item.deleted;
 
     // Create a Bootstrap card div element with the data
     let card = $('<div>').addClass('card shadow-grow mb-4');
@@ -59,7 +61,7 @@ function insertData(data)
 
     // Open modal with inputs filled when the photo is clicked
     card.click(function() {
-      openProjectInfo(id, title, description, active, orderOfDisplay);
+      openProjectInfo(id, title, description, active, orderOfDisplay, deleted);
     });
 
     // Append the card to the existingPhotoInformation element
@@ -67,11 +69,11 @@ function insertData(data)
   });
 }
 
-function openProjectInfo(id, title, description, active, orderOfDisplay) {
-
+function openProjectInfo(id, title, description, active, orderOfDisplay, deleted) {
+	getThenPopulateWorks();
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete Project</button>';
 
-  if (active == 0)
+  if (deleted == 1)
   {
     document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-info" onclick="restoreWork()">Restore post</button>';
   }
@@ -147,6 +149,9 @@ function createProject() {
 function updateWork()
 {
   // Get the form data
+
+	populateWorksList();
+
   let isActive = $('input[name=editIsActivePost]:checked').val(); // Retrieve the selected radio button value
 
   let activeInt = 1;
@@ -193,15 +198,15 @@ function deleteWork()
 {
   {
     var formData = {
-      id: $('#photoId').val(),
-    };
+    id: $('#projectId').val(),
+  	};
     $.ajax({
-      url: '../actions/picturesAPI.php',
+      url: '../actions/projectsAPI.php',
       type: 'DELETE',
       data: formData,
       success: function(response) {
-        getAllWorks('everything')
-        $('#photoUpdateModal').modal('hide');
+        getProjects('everything')
+        $('#projectUpdateModal').modal('hide');
       },
       error: function(xhr, status, error) {
         $('#errorToast').toast('show');
@@ -213,17 +218,31 @@ function deleteWork()
 
 function restoreWork()
 {
+
+	let isActive = $('input[name=editIsActivePost]:checked').val(); // Retrieve the selected radio button value
+
+  let activeInt = 1;
+
+  if (isActive != 'true')
   {
+        activeInt = 0;
+  }
+
     var formData = {
-      id: $('#photoId').val(),
+    id: $('#projectId').val(),
+    title: $('#editProjectTitle').val(),
+    description: $('#editProjectDescription').val(),
+    orderOfDisplay: $('#editOrderOfDisplay').val(),
+    active : activeInt
     };
+
     $.ajax({
-      url: '../actions/picturesAPI.php',
-      type: 'PUT',
+      url: '../actions/projectsAPI.php',
+      type: 'PATCH',
       data: formData,
       success: function(response) {
-        getAllWorks('invisible')
-        $('#photoUpdateModal').modal('hide');
+        getProjects('invisible')
+        $('#projectUpdateModal').modal('hide');
       },
       error: function(xhr, status, error) {
         $('#errorToast').toast('show');
@@ -231,4 +250,118 @@ function restoreWork()
       }
     });
   }
+
+function getProjectsAsMenuItems()
+{
+  let dropDownOptionsText = "";
+    yearData = 
+    $.ajax({
+    url: "../actions/projectsAPI.php",
+    type: "GET",
+    data: { activity: 'active' },
+    dataType: "json",
+    success: function(data) {
+      console.log(data);
+      //insertData(data);
+      dropDownOptionsText = makeProjectsDropDownText(data);
+      console.log(dropDownOptionsText);
+    },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+    return dropDownOptionsText;
 }
+
+function makeProjectsDropDownText(projects)
+{
+  let finalText = "";
+
+  projects.forEach(project => {
+    if(project.deleted === 0) { // Assuming 'deleted' is used to mark soft-deleted projects
+      finalText += `<option value="${project.id}">${project.title}</option>`;
+    }
+  });
+
+  return finalText;
+}
+
+function getActiveWorks()
+{
+	let theWorks;
+	$.ajax({
+    url: "../actions/picturesAPI.php",
+    type: "GET",
+    data: {'theYear' : 'Select Works'},
+    dataType: "json",
+    success: function(data) {
+    	theWorks = data;
+      console.log(data);
+      },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+	return theWorks;
+}
+
+function getThenPopulateWorks()
+{
+	$.ajax({
+    url: "../actions/picturesAPI.php",
+    type: "GET",
+    data: {'theYear' : 'Select Works'},
+    dataType: "json",
+    success: function(data) {
+    	populateWorksList(data);
+      },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+}
+
+function populateWorksList(works) {
+
+	console.log(works);
+	
+    const worksList = document.getElementById('worksList');
+    worksList.innerHTML = ''; // Clear existing list
+
+    works.forEach(work => {
+        const listItem = document.createElement('li');
+        listItem.textContent = work.name; // or work.title
+        listItem.setAttribute('workId', work.id);
+
+        // Optional: Add a checkbox or another way to select works
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.setAttribute('data-work-id', work.id);
+        listItem.prepend(checkbox);
+
+        worksList.appendChild(listItem);
+    });
+}
+
+function addWorkToProject(work) {
+    // Logic to add a work to the project
+}
+
+function removeSelectedWorks() {
+    const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
+    selectedWorks.forEach(checkbox => {
+        const workId = checkbox.getAttribute('data-work-id');
+        // Logic to remove the work from the project using workId
+        checkbox.parentElement.remove();
+    });
+}
+
+// // Event Listeners for Add/Remove buttons
+// document.getElementById('addWork').addEventListener('click', () => {
+//     // Logic to select a work to add
+//     // Example: addWorkToProject(selectedWork);
+// });
+
+// document.getElementById('removeWork').addEventListener('click', removeSelectedWorks);
+
+
