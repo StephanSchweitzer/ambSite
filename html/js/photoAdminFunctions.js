@@ -246,10 +246,13 @@ function updateWork()
   let isColor = $('input[name=isColorEdit]:checked').val(); // Retrieve the selected radio button value
   let isAvailable = $('input[name=isAvailableEdit]:checked').val(); // Retrieve the selected radio button value
   let isCarousel = $('input[name=isCarouselEdit]:checked').val(); // Retrieve the selected radio button value
+  let isSelectWork = $('input[name=isSelectWorksEdit]:checked').val(); // Retrieve the selected radio button value
+
 
   let colorInt = 1;
   let availableInt = 1;
   let carouselInt = 1;
+  let selectWorkInt = 1;
 
   if (isColor != 'true')
   {
@@ -266,6 +269,11 @@ function updateWork()
         carouselInt = 0;
   }
 
+  if (isSelectWork != 'true')
+  {
+        selectWorkInt = 0;
+  }
+
   var formData = {
     id: $('#photoId').val(),
     name: $('#photoName').val(),
@@ -276,7 +284,8 @@ function updateWork()
     availability: availableInt,
     creationYear: $('#photoCreationYear').val(),
     orderOfDisplay : $('#updateOrderOfDisplay').val(),
-    carousel : carouselInt
+    carousel : carouselInt,
+    selectWork : selectWorkInt
   };
 console.log(formData);
   // Send the form data via AJAX
