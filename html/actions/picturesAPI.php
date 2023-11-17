@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
   $theYear = "";
   $theYear = $_GET['theYear'];
-  $yearCondition = "WHERE visible = 1";
+  $yearCondition = "WHERE visible = 1 and isSelectWork = 0";
 
   // if($theYear == 0)
   // {

@@ -46,3 +46,39 @@
       <br>
     </div>
     <br>
+
+
+
+
+       <div class="container" style="background-color:white;">
+     <br>
+     <button type="button" class="btn btn-primary" onclick="getAllWorks(0)">See all active works</button>
+     <button type="button" class="btn btn-primary" onclick="getAllWorks('invisible')">See Deleted Works</button>
+     <button type="button" class="btn btn-primary" onclick="openPostForm()">Post Work</button>
+     <br><br>
+
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Fixed Motion')">Fixed Motion</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Tape Diaries')">Tape Diaries</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Force')">Force</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Drip')">Drip</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Where is my mind?')">Where is my mind?</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Portraits')">Portraits</button>
+
+     <br><br>
+
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('2020')">2019/2020</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('2022')">2021/2022</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('2023')">2023</button>
+
+     <br><br>
+
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Leaves / Petals')">Leaves / Petals</button>
+
+     <br><br>
+
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Mise en scene')">Mise en scene</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Paris')">Paris</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('In conversation with a flower')">In conversation with a flower</button>
+     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Recyclart')">Recyclart</button>
+     <br><br>
+   </div>

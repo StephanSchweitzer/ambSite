@@ -43,37 +43,13 @@ if ($_SESSION["ambar"] != "connected")
    </div>
 
 
-   <div class="container" style="background-color:white;">
+       <div class="container" style="background-color:white;">
      <br>
-     <button type="button" class="btn btn-primary" onclick="getAllWorks(0)">See all active works</button>
+     <button type="button" class="btn btn-primary" onclick="getAllWorks(0)">See all unselected works</button>
      <button type="button" class="btn btn-primary" onclick="getAllWorks('invisible')">See Deleted Works</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Post Work</button>
      <br><br>
 
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Fixed Motion')">Fixed Motion</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Tape Diaries')">Tape Diaries</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Force')">Force</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Drip')">Drip</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Where is my mind?')">Where is my mind?</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Portraits')">Portraits</button>
-
-     <br><br>
-
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('2020')">2019/2020</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('2022')">2021/2022</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('2023')">2023</button>
-
-     <br><br>
-
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Leaves / Petals')">Leaves / Petals</button>
-
-     <br><br>
-
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Mise en scene')">Mise en scene</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Paris')">Paris</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('In conversation with a flower')">In conversation with a flower</button>
-     <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Recyclart')">Recyclart</button>
-     <br><br>
    </div>
 
    <div class="container" style="background-color:white;">
@@ -170,6 +146,18 @@ if ($_SESSION["ambar"] != "connected")
                  <label class="form-check-label" for="availableNoEdit">Unavailable</label>
                </div>
              </div>
+
+             <div class="form-group">
+              <label>Include this included in "Select Works" ?</label>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="SelectWorksYesEdit" value="true">
+                <label class="form-check-label" for="SelectWorksYesEdit">Include</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="SelectWorksNoEdit" value="false">
+                <label class="form-check-label" for="SelectWorksNoEdit">Don't include</label>
+              </div>
+            </div>
 
              <div class="form-group">
               <label>Include this image in the carousel?</label>
@@ -330,7 +318,7 @@ if ($_SESSION["ambar"] != "connected")
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script type="text/javascript">
 document.addEventListener("DOMContentLoaded", function() {
-  getAllWorks(0);
+  getAllWorks('Select Works');
 });
 </script>
 
