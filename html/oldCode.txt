@@ -82,3 +82,34 @@
      <button type="button" name="button" class="btn btn-primary" onclick="getAllWorks('Recyclart')">Recyclart</button>
      <br><br>
    </div>
+
+   function insertWorks(informations)
+{
+  $('#imagesAndContent').empty();
+
+  informations.forEach(function(information) {
+    let imageURL = "baseImages/"+information.location;
+    let title = information.name;
+    let description = information.firstDescription;
+
+    let card = $('<div>').addClass('card').attr('alt', name).css({'border' : '0px', 'text-align' : 'center'});
+
+    let imageContainer = $('<div>').addClass('img-container');
+    let image = $('<img>').attr('src', imageURL).attr('alt', 'Image');
+    image.appendTo(imageContainer);
+
+    // let image = $('<img>').attr('src', imageURL);
+    let insertTitle = $('<p>').text(title);
+    let formattedDescription = description.replace(/\n/g, '<br>');
+    let insertDescription = $('<p>').html(formattedDescription);
+    
+    card.append(imageContainer, insertTitle, insertDescription);
+
+    card.click(function()
+    {
+      makeBigPic(imageURL);
+    });
+
+    $('#imagesAndContent').append(card);
+  });
+}

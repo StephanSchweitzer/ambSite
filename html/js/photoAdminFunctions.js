@@ -175,10 +175,13 @@ function postPhoto() {
   let isColor = $('input[name=isColorPost]:checked').val(); // Retrieve the selected radio button value
   let isAvailable = $('input[name=isAvailablePost]:checked').val(); // Retrieve the selected radio button value
   let isCarousel = $('input[name=isCarouselPost]:checked').val(); // Retrieve the selected radio button value
+  let isSelectWork = $('input[name=isSelectWorksPost]:checked').val(); // Retrieve the selected radio button value
+
 
   let colorInt = 1;
   let availableInt = 1;
   let carouselInt = 1;
+  let selectWorkInt = 1;
 
   if (isColor != 'true')
   {
@@ -193,6 +196,11 @@ function postPhoto() {
   if (isCarousel != 'true')
   {
         carouselInt = 0;
+  }
+
+  if (isSelectWork != 'true')
+  {
+        selectWorkInt = 0;
   }
 
    var fileInput = $('#photoPostUpload')[0].files[0];
@@ -213,6 +221,7 @@ function postPhoto() {
   postData.append('photo', fileInput);
   postData.append('orderOfDisplay', $('#postOrderOfDisplay').val());
   postData.append('carousel', carouselInt);
+  postData.append('selectWork', selectWorkInt);
 
 // console.log(postData);
 //   // var fileInput = $('#photoPostUpload')[0].files[0];

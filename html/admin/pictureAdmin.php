@@ -86,10 +86,11 @@ if ($_SESSION["ambar"] != "connected")
              </div>
              <div class="form-group">
                <label for="photoFirstDescription">First Description</label>
-               <input type="text" class="form-control" id="photoFirstDescription" >
+               <!-- <input type="text" class="form-control" id="photoFirstDescription" > -->
+               <textarea class="form-control" aria-label="With textarea" id="photoFirstDescription"></textarea>
              </div>
              <div class="form-group">
-               <label for="photoSecondDescription">Second Description</label>
+               <label for="photoSecondDescription">(Optional for you) Second Description</label>
                <input type="text" class="form-control" id="photoSecondDescription" >
              </div>
 
@@ -218,14 +219,18 @@ if ($_SESSION["ambar"] != "connected")
                <label for="photoName">Name</label>
                <input type="text" class="form-control" id="photoPostName" >
              </div>
+
              <div class="form-group">
                <label for="photoFirstDescription">First Description</label>
-               <input type="text" class="form-control" id="photoPostFirstDescription" >
+               <textarea class="form-control" aria-label="With textarea" id="photoPostFirstDescription"></textarea>
+               <!-- <input type="text" class="form-control" id="photoPostFirstDescription" > -->
              </div>
+
              <div class="form-group">
-               <label for="photoSecondDescription">Second Description</label>
+               <label for="photoSecondDescription">(Optional for you) Second Description</label>
                <input type="text" class="form-control" id="photoPostSecondDescription" >
              </div>
+
              <div class="form-group">
                <label for="photoPostMedium">Medium</label>
                <select class="form-select" id="photoPostMedium">

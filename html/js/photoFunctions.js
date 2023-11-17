@@ -269,30 +269,32 @@ function createCarousel(informations)
 
 }
 
-
-function insertWorks(informations)
-{
+function insertWorks(informations) {
   $('#imagesAndContent').empty();
 
-  informations.forEach(function(information) {
-    let imageURL = "baseImages/"+information.location;
+  informations.forEach(function(information, index) { // 'array' removed
+    let imageURL = "baseImages/" + information.location;
     let title = information.name;
     let description = information.firstDescription;
 
-    let card = $('<div>').addClass('card').attr('alt', name).css({'border' : '0px', 'text-align' : 'center'});
+    let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
 
     let imageContainer = $('<div>').addClass('img-container');
-    let image = $('<img>').attr('src', imageURL).attr('alt', 'Image');
+    let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
     image.appendTo(imageContainer);
 
-    // let image = $('<img>').attr('src', imageURL);
     let insertTitle = $('<p>').text(title);
-    let insertDescription = $('<p>').text(description);
-
+    let formattedDescription = description.replace(/\n/g, '<br>');
+    let insertDescription = $('<p>').html(formattedDescription);
+    
     card.append(imageContainer, insertTitle, insertDescription);
 
-    card.click(function()
-    {
+    // Check if this is not the last element in the array
+    if (index < informations.length - 1) {
+      card.append('<hr class="work-separator" />'); // Append the separator
+    }
+
+    card.click(function() {
       makeBigPic(imageURL);
     });
 

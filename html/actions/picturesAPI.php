@@ -197,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   $year = $_POST["creationYear"];
   $orderOfDisplay = $_POST["orderOfDisplay"];
   $carousel = $_POST["carousel"];
+  $selectWork = $_POST["selectWork"];
 
   // Check if a photo was uploaded successfully
   if ($photo['error'] === UPLOAD_ERR_OK) {
@@ -210,16 +211,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   $query = "INSERT INTO allWorks (fileLocation, name, desc2,
                     desc3, medium, color,
                     isAvailable, year, OrderOfDisplay,
-                    carousel)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    carousel, isSelectWork)
+            VALUES (?, ?, ?, 
+                    ?, ?, ?, 
+                    ?, ?, ?, 
+                    ?, ?
             )";
-  // echo json_encode($query);
+
+  $theArray = array($fileLocation, $name, $desc2, 
+    $desc3, $medium, $color, 
+    $isAvailable, $year, $orderOfDisplay, 
+    $carousel, $selectWork,);
+
+  // echo json_encode($theArray);
   // die;
 
   $uploadQuery = $conn->prepare($query);
-  $uploadQuery->execute([$fileLocation, $name, $desc2,
-          $desc3, $medium, $color,
-          $isAvailable, $year, $orderOfDisplay]);
+  $uploadQuery->execute($theArray);
 
   echo json_encode("success");
   //$uploadQuery->close();
