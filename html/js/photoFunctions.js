@@ -150,21 +150,6 @@ $( document ).ready(function() {
 
 }
 
-  //
-  // $( ".size12020" ).click(function() {
-  //   let theWidth = this.width;
-  //   console.log(theWidth);
-  //   //$('#ambName').width(1000);
-  //   $(this).closest('.holdForNow').css("min-width",theWidth+"px");
-  // });
-
-  // function makeBigPic(path)
-  // {
-  //   $('#bigPicModal').modal('show');
-  //   document.getElementById('popUpImage').src = path;
-  //
-  //   // this.classList.remove("size12020");
-  // }
 
 });
 
@@ -188,8 +173,8 @@ function toggleSublinks(event, sublinksId)
   sublinks.slideToggle();
 }
 
-function getWorksInformation(genre) {
-
+function getWorksInformation(genre) 
+{
   //pageNumber = genre;
   genre = {
     theYear: genre
@@ -203,6 +188,106 @@ function getWorksInformation(genre) {
     success: function(response) {
     console.log(response);
     insertWorks(response);
+    },
+    error: function(xhr, status, error) {
+      console.log('Error:', error);
+    }
+  });
+}
+
+function getProjectsAndWorks()
+{
+    $.ajax({
+    url: "../actions/projectsAPI.php",
+    type: "GET",
+    data: {'activity' : 'active'},
+    dataType: "json",
+    success: function(data) {
+      makeProjectCard(data);
+    },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+
+  //   allActiveProjects.forEach(function(project){
+  //   let imageURL = "baseImages/"+information.location;
+  //   let thisImage = `<div id="`+information.name+`" class="carousel-item `+active+` " >
+  //   <img class="d-block carousel-pic" src="`+imageURL+`" onclick="makeBigPic('`+imageURL+`')">
+  //   </div>`;
+  //   carouselHtml += thisImage;
+  //   active = '';
+  // });
+}
+
+function fetchWorkIdsForProject(id) {
+
+    return $.ajax({
+        url: '../actions/worksOfProjectsAPI.php',
+        type: 'GET',
+        data: { 'projectId': id },
+        dataType: 'json'
+    });
+}
+
+function getWorkFromId(id) {
+
+    return $.ajax({
+        url: '../actions/worksOfProjectsAPI.php',
+        type: 'GET',
+        data: { 'projectId': id },
+        dataType: 'json'
+    });
+}
+
+function makeProjectCard(projects)
+{
+     $('#imagesAndContent').empty();
+
+    projects.forEach(function(project, index) { // 'array' removed
+    let title = project.title;
+    let description = project.description;
+    let insertTitle = $('<h2>').text(title);
+    let formattedDescription = description.replace(/\n/g, '<br>');
+    let insertDescription = $('<p>').html(formattedDescription);
+    
+    let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
+
+    card.append(insertTitle, insertDescription);
+
+    fetchWorkIdsForProject(project.id).done(function(workIds)
+    {
+      console.log(workIds);
+    }).fail(function() {
+        console.error('Error fetching work IDs for project');
+    });
+
+    // let imageContainer = $('<div>').addClass('img-container');
+    // let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
+    // image.appendTo(imageContainer);
+
+    // // Check if this is not the last element in the array
+    if (index < projects.length - 1) {
+      card.append('<hr class="work-separator" />'); // Append the separator
+    }
+
+    // card.click(function() {
+    //   makeBigPic(imageURL);
+    // });
+
+    $('#imagesAndContent').append(card);
+  });
+}
+
+function getWorksInfoFromIdsArray(projectIds) 
+{
+  $.ajax({
+    url: 'actions/picturesAPI.php',
+    method: 'GET',
+    data: genre,
+    dataType: 'json',
+    success: function(response) {
+    console.log(response);
     },
     error: function(xhr, status, error) {
       console.log('Error:', error);

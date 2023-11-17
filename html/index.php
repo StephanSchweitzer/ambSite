@@ -35,7 +35,7 @@ header('Content-Type: text/html; charset=UTF-8');
     <br>
     <br>
 
-    <a href="#" class="mainLinkGenres" onclick="getWorksInformation('Select Works')">Select Works</a>
+    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks()">Select Works</a>
 
     <br><br>
 
