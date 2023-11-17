@@ -249,11 +249,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $creationYear = $_PATCH['creationYear'];
   $orderOfDisplay = $_PATCH['orderOfDisplay'];
   $carousel = $_PATCH['carousel'];
-  $selectWork = $_PATCH['isSelectWork'];
+  $selectWork = $_PATCH['selectWork'];
 
   $theQuery = "UPDATE allWorks SET name = ?, desc2 = ?, desc3 = ?, medium = ?, color = ?, isAvailable = ?, year = ?, orderOfDisplay = ?, carousel = ?, isSelectWork = ? WHERE workID = ?";
 
   $theArray = array($name, $firstDescription, $secondDescription, $medium, $isColor, $availability, $creationYear, $orderOfDisplay, $carousel, $selectWork, $id,);
+  
   // echo json_encode($theArray);
   // die;
 

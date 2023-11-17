@@ -152,11 +152,11 @@ if ($_SESSION["ambar"] != "connected")
               <label>Include this image in "Select Works" ?</label>
               <div class="form-check">
                 <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="selectWorksYesEdit" value="true">
-                <label class="form-check-label" for="SelectWorksYesEdit">Include</label>
+                <label class="form-check-label" for="selectWorksYesEdit">Include</label>
               </div>
               <div class="form-check">
                 <input class="form-check-input" type="radio" name="isSelectWorksEdit" id="selectWorksNoEdit" value="false">
-                <label class="form-check-label" for="SelectWorksNoEdit">Don't include</label>
+                <label class="form-check-label" for="selectWorksNoEdit">Don't include</label>
               </div>
             </div>
 
@@ -276,7 +276,19 @@ if ($_SESSION["ambar"] != "connected")
                </div>
              </div>
 
-             <div class="form-group">
+              <div class="form-group">
+               <label>Include this image in Select Works?</label>
+               <div class="form-check">
+                 <input class="form-check-input" type="radio" name="isSelectWorksPost" id="selectWorksYesPost" value="true">
+                 <label class="form-check-label" for="selectWorksYesPost">Include</label>
+               </div>
+               <div class="form-check">
+                 <input class="form-check-input" type="radio" name="isSelectWorksPost" id="selectWorksNoPost" value="false">
+                 <label class="form-check-label" for="selectWorksNoPost">Don't include</label>
+               </div>
+             </div>
+
+              <div class="form-group">
                <label>Include this image in the carousel?</label>
                <div class="form-check">
                  <input class="form-check-input" type="radio" name="isCarouselPost" id="carouselYesPost" value="true">
