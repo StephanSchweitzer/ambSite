@@ -2,7 +2,7 @@ var pageNumber = 0;
 
 function getProjects(activity)
 {
-  pageNumber = theYear;
+  pageNumber = activity;
   yearData = {
     activity: activity
   }
@@ -25,38 +25,25 @@ function insertData(data)
 {
   let items = data;
 
-  $('#existingPhotoInformation').empty();
+  $('#existingPostInformation').empty();
 
   items.forEach(function(item) {
     let id = item.id;
-    let location = "../baseImages/"+item.location;
-    let name = item.name;
-    let firstDescription = item.firstDescription;
-    let secondDescription = item.secondDescription;
-    let medium = item.medium;
-    let isColor = item.isColor;
-    let availability = item.availability;
-    let creationYear = item.creationYear;
+    let title = item.title;
+    let description = item.description;
     let orderOfDisplay = item.orderOfDisplay;
-    let carousel = item.carousel;
-    let visible = item.visible;
-    let isSelectWork = item.isSelectWork;
+    let active = item.active;
 
     // Create a Bootstrap card div element with the data
     let card = $('<div>').addClass('card shadow-grow mb-4');
-    let image = $('<img>').addClass('card-img-top').attr('src', location).attr('alt', name).css('max-width', '300px');
     let cardBody = $('<div>').addClass('card-body');
-    $('<h5>').addClass('card-title').text(name).appendTo(cardBody);
+    $('<h5>').addClass('card-title').text(title).appendTo(cardBody);
     //$('<p>').addClass('card-text').text('Location: ' + location).appendTo(cardBody);
     $('<p>').addClass('card-text').text('ID: ' + id).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Description: ' + firstDescription).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Medium: ' + medium).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Is Color: ' + isColor).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Availability: ' + availability).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Creation Year: ' + creationYear).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('OrderOfDisplay: ' + orderOfDisplay).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Included in the carousel: ' + carousel).appendTo(cardBody);
-    card.append(image, cardBody);
+    $('<p>').addClass('card-text').text('Description: ' + description).appendTo(cardBody);
+    $('<p>').addClass('card-text').text('Order of display: ' + orderOfDisplay).appendTo(cardBody);
+
+    card.append(cardBody);
 
     // Add padding to the card
     card.css('padding', '20px');
@@ -73,155 +60,68 @@ function insertData(data)
 
     // Open modal with inputs filled when the photo is clicked
     card.click(function() {
-      openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork);
+      openProjectInfo(id, title, description, active, orderOfDisplay);
     });
 
     // Append the card to the existingPhotoInformation element
-    $('#existingPhotoInformation').append(card);
+    $('#existingPostInformation').append(card);
   });
 }
 
-function openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork) {
+function openProjectInfo(id, title, description, active, orderOfDisplay) {
 
-  console.log(isSelectWork);
-  document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete post</button>';
+  document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete Project</button>';
 
-  if (visible == 0)
+  if (active == 0)
   {
     document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-info" onclick="restoreWork()">Restore post</button>';
   }
 
-  var openColorYes = document.getElementById('colorYesEdit');
-  var openColorNo = document.getElementById('colorNoEdit');
-  var openAvailableYes = document.getElementById('availableYesEdit');
-  var openAvailableNo = document.getElementById('availableNoEdit');
-  var openCarouselYes = document.getElementById('carouselYesEdit');
-  var openCarouselNo = document.getElementById('carouselNoEdit');
-  var openSelectWorksYes = document.getElementById('selectWorksYesEdit');
-  var openSelectWorksNo = document.getElementById('selectWorksNoEdit');
+  var openActiveYes = document.getElementById('editActiveYesPost');
+  var openActiveNo = document.getElementById('editActiveNoPost');
 
   // Set the values of the modal inputs
-  $('#photoId').val(id);
-  //$('#photoLocation').val(location);
-  $('#photoName').val(name);
-  $('#photoFirstDescription').val(firstDescription);
-  $('#photoSecondDescription').val(secondDescription);
-  //$('#photoMedium').val(medium);
+  $('#projectId').val(id);
+  $('#editProjectTitle').val(title);
+  $('#editProjectDescription').val(description);
+  $('#editOrderOfDisplay').val(orderOfDisplay);
 
 
-  var selectElement = document.getElementById("photoMedium");
-  for (var i = 0; i < selectElement.options.length; i++) {
-  if (selectElement.options[i].value === medium) {
-    selectElement.options[i].selected = true;
-    break; // Exit the loop once the option is selected
-  }
-}
-
-  //$('#photoIsColor').val(isColor);
-  //var isColor = document.querySelector('input[name="isColor"]:checked').value;
-
-  //$('#photoAvailability').val(availability);
-  $('#photoCreationYear').val(creationYear);
-  $('#updateOrderOfDisplay').val(orderOfDisplay);
-
-
-  if (isColor == 1)
+  if (active == 1)
   {
-    openColorYes.checked = true;
+    openActiveYes.checked = true;
   }
   else
   {
-    openColorNo.checked = true;
-  }
-
-  if (availability == 1)
-  {
-    openAvailableYes.checked = true;
-  }
-  else
-  {
-    openAvailableNo.checked = true;
-  }
-
-  if (carousel == 1)
-  {
-    openCarouselYes.checked = true;
-  }
-  else
-  {
-    openCarouselNo.checked = true;
-  }
-
-  if (isSelectWork == 1)
-  {
-    openSelectWorksYes.checked = true;
-  }
-  else
-  {
-    openSelectWorksNo.checked = true;
+    openActiveNo.checked = true;
   }
 
   // Open the Bootstrap modal
-  $('#photoUpdateModal').modal('show');
+  $('#projectUpdateModal').modal('show');
 }
 
 function openPostForm()
 {
-  $("#photoPostModal").modal('show');
+  $("#projectPostModal").modal('show');
 }
 
-function postPhoto() {
+function createProject() {
 
-  let isColor = $('input[name=isColorPost]:checked').val(); // Retrieve the selected radio button value
-  let isAvailable = $('input[name=isAvailablePost]:checked').val(); // Retrieve the selected radio button value
-  let isCarousel = $('input[name=isCarouselPost]:checked').val(); // Retrieve the selected radio button value
-  let isSelectWork = $('input[name=isSelectWorksPost]:checked').val(); // Retrieve the selected radio button value
+  let isActiveProject = $('input[name=isActivePost]:checked').val(); // Retrieve the selected radio button value
 
 
-  let colorInt = 1;
-  let availableInt = 1;
-  let carouselInt = 1;
-  let selectWorkInt = 1;
+  let projectInt = 1;
 
-  if (isColor != 'true')
+  if (isActiveProject != 'true')
   {
-        colorInt = 0;
+        projectInt = 0;
   }
-
-  if (isAvailable != 'true')
-  {
-        availableInt = 0;
-  }
-
-  if (isCarousel != 'true')
-  {
-        carouselInt = 0;
-  }
-
-  if (isSelectWork != 'true')
-  {
-        selectWorkInt = 0;
-  }
-
-   var fileInput = $('#photoPostUpload')[0].files[0];
-  // console.log(fileInput);
-  //
-  // return;
 
   var postData = new FormData();
-  postData.append('name', $('#photoPostName').val());
-  postData.append('firstDescription', $('#photoPostFirstDescription').val());
-  postData.append('secondDescription', $('#photoPostSecondDescription').val());
-  postData.append('medium', $('#photoPostMedium').val());
-  //postData.append('isColor', $('#photoPostIsColor').val());
-  //postData.append('availability', $('#photoPostAvailability').val());
-  postData.append('isColor', colorInt);
-  postData.append('availability', availableInt);
-  postData.append('creationYear', $('#photoPostCreationYear').val());
-  postData.append('photo', fileInput);
+  postData.append('title', $('#titlePostName').val());
+  postData.append('description', $('#projectDescription').val());
+  postData.append('active', projectInt);
   postData.append('orderOfDisplay', $('#postOrderOfDisplay').val());
-  postData.append('carousel', carouselInt);
-  postData.append('selectWork', selectWorkInt);
 
 // console.log(postData);
 //   // var fileInput = $('#photoPostUpload')[0].files[0];
@@ -231,15 +131,15 @@ function postPhoto() {
 document.getElementById('uploadWorkButton').disabled = true;
 
   $.ajax({
-    url: '../actions/picturesAPI.php',
+    url: '../actions/projectsAPI.php',
     type: 'POST',
     data: postData,
     processData: false,
     contentType: false,
     success: function(response) {
       console.log('Data saved successfully!');
-      getAllWorks(pageNumber);
-      $('#photoPostModal').modal('hide');
+      getProjects(pageNumber);
+      $('#projectPostModal').modal('hide');
       document.getElementById('uploadWorkButton').disabled = false;
     },
     error: function(xhr, status, error) {

@@ -13,16 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
   if($activity == 'active')
   {
-    $activityCondition = "WHERE visible = 1";
+    $activityCondition = "WHERE active = 1";
   }
 
   if($activity == 'invisible')
   {
-    $activityCondition = "WHERE active = 0";
+    $activityCondition = "WHERE active = 0 ";
   }
 
 
-  $query = "SELECT id, title, description,
+  $query = "SELECT id, title, description, orderOfDisplay, active
             FROM    projects $activityCondition
             ORDER BY orderOfDisplay DESC";
 
@@ -38,6 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
       'id' => $result[$i][0],
       'title' => $result[$i][1],
       'description' => $result[$i][2],
+      'orderOfDisplay' => $result[$i][3],
+      'active' => $result[$i][4],
     );
 
     array_push($data, $singleEntry);
@@ -60,30 +62,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   $title = $_POST["title"];
   $description = $_POST["description"];
   $active = $_POST["active"];
+  $orderOfDisplay = $_POST["orderOfDisplay"];
 
-  // Check if a photo was uploaded successfully
-  if ($photo['error'] === UPLOAD_ERR_OK) {
-      $tempFilePath = $photo['tmp_name'];
+  $query = "INSERT INTO projects (title, description, active, orderOfDisplay)
+          VALUES (?, ?, ?, ?)";
 
-      // Move the uploaded photo to a desired location
-      $destination = '../baseImages/' . $photo['name'];
-      move_uploaded_file($tempFilePath, $destination);
-    }
+  $theArray = array($title, $description, $active, $orderOfDisplay);
 
-  $query = "INSERT INTO projects (title, description, active)
-            VALUES (?, ?, ?
-            )";
-
-  $theArray = array($title, $description, $active);
-
-  // echo json_encode($theArray);
+  //echo json_encode($theArray);
   // die;
 
-  $uploadQuery = $conn->prepare($query);
-  $uploadQuery->execute($theArray);
+  // $uploadQuery = $conn->prepare($query);
+  // $uploadQuery->execute($theArray);
 
-  echo json_encode("success");
-  //$uploadQuery->close();
+  try {
+    $uploadQuery = $conn->prepare($query);
+    $uploadQuery->execute($theArray);
+    echo json_encode(array('status' => 'success', 'data' => $theArray));
+  } catch (PDOException $e) {
+    // Handle the error appropriately
+    http_response_code(500);
+    echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
+  }
+
   die;
 }
 
