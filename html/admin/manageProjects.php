@@ -46,8 +46,8 @@ if ($_SESSION["ambar"] != "connected")
        <div class="container" style="background-color:white;">
      <br>
     <button type="button" class="btn btn-secondary" onclick="getProjects('active')">See all active projects</button>
-     <button type="button" class="btn btn-secondary" onclick="getProjects(0)">See all inactive projects</button>
-     <button type="button" class="btn btn-dark" onclick="getProjects('invisible')">See deleted projects</button>
+     <button type="button" class="btn btn-secondary" onclick="getProjects('inactive')">See all inactive projects</button>
+     <button type="button" class="btn btn-dark" onclick="getProjects('deleted')">See deleted projects</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Create project</button>
      <br><br>
 

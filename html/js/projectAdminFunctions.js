@@ -1,4 +1,4 @@
-var pageNumber = 0;
+var pageNumber = 'active';
 
 function getProjects(activity)
 {

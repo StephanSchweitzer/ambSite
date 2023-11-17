@@ -9,16 +9,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   $activity = "";
   $activity = $_GET['activity'];
   
-  $activityCondition = "WHERE active = 1";
+  $activityCondition = "WHERE active = 1 ";
 
   if($activity == 'active')
   {
-    $activityCondition = "WHERE active = 1";
+    $activityCondition = "WHERE active = 1 ";
   }
 
-  if($activity == 'invisible')
+    if($activity == 'inactive')
   {
     $activityCondition = "WHERE active = 0 ";
+  }
+
+  if($activity == 'deleted')
+  {
+    $activityCondition = "WHERE deleted = 1 ";
   }
 
 
