@@ -70,7 +70,12 @@ function insertData(data)
 }
 
 function openProjectInfo(id, title, description, active, orderOfDisplay, deleted) {
+	fetchWorkIdsForProject(id)
+
 	getThenPopulateWorks();
+
+	checkWorkCheckboxes(id);
+	
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete Project</button>';
 
   if (deleted == 1)
@@ -149,8 +154,6 @@ function createProject() {
 function updateWork()
 {
   // Get the form data
-
-	populateWorksList();
 
   let isActive = $('input[name=editIsActivePost]:checked').val(); // Retrieve the selected radio button value
 
@@ -307,13 +310,16 @@ function getActiveWorks()
 
 function getThenPopulateWorks()
 {
+	let id = document.getElementById('projectId');
 	$.ajax({
     url: "../actions/picturesAPI.php",
     type: "GET",
-    data: {'theYear' : 'Select Works'},
+    data: {'theYear' : 'projectsAPI'},
     dataType: "json",
     success: function(data) {
     	populateWorksList(data);
+    	//checkWorkCheckboxes(id);
+    	//fetchWorkIdsForProject(id);
       },
     error: function() {
       console.log("An error occurred.");
@@ -331,7 +337,6 @@ function populateWorksList(works) {
     works.forEach(work => {
         const listItem = document.createElement('li');
         listItem.textContent = work.name; // or work.title
-        listItem.setAttribute('data-work-id', work.id);
 
         // Optional: Add a checkbox or another way to select works
         const checkbox = document.createElement('input');
@@ -343,27 +348,64 @@ function populateWorksList(works) {
     });
 }
 
-function addWorkToProject(work) {
+function addWorksToProject() {
         const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
         const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id'));
-        console.log(workIds);
+        //console.log(workIds);
+        projectId = document.getElementById('projectId').value;
+        
+        postWorksProjectsDB(projectId, workIds);
 }
 
-function removeSelectedWorks() {
-    const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
-    selectedWorks.forEach(checkbox => {
-        const workId = checkbox.getAttribute('data-work-id');
-        // Logic to remove the work from the project using workId
-        checkbox.parentElement.remove();
+function postWorksProjectsDB(projectId, workIds)
+{
+	console.log(workIds);
+	
+$.ajax({
+    url: "../actions/worksOfProjectsAPI.php",
+    type: "POST",
+    data: {'projectId': projectId, 'workIds': workIds},
+    dataType: "json",
+    success: function(data) {
+        $('#successToast').toast('show');
+    },
+    error: function(jqXHR, textStatus, errorThrown) {
+        console.log("An error occurred: " + textStatus + ", " + errorThrown);
+    }
+});
+
+}
+
+function fetchWorkIdsForProject(id) {
+
+    return $.ajax({
+        url: '../actions/worksOfProjectsAPI.php',
+        type: 'GET',
+        data: { 'projectId': id },
+        dataType: 'json'
     });
 }
 
-// // Event Listeners for Add/Remove buttons
-//document.getElementById('addWork').addEventListener('click', () => {
-    // Logic to select a work to add
-    // Example: addWorkToProject(selectedWork);
-//});
 
-// document.getElementById('removeWork').addEventListener('click', removeSelectedWorks);
+function checkWorkCheckboxes(id) {
+	console.log("hihi");
+
+    fetchWorkIdsForProject(id).done(function(workIds) {
+    	
+        // First, uncheck all checkboxes
+        $('input[type="checkbox"][data-work-id]').prop('checked', false);
+
+        // Now, check the checkboxes corresponding to the fetched workIds
+        workIds.forEach(function(workId) {
+        	console.log(workId);
+            $('input[type="checkbox"][data-work-id="' + workId + '"]').prop('checked', true);
+        });
+    }).fail(function() {
+        console.error('Error fetching work IDs for project');
+    });
+}
+
+
+
 
 

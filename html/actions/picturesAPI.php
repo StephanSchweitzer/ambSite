@@ -140,7 +140,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                       orderOfDisplay, isSelectWork
               FROM    allWorks
               WHERE carousel = 1
-              ORDER BY orderOfDisplay DESC";;
+              ORDER BY orderOfDisplay DESC";
+  }
+
+  if ($theYear == 'projectsAPI')
+  {
+        $query = "SELECT
+                      workId, fileLocation, name,
+                      desc2, desc3, medium,
+                      color, isAvailable, year,
+                      orderOfDisplay, isSelectWork
+              FROM    allWorks
+              WHERE isSelectWork = 1
+              ORDER BY name ASC";
   }
 
   $pictureQuery = $conn->prepare($query);

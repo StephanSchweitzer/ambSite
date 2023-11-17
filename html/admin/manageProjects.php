@@ -161,8 +161,7 @@ if ($_SESSION["ambar"] != "connected")
             <div id="worksInProject">
                 <ul id="worksList"></ul>
 
-                <button type="button" id="addWork" onclick="addWorkToProject()">Add Work</button>
-                <button type="button" id="removeWork" onclick="removeWorks()">Remove Selected Work</button>
+                <button type="button" id="addWork" onclick="addWorksToProject()">Update Works</button>
             </div>
 
             <br>
@@ -190,6 +189,10 @@ if ($_SESSION["ambar"] != "connected")
   <div class="toast-body">
     <strong>Error:</strong> There was a problem processing your request.
   </div>
+</div>
+
+<div id="successToast" class="toast" role="alert" aria-live="polite" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+  <div class="toast-body">Works added to the project</div>
 </div>
 
 <!-- Modal -->
