@@ -2,12 +2,6 @@
 
 session_start();
 
-if ($_SESSION["ambar"] != "connected")
-{
-	header("Location: signIn/signIn.php?status=needCredentials");
-	die;
-}
-
 include '../database/pdo.php';
 
 
@@ -42,6 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
+	if ($_SESSION["ambar"] != "connected")
+	{
+		header("Location: signIn/signIn.php?status=needCredentials");
+		die;
+	}
+	
 	$projectId = $_POST["projectId"];
 	$workIds = $_POST["workIds"];
 

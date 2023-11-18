@@ -70,14 +70,14 @@ $( window ).on( "load", function() {
     $(idOfForm).attr("src",imgPath);
   });
 
-$('.invisible').each(function(index, element) {
-  $(this).removeClass('invisible')
+  $('.invisible').each(function(index, element) {
+    $(this).removeClass('invisible')
   });
 
   setTimeout(function() {
     $('.invisibleText').each(function(index, element) {
       $(this).removeClass('invisibleText')
-      });
+    });
   }, 500);
 
 })
@@ -101,18 +101,18 @@ $( document ).ready(function() {
 
   $('.modal').on('hidden.bs.modal', function ()
   {
-  $('#modifyZIndex').removeClass('headerNoMove2')
-  $('#modifyZIndex').addClass('headerNoMove')
-  $('#whiteForTheTop').removeClass('headerNoMove3')
-  $('#whiteForTheTop').addClass('whiteComeAndGo')
+    $('#modifyZIndex').removeClass('headerNoMove2')
+    $('#modifyZIndex').addClass('headerNoMove')
+    $('#whiteForTheTop').removeClass('headerNoMove3')
+    $('#whiteForTheTop').addClass('whiteComeAndGo')
   })
 
   $('.modal').on('show.bs.modal', function ()
   {
-  $('#modifyZIndex').removeClass('headerNoMove')
-  $('#modifyZIndex').addClass('headerNoMove2')
-  $('#whiteForTheTop').removeClass('whiteComeAndGo')
-  $('#whiteForTheTop').addClass('headerNoMove3')
+    $('#modifyZIndex').removeClass('headerNoMove')
+    $('#modifyZIndex').addClass('headerNoMove2')
+    $('#whiteForTheTop').removeClass('whiteComeAndGo')
+    $('#whiteForTheTop').addClass('headerNoMove3')
   })
 
   getCarousel();
@@ -148,7 +148,7 @@ $( document ).ready(function() {
       link.style.margin = '-.7em';
     });
 
-}
+  }
 
 
 });
@@ -186,8 +186,8 @@ function getWorksInformation(genre)
     data: genre,
     dataType: 'json',
     success: function(response) {
-    console.log(response);
-    insertWorks(response);
+      console.log(response);
+      insertWorks(response);
     },
     error: function(xhr, status, error) {
       console.log('Error:', error);
@@ -197,7 +197,7 @@ function getWorksInformation(genre)
 
 function getProjectsAndWorks()
 {
-    $.ajax({
+  $.ajax({
     url: "../actions/projectsAPI.php",
     type: "GET",
     data: {'activity' : 'active'},
@@ -222,76 +222,94 @@ function getProjectsAndWorks()
 
 function fetchWorkIdsForProject(id) {
 
-    return $.ajax({
-        url: '../actions/worksOfProjectsAPI.php',
-        type: 'GET',
-        data: { 'projectId': id },
-        dataType: 'json'
-    });
+  return $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'GET',
+    data: { 'projectId': id },
+    dataType: 'json'
+  });
 }
 
 function getWorkFromId(id) {
 
-    return $.ajax({
-        url: '../actions/worksOfProjectsAPI.php',
-        type: 'GET',
-        data: { 'projectId': id },
-        dataType: 'json'
-    });
+  return $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'GET',
+    data: { 'projectId': id },
+    dataType: 'json'
+  });
 }
 
 function makeProjectCard(projects)
 {
-     $('#imagesAndContent').empty();
+ $('#imagesAndContent').empty();
+ console.log(projects);
 
-    projects.forEach(function(project, index) { // 'array' removed
+ projects.forEach(function(project, index) {
+  fetchWorkIdsForProject(project.id).done(function(workIds)
+  {
+
     let title = project.title;
     let description = project.description;
     let insertTitle = $('<h2>').text(title);
     let formattedDescription = description.replace(/\n/g, '<br>');
     let insertDescription = $('<p>').html(formattedDescription);
-    
-    let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
 
-    card.append(insertTitle, insertDescription);
+    let mainProj = $('<div>').addClass('project').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
 
-    fetchWorkIdsForProject(project.id).done(function(workIds)
-    {
-      console.log(workIds);
-    }).fail(function() {
-        console.error('Error fetching work IDs for project');
+    mainProj.append(insertTitle, insertDescription);
+
+    getWorksInfoFromIdsArray(workIds).then(function(allWorksForProject) {
+      allWorksForProject.forEach(function(information, index2) {
+
+        let imageURL = "baseImages/" + information.location;
+        let title = information.name;
+        let description = information.firstDescription;
+
+        let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
+
+        let imageContainer = $('<div>').addClass('img-container');
+        let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
+        image.appendTo(imageContainer);
+
+        let insertTitle = $('<p>').text(title);
+        let formattedDescription = description.replace(/\n/g, '<br>');
+        let insertDescription = $('<p>').html(formattedDescription);
+
+        card.append(imageContainer, insertTitle, insertDescription);
+
+        card.click(function() {
+          makeBigPic(imageURL);
+        });
+
+        if (index2 < information.length - 1) {
+            mainProj.append('<hr class="work-separator" />'); // Append the separator
+          }
+
+          mainProj.append(card);
+
+        });
+          mainProj.append("<br><br><br>")
     });
 
-    // let imageContainer = $('<div>').addClass('img-container');
-    // let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
-    // image.appendTo(imageContainer);
+    $('#imagesAndContent').append(mainProj);
 
-    // // Check if this is not the last element in the array
-    if (index < projects.length - 1) {
-      card.append('<hr class="work-separator" />'); // Append the separator
-    }
+    // Check if this is not the last element in the array
 
-    // card.click(function() {
-    //   makeBigPic(imageURL);
-    // });
-
-    $('#imagesAndContent').append(card);
+  }).fail(function() {
+    console.error('Error fetching work IDs for project');
   });
+});
 }
 
 function getWorksInfoFromIdsArray(projectIds) 
 {
-  $.ajax({
-    url: 'actions/picturesAPI.php',
+  return $.ajax({
+    url: '../actions/getWorksByIdArray.php',
     method: 'GET',
-    data: genre,
+    data: {'projectIds' : projectIds},
     dataType: 'json',
-    success: function(response) {
-    console.log(response);
-    },
-    error: function(xhr, status, error) {
-      console.log('Error:', error);
-    }
+
   });
 }
 
@@ -404,23 +422,23 @@ function openInfo()
 
     document.getElementById('imagesAndContent').innerHTML = `
 
-      <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:400px;">
+    <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:400px;">
 
-      <br>
-      <br>
+    <br>
+    <br>
     <div class="iconsRow" style="width:100%">
-      <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
-      <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
-      <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
+    <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
+    <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
+    <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
     </div>
     <p>
-      My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
+    My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
     </p>
     <p>
-      I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
+    I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
     </p>
     <p>
-      I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
+    I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
     </p>
     <br>
 
@@ -431,40 +449,40 @@ function openInfo()
   else
   {
     document.getElementById('imagesAndContent').innerHTML = `
-        <div class="`+infoflex+`">
-          <div class="size1">
-            <h2>About Me</h2>
-            <br>
-            <p>
-              My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
-            </p>
-            <p>
-              I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
-            </p>
-            <p>
-              I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
-            </p>
-            <br>
+    <div class="`+infoflex+`">
+    <div class="size1">
+    <h2>About Me</h2>
+    <br>
+    <p>
+    My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
+    </p>
+    <p>
+    I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
+    </p>
+    <p>
+    I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
+    </p>
+    <br>
 
-            <br><br>
-            </div>
+    <br><br>
+    </div>
 
-            <div class="size2">
-              <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-                <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:435px; min-width:291px; max-height:435px; max-width:291px; margin-left: -5vw; margin-top:4vh">
-              </div>
-              <div class="iconsRow">
-                <!-- <p>ornament here</p> -->
-              </div>
-              <div class="iconsRow" style="padding-right:30px;">
-                <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
-                <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
-                <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
-              </div>
+    <div class="size2">
+    <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
+    <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:435px; min-width:291px; max-height:435px; max-width:291px; margin-left: -5vw; margin-top:4vh">
+    </div>
+    <div class="iconsRow">
+    <!-- <p>ornament here</p> -->
+    </div>
+    <div class="iconsRow" style="padding-right:30px;">
+    <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
+    <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
+    <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
+    </div>
 
-            </div>
+    </div>
 
-          </div>
+    </div>
     `;
   }
 }
@@ -474,15 +492,15 @@ function openFlowerVideo()
   if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
   {
     document.getElementById('imagesAndContent').innerHTML = `
-      <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     `;
   }
   else
   {
     document.getElementById('imagesAndContent').innerHTML = `
     <br><br><br>
-      <br>
-      <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    <br>
+    <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
     `;
   }
 }

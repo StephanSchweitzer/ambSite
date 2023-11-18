@@ -5,7 +5,10 @@ include '../database/pdo.php';
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
 
-  $worksIds = $_GET['worksIds'];
+  $worksIds = $_GET['projectIds'];
+
+  // echo json_encode($worksIds);
+  // die;
 
   $query = "SELECT workId, fileLocation, name,
                     desc2, desc3, medium,
@@ -13,35 +16,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                     orderOfDisplay, carousel,
                     isSelectWork
             FROM    allWorks
-            WHERE id = ?
-            ORDER BY orderOfDisplay DESC";
+            WHERE workId = ?";
 
    $data = array();
 
-  for ($i=0; $i < count($worksIds); $i++) {
+  foreach ($worksIds as $workId) {
+        $query = "SELECT workId, fileLocation, name, desc2, desc3, medium,
+                  color, isAvailable, year, orderOfDisplay, carousel, isSelectWork
+                  FROM allWorks
+                  WHERE workId = ?";
+        
+        $pictureQuery = $conn->prepare($query);
+        $pictureQuery->execute(array($workId));
+        $result = $pictureQuery->fetchAll();
 
-  $pictureQuery = $conn->prepare($query);
-  $pictureQuery->execute(array($worksIds[$i]);
-  $result = $pictureQuery->fetchAll();
+        // Assuming each query returns only one row, access it directly
+        if (!empty($result)) {
+            $row = $result[0]; // Fetch the first row
+            $singleEntry = array(
+                'id' => $row['workId'],
+                'location' => $row['fileLocation'],
+                'name' => $row['name'],
+                'firstDescription' => $row['desc2'],
+                'secondDescription' => $row['desc3'],
+                'medium' => $row['medium'],
+                'isColor' => $row['color'],
+                'availability' => $row['isAvailable'],
+                'creationYear' => $row['year'],
+                'orderOfDisplay' => $row['orderOfDisplay'],
+                'carousel' => $row['carousel'],
+                'isSelectWork' => $row['isSelectWork']
+            );
+            array_push($data, $singleEntry);
+        }
+    }
 
-    $singleEntry = array(
-      'id' => $result[$i][0],
-      'location' => $result[$i][1],
-      'name' => $result[$i][2],
-      'firstDescription' => $result[$i][3],
-      'secondDescription' => $result[$i][4],
-      'medium' => $result[$i][5],
-      'isColor' => $result[$i][6],
-      'availability' => $result[$i][7],
-      'creationYear' => $result[$i][8],
-      'orderOfDisplay' => $result[$i][9],
-      'carousel' => $result[$i][10],
-      'isSelectWork' => $result[$i][11]
-    );
-
-    array_push($data, $singleEntry);
-  }
-
+    usort($data, function($a, $b) {
+    // Compare the orderOfDisplay attributes
+    return $b['orderOfDisplay'] <=> $a['orderOfDisplay'];
+});
 
   header('Content-Type: application/json');
   echo json_encode($data);
