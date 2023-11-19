@@ -38,28 +38,14 @@ header('Content-Type: text/html; charset=UTF-8');
     <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectProjectCategories')">Select Works</a>
 
     <div id="selectProjectCategories" class="hiddenLinkStuff">
-<!--       <br>
-      <a href="#">`title`</a>
-      <br>
-      <a href="#">2021-2022</a>
-      <br>
-      <a href="#">2019-2020</a>
-      <br><br> -->
     </div>
 
     <div id="breaksForTitles">
       <br>
     </div>
 
-    <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenAbout')">About</a>
+    <a href="#" class="mainLinkGenres" onclick="openInfo()">About</a>
     <br>
-    <div id="hiddenAbout" class="hiddenLinkStuff">
-      <br>
-      <a href="#" onclick="openInfo()">Bio</a>
-      <br>
-      <a href="mailto: ambarvelasco3@yahoo.com">Contact</a>
-      <br>
-    </div>
     <br>
 
       <a class="mainLinkGenres" href="https://www.instagram.com/ambar_velasc0/" target="_blank">Instagram</a>
@@ -80,6 +66,7 @@ header('Content-Type: text/html; charset=UTF-8');
       </div>
     </div>
   </div>
+
 
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 

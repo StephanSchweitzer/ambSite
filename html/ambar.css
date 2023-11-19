@@ -26,6 +26,62 @@
     margin: 20px 0; /* Add some margin around the list */
 }
 
+/*.lightbox {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    padding-top: 100px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.9);
+}
+.lightbox-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+}
+.close {
+    position: absolute;
+    top: 25px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.prev, .next {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    padding: 16px;
+    margin-top: -50px;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    transition: 0.6s ease;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+}
+.prev {
+    left: 0;
+    border-radius: 3px 0 0 3px;
+}
+.next {
+    right: 0;
+    border-radius: 0 3px 3px 0;
+}*/
+
+.no-scroll {
+    overflow: hidden;
+    position: fixed; /* Optional, for better handling on iOS devices */
+    width: 100%; /* Optional, for better handling on iOS devices */
+}
+
 
 .img-container img {
   max-width: 100%; /* Make the image fill the container width */*/
@@ -526,6 +582,8 @@ body
   max-height: 90vh;
   max-width: 90vw;
   min-width: 90vw;
+  transition: transform 0.3s ease;
+  transition: transform 0.1s ease-out;
   /* min-width: : 90vw; */
 }
 

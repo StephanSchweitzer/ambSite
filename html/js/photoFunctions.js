@@ -1,4 +1,8 @@
 var selectWorksAreShown = false;
+let currentImageIndex = 0; // Global variable to track the current image index
+let images = []; // Global array to store image URLs
+let startX, startY, initialTouchDistance, currentX;
+let isPinching = false;
 
 $( window ).on( "load", function() {
 
@@ -87,23 +91,75 @@ $( window ).on( "load", function() {
 
 $( document ).ready(function() {
 
-  // var scrollPosition = 0;
-  // const scrollDemo = document.querySelector("#photoHolder");
-  //
-  //
-  // $( "#scrollRight" ).click(function() {
-  //   scrollPosition = scrollDemo.scrollLeft + 1000;
-  //   $("#photoHolder").scrollLeft(scrollPosition);
-  // });
-  //
-  // $( "#scrollLeft" ).click(function() {
-  //
-  //   scrollPosition = scrollDemo.scrollLeft - 1000;
-  //   $("#photoHolder").scrollLeft(scrollPosition);
-  // });
+  document.getElementById('popUpImage').addEventListener('click', function(event) {
+    let imgWidth = this.clientWidth;
+    let xCoordinate = event.offsetX; // Get the x coordinate of the click
+
+    if (xCoordinate < imgWidth / 2) {
+        // Click on the left side
+        changeImage(-1); // Go to the previous image
+      } else {
+        // Click on the right side
+        changeImage(1); // Go to the next image
+      }
+    });
+
+
+document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
+  isPinching = false;
+    if (e.touches.length === 1) {
+      this.style.transition = 'none';
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isPinching = false; // Single touch, so not pinching
+    } else if (e.touches.length === 2) {
+        // Two fingers - potential pinch
+        isPinching = true;
+    }
+}, false);
+
+document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
+    if (e.touches.length === 2) {
+        // Two fingers moving - continue to treat as a pinch
+        isPinching = true;
+    } else if (e.touches.length === 1 && !isPinching) {
+        // Single finger swipe action
+        let currentX = e.touches[0].clientX;
+        let currentY = e.touches[0].clientY;
+
+        // Calculate the distance moved
+        let deltaX = Math.round(currentX - startX)
+        let deltaY = currentY - startY;
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // More horizontal movement than vertical
+            e.preventDefault(); // Prevent scrolling
+            // Apply the movement for visual feedback
+            this.style.transform = `translateX(${deltaX}px)`;
+        }
+    }
+}, false);
+
+document.getElementById('popUpImage').addEventListener('touchend', function(e) {
+    if (!isPinching && e.changedTouches.length === 1) {
+        let endX = e.changedTouches[0].clientX;
+        let deltaX = endX - startX;
+
+        if (Math.abs(deltaX) > window.innerWidth * 0.25) {
+            // Threshold for swipe action
+            changeImage(deltaX > 0 ? -1 : 1);
+        } else {
+            // Not enough swipe, return to original position
+            this.style.transform = '';
+        }
+    }
+     // Reset pinch status on touch end
+}, false);
 
   $('.modal').on('hidden.bs.modal', function ()
   {
+    $('body').removeClass('no-scroll').css('top', '');
+    $(window).scrollTop(scrollPosition);
     $('#modifyZIndex').removeClass('headerNoMove2')
     $('#modifyZIndex').addClass('headerNoMove')
     $('#whiteForTheTop').removeClass('headerNoMove3')
@@ -112,6 +168,8 @@ $( document ).ready(function() {
 
   $('.modal').on('show.bs.modal', function ()
   {
+    scrollPosition = $(window).scrollTop();
+    $('body').addClass('no-scroll').css('top', -scrollPosition);
     $('#modifyZIndex').removeClass('headerNoMove')
     $('#modifyZIndex').addClass('headerNoMove2')
     $('#whiteForTheTop').removeClass('whiteComeAndGo')
@@ -158,27 +216,27 @@ $( document ).ready(function() {
 });
 
 function loadAndDisplayProjectTitles() {
-    $.ajax({
+  $.ajax({
         url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
         type: 'GET',
         dataType: 'json',
         success: function(projects) {
-            let container = $('#selectProjectCategories');
+          let container = $('#selectProjectCategories');
             container.empty(); // Clear existing content
             container.append('<br>')
             projects.forEach(function(project) {
                 let title = project.title; // Assuming each project has a 'title' property
                 let link = $('<a>')
-                    .attr('href', '#projectSection'+project.title)
-                    .text(title)            
-                container.append(link, '<br>'); // Append link and a line break for spacing
-            });
-            container.append('<br>')
-        },
-        error: function() {
+                .attr('href', '#projectSection'+project.title)
+                .text(title)            
+                container.append(link, '<br><br>'); // Append link and a line break for spacing
+              });
+            //container.append('<br>')
+          },
+          error: function() {
             console.log('Error loading project titles.');
-        }
-    });
+          }
+        });
 }
 
 function accessPictureForm(divName)
@@ -246,15 +304,6 @@ function getProjectsAndWorks()
       console.log("An error occurred.");
     },
   });
-
-  //   allActiveProjects.forEach(function(project){
-  //   let imageURL = "baseImages/"+information.location;
-  //   let thisImage = `<div id="`+information.name+`" class="carousel-item `+active+` " >
-  //   <img class="d-block carousel-pic" src="`+imageURL+`" onclick="makeBigPic('`+imageURL+`')">
-  //   </div>`;
-  //   carouselHtml += thisImage;
-  //   active = '';
-  // });
 }
 
 function fetchWorkIdsForProject(id) {
@@ -277,113 +326,56 @@ function getWorkFromId(id) {
   });
 }
 
-// function makeProjectCards(projects)
-// {
-//  $('#imagesAndContent').empty();
-//  console.log(projects);
-
-//  projects.forEach(function(project, index) {
-//   fetchWorkIdsForProject(project.id).done(function(workIds)
-//   {
-
-//     let title = project.title;
-//     let description = project.description;
-//     let insertTitle = $('<h2>').text(title);
-//     let formattedDescription = description.replace(/\n/g, '<br>');
-//     let insertDescription = $('<p>').html(formattedDescription);
-
-//     let mainProj = $('<div>').addClass('project').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
-
-//     mainProj.append(insertTitle, insertDescription);
-
-//     getWorksInfoFromIdsArray(workIds).then(function(allWorksForProject) {
-//       allWorksForProject.forEach(function(information, index2) {
-
-//         let imageURL = "baseImages/" + information.location;
-//         let title = information.name;
-//         let description = information.firstDescription;
-
-//         let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
-
-//         let imageContainer = $('<div>').addClass('img-container');
-//         let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
-//         image.appendTo(imageContainer);
-
-//         let insertTitle = $('<p>').text(title);
-//         let formattedDescription = description.replace(/\n/g, '<br>');
-//         let insertDescription = $('<p>').html(formattedDescription);
-
-//         card.append(imageContainer, insertTitle, insertDescription);
-
-//         card.click(function() {
-//           makeBigPic(imageURL);
-//         });
-
-//           mainProj.append(card);
-
-//         });
-//           mainProj.append('<hr class="work-separator" />'); // Append the separator
-//           mainProj.append("<br><br><br>")
-//     });
-
-//     $('#imagesAndContent').append(mainProj);
-
-//     // Check if this is not the last element in the array
-
-//   }).fail(function() {
-//     console.error('Error fetching work IDs for project');
-//   });
-// });
-// }
-
 function makeProjectCards(projects) {
-    $('#imagesAndContent').empty();
-    console.log(projects);
+  $('#imagesAndContent').empty();
+  console.log(projects);
+  images.length = 0;
 
-    let projectPromises = projects.map(project => {
-        return fetchWorkIdsForProject(project.id).then(workIds => {
-            return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
+  let projectPromises = projects.map(project => {
+    return fetchWorkIdsForProject(project.id).then(workIds => {
+      return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
                 return { project, allWorksForProject }; // Return project info with its works
-            });
-        });
+              });
     });
+  });
 
-    Promise.all(projectPromises).then(results => {
-        results.forEach(({ project, allWorksForProject }) => {
-            let mainProj = createProjectElement(project);
-            allWorksForProject.forEach(information => {
-                let card = createWorkCardElement(information);
-                mainProj.append(card);
-            });
-            mainProj.append('<hr class="work-separator" />');
-            $('#imagesAndContent').append(mainProj);
-        });
-    }).catch(error => {
-        console.error('Error:', error);
+  Promise.all(projectPromises).then(results => {
+    results.forEach(({ project, allWorksForProject }) => {
+      let mainProj = createProjectElement(project);
+      allWorksForProject.forEach(information => {
+        let card = createWorkCardElement(information);
+        mainProj.append(card);
+      });
+      mainProj.append('<hr class="work-separator" />');
+      $('#imagesAndContent').append(mainProj);
     });
+  }).catch(error => {
+    console.error('Error:', error);
+  });
 }
 
 function createProjectElement(project) {
-    let title = project.title;
-    let description = project.description.replace(/\n/g, '<br>');
-    let insertTitle = $('<h2>').text(title);
-    let insertDescription = $('<p>').html(description);
-    return $('<div>').addClass('project').attr({
+  let title = project.title;
+  let description = project.description.replace(/\n/g, '<br>');
+  let insertTitle = $('<h2>').text(title);
+  let insertDescription = $('<p>').html(description);
+  return $('<div>').addClass('project').attr({
     'alt': title,
     'id': 'projectSection'+title.trim()
-}).css({'border': '0px', 'text-align': 'center'}).append(insertTitle, insertDescription);
+  }).css({'border': '0px', 'text-align': 'center'}).append(insertTitle, insertDescription);
 }
 
 function createWorkCardElement(information) {
-    let imageURL = "baseImages/" + information.location;
-    let title = information.name;
-    let description = information.firstDescription.replace(/\n/g, '<br>');
-    let insertTitle = $('<p>').text(title);
-    let insertDescription = $('<p>').html(description);
-    let imageContainer = $('<div>').addClass('img-container').append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
-    let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
-    card.click(() => makeBigPic(imageURL));
-    return card;
+  let imageURL = "baseImages/" + information.location;
+  let title = information.name;
+  let description = information.firstDescription.replace(/\n/g, '<br>');
+  let insertTitle = $('<p>').text(title);
+  let insertDescription = $('<p>').html(description);
+  let imageContainer = $('<div>').addClass('img-container').append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
+  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
+  card.click(() => makeBigPic(imageURL));
+  images.push(imageURL);
+  return card;
 }
 
 
@@ -420,6 +412,7 @@ function getCarousel()
 
 function createCarousel(informations)
 {
+  images.length = 0;
   carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
   <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
   active = 'active';
@@ -431,6 +424,7 @@ function createCarousel(informations)
     </div>`;
     carouselHtml += thisImage;
     active = '';
+    images.push(imageURL);
   });
 
   carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
@@ -490,102 +484,139 @@ function insertWorks(informations) {
   });
 }
 
-function makeBigPic(path)
+// function makeBigPic(imageURL) 
+// {
+//     currentIndex = images.indexOf(imageURL);
+//     updateLightboxImage();
+//     document.getElementById('lightbox').style.display = 'block';
+// }
+
+function makeBigPic(clickedImageUrl)
 {
+  currentImageIndex = images.indexOf(clickedImageUrl);
+  document.getElementById('popUpImage').src = images[currentImageIndex];
   $('#bigPicModal').modal('show');
-  document.getElementById('popUpImage').src = path;
-
-  // this.classList.remove("size12020");
 }
 
-function openInfo()
-{
-  let infoflex = 'infoflex';
-  if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-  {
-    infoflex = 'infoflexMobile';
 
-    document.getElementById('imagesAndContent').innerHTML = `
 
-    <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:400px;">
-
-    <br>
-    <br>
-    <div class="iconsRow" style="width:100%">
-    <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
-    <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
-    <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
-    </div>
-    <p>
-    My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
-    </p>
-    <p>
-    I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
-    </p>
-    <p>
-    I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
-    </p>
-    <br>
-
-    <br><br>
-    `;
-
+function changeImage(step) {
+  currentImageIndex += step;
+  if (currentImageIndex >= images.length) {
+    currentImageIndex = 0;
+  } else if (currentImageIndex < 0) {
+    currentImageIndex = images.length - 1;
   }
-  else
-  {
-    document.getElementById('imagesAndContent').innerHTML = `
-    <div class="`+infoflex+`">
-    <div class="size1">
-    <h2>About Me</h2>
-    <br>
-    <p>
-    My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
-    </p>
-    <p>
-    I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
-    </p>
-    <p>
-    I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
-    </p>
-    <br>
-
-    <br><br>
-    </div>
-
-    <div class="size2">
-    <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-    <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:435px; min-width:291px; max-height:435px; max-width:291px; margin-left: -5vw; margin-top:4vh">
-    </div>
-    <div class="iconsRow">
-    <!-- <p>ornament here</p> -->
-    </div>
-    <div class="iconsRow" style="padding-right:30px;">
-    <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
-    <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
-    <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
-    </div>
-
-    </div>
-
-    </div>
-    `;
+  const imgElement = document.getElementById('popUpImage');
+    imgElement.style.transform = ''; // Reset transform for new image
+    imgElement.src = images[currentImageIndex];
   }
-}
 
-function openFlowerVideo()
-{
-  if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-  {
-    document.getElementById('imagesAndContent').innerHTML = `
-    <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-    `;
+  function getDistanceBetweenTouches(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
   }
-  else
-  {
-    document.getElementById('imagesAndContent').innerHTML = `
-    <br><br><br>
-    <br>
-    <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-    `;
+
+
+
+
+
+  function openModalWithImage(imageIndex) {
+
+    currentImageIndex = imageIndex;
+    document.getElementById('popUpImage').src = images[imageIndex];
+    $('#bigPicModal').modal('show');
   }
-}
+
+  function openInfo()
+  {
+    let infoflex = 'infoflex';
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
+    {
+      infoflex = 'infoflexMobile';
+
+      document.getElementById('imagesAndContent').innerHTML = `
+
+      <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:400px;">
+
+      <br>
+      <br>
+      <div class="iconsRow" style="width:100%">
+      <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
+      <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
+      <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
+      </div>
+      <p>
+      My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
+      </p>
+      <p>
+      I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
+      </p>
+      <p>
+      I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
+      </p>
+      <br>
+
+      <br><br>
+      `;
+
+    }
+    else
+    {
+      document.getElementById('imagesAndContent').innerHTML = `
+      <div class="`+infoflex+`">
+      <div class="size1">
+      <h2>About Me</h2>
+      <br>
+      <p>
+      My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
+      </p>
+      <p>
+      I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
+      </p>
+      <p>
+      I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
+      </p>
+      <br>
+
+      <br><br>
+      </div>
+
+      <div class="size2">
+      <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
+      <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:435px; min-width:291px; max-height:435px; max-width:291px; margin-left: -5vw; margin-top:4vh">
+      </div>
+      <div class="iconsRow">
+      <!-- <p>ornament here</p> -->
+      </div>
+      <div class="iconsRow" style="padding-right:30px;">
+      <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
+      <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
+      <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
+      </div>
+
+      </div>
+
+      </div>
+      `;
+    }
+  }
+
+  function openFlowerVideo()
+  {
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
+    {
+      document.getElementById('imagesAndContent').innerHTML = `
+      <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      `;
+    }
+    else
+    {
+      document.getElementById('imagesAndContent').innerHTML = `
+      <br><br><br>
+      <br>
+      <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      `;
+    }
+  }
