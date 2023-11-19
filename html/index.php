@@ -35,7 +35,16 @@ header('Content-Type: text/html; charset=UTF-8');
     <br>
     <br>
 
-    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks()">Select Works</a>
+    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectWorkCategories')">Select Works</a>
+
+    <div id="selectWorkCategories" class="hiddenLinkStuff">
+      <br>
+      <a href="#" onclick="goToSection('test')">2023</a>
+      <br>
+      <a href="#" onclick="goToSection('test')">2021-2022</a>
+      <br>
+      <a href="#" onclick="goToSection('test')">2019-2020</a>
+    </div>
 
     <br><br>
 

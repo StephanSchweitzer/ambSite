@@ -1,3 +1,5 @@
+var selectWorksAreShown = false;
+
 $( window ).on( "load", function() {
 
   //this fixes the width of all thumbnails
@@ -16,7 +18,6 @@ $( window ).on( "load", function() {
   //   $('#navLinksBox').removeClass('navLinksBox')
   //   $('#navLinksBox').addClass('navLinksBoxMobile')
   // }
-
 
   $('.size12020').each(function(index, element) {
     let theWidth = this.width;
@@ -171,6 +172,8 @@ function toggleSublinks(event, sublinksId)
   var sublinks = $("#" + sublinksId);
   $(".hiddenLinkStuff").not(sublinks).slideUp();
   sublinks.slideToggle();
+  selectWorksAreShown = !selectWorksAreShown;
+  console.log(selectWorksAreShown);
 }
 
 function getWorksInformation(genre) 
@@ -195,15 +198,21 @@ function getWorksInformation(genre)
   });
 }
 
+
 function getProjectsAndWorks()
 {
+  if (selectWorksAreShown)
+  {
+    return;
+  }
+
   $.ajax({
     url: "../actions/projectsAPI.php",
     type: "GET",
     data: {'activity' : 'active'},
     dataType: "json",
     success: function(data) {
-      makeProjectCard(data);
+      makeProjectCards(data);
     },
     error: function() {
       console.log("An error occurred.");
@@ -240,67 +249,112 @@ function getWorkFromId(id) {
   });
 }
 
-function makeProjectCard(projects)
-{
- $('#imagesAndContent').empty();
- console.log(projects);
+// function makeProjectCards(projects)
+// {
+//  $('#imagesAndContent').empty();
+//  console.log(projects);
 
- projects.forEach(function(project, index) {
-  fetchWorkIdsForProject(project.id).done(function(workIds)
-  {
+//  projects.forEach(function(project, index) {
+//   fetchWorkIdsForProject(project.id).done(function(workIds)
+//   {
 
-    let title = project.title;
-    let description = project.description;
-    let insertTitle = $('<h2>').text(title);
-    let formattedDescription = description.replace(/\n/g, '<br>');
-    let insertDescription = $('<p>').html(formattedDescription);
+//     let title = project.title;
+//     let description = project.description;
+//     let insertTitle = $('<h2>').text(title);
+//     let formattedDescription = description.replace(/\n/g, '<br>');
+//     let insertDescription = $('<p>').html(formattedDescription);
 
-    let mainProj = $('<div>').addClass('project').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
+//     let mainProj = $('<div>').addClass('project').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
 
-    mainProj.append(insertTitle, insertDescription);
+//     mainProj.append(insertTitle, insertDescription);
 
-    getWorksInfoFromIdsArray(workIds).then(function(allWorksForProject) {
-      allWorksForProject.forEach(function(information, index2) {
+//     getWorksInfoFromIdsArray(workIds).then(function(allWorksForProject) {
+//       allWorksForProject.forEach(function(information, index2) {
 
-        let imageURL = "baseImages/" + information.location;
-        let title = information.name;
-        let description = information.firstDescription;
+//         let imageURL = "baseImages/" + information.location;
+//         let title = information.name;
+//         let description = information.firstDescription;
 
-        let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
+//         let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
 
-        let imageContainer = $('<div>').addClass('img-container');
-        let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
-        image.appendTo(imageContainer);
+//         let imageContainer = $('<div>').addClass('img-container');
+//         let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
+//         image.appendTo(imageContainer);
 
-        let insertTitle = $('<p>').text(title);
-        let formattedDescription = description.replace(/\n/g, '<br>');
-        let insertDescription = $('<p>').html(formattedDescription);
+//         let insertTitle = $('<p>').text(title);
+//         let formattedDescription = description.replace(/\n/g, '<br>');
+//         let insertDescription = $('<p>').html(formattedDescription);
 
-        card.append(imageContainer, insertTitle, insertDescription);
+//         card.append(imageContainer, insertTitle, insertDescription);
 
-        card.click(function() {
-          makeBigPic(imageURL);
+//         card.click(function() {
+//           makeBigPic(imageURL);
+//         });
+
+//           mainProj.append(card);
+
+//         });
+//           mainProj.append('<hr class="work-separator" />'); // Append the separator
+//           mainProj.append("<br><br><br>")
+//     });
+
+//     $('#imagesAndContent').append(mainProj);
+
+//     // Check if this is not the last element in the array
+
+//   }).fail(function() {
+//     console.error('Error fetching work IDs for project');
+//   });
+// });
+// }
+
+function makeProjectCards(projects) {
+    $('#imagesAndContent').empty();
+    console.log(projects);
+
+    let projectPromises = projects.map(project => {
+        return fetchWorkIdsForProject(project.id).then(workIds => {
+            return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
+                return { project, allWorksForProject }; // Return project info with its works
+            });
         });
-
-        if (index2 < information.length - 1) {
-            mainProj.append('<hr class="work-separator" />'); // Append the separator
-          }
-
-          mainProj.append(card);
-
-        });
-          mainProj.append("<br><br><br>")
     });
 
-    $('#imagesAndContent').append(mainProj);
-
-    // Check if this is not the last element in the array
-
-  }).fail(function() {
-    console.error('Error fetching work IDs for project');
-  });
-});
+    Promise.all(projectPromises).then(results => {
+        results.forEach(({ project, allWorksForProject }) => {
+            let mainProj = createProjectElement(project);
+            allWorksForProject.forEach(information => {
+                let card = createWorkCardElement(information);
+                mainProj.append(card);
+            });
+            mainProj.append('<hr class="work-separator" />');
+            $('#imagesAndContent').append(mainProj);
+        });
+    }).catch(error => {
+        console.error('Error:', error);
+    });
 }
+
+function createProjectElement(project) {
+    let title = project.title;
+    let description = project.description.replace(/\n/g, '<br>');
+    let insertTitle = $('<h2>').text(title);
+    let insertDescription = $('<p>').html(description);
+    return $('<div>').addClass('project').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(insertTitle, insertDescription);
+}
+
+function createWorkCardElement(information) {
+    let imageURL = "baseImages/" + information.location;
+    let title = information.name;
+    let description = information.firstDescription.replace(/\n/g, '<br>');
+    let insertTitle = $('<p>').text(title);
+    let insertDescription = $('<p>').html(description);
+    let imageContainer = $('<div>').addClass('img-container').append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
+    let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
+    card.click(() => makeBigPic(imageURL));
+    return card;
+}
+
 
 function getWorksInfoFromIdsArray(projectIds) 
 {
