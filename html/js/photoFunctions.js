@@ -81,6 +81,8 @@ $( window ).on( "load", function() {
     });
   }, 500);
 
+
+
 })
 
 $( document ).ready(function() {
@@ -117,6 +119,7 @@ $( document ).ready(function() {
   })
 
   getCarousel();
+  loadAndDisplayProjectTitles()
 
 
   if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
@@ -154,6 +157,30 @@ $( document ).ready(function() {
 
 });
 
+function loadAndDisplayProjectTitles() {
+    $.ajax({
+        url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
+        type: 'GET',
+        dataType: 'json',
+        success: function(projects) {
+            let container = $('#selectProjectCategories');
+            container.empty(); // Clear existing content
+            container.append('<br>')
+            projects.forEach(function(project) {
+                let title = project.title; // Assuming each project has a 'title' property
+                let link = $('<a>')
+                    .attr('href', '#projectSection'+project.title)
+                    .text(title)            
+                container.append(link, '<br>'); // Append link and a line break for spacing
+            });
+            container.append('<br>')
+        },
+        error: function() {
+            console.log('Error loading project titles.');
+        }
+    });
+}
+
 function accessPictureForm(divName)
 {
   let newDiveName = '#'+divName;
@@ -170,8 +197,9 @@ function toggleSublinks(event, sublinksId)
 {
   event.preventDefault();
   var sublinks = $("#" + sublinksId);
-  $(".hiddenLinkStuff").not(sublinks).slideUp();
+  //$(".hiddenLinkStuff").not(sublinks).slideUp();
   sublinks.slideToggle();
+  $("#breaksForTitles").slideToggle();
   selectWorksAreShown = !selectWorksAreShown;
   console.log(selectWorksAreShown);
 }
@@ -340,7 +368,10 @@ function createProjectElement(project) {
     let description = project.description.replace(/\n/g, '<br>');
     let insertTitle = $('<h2>').text(title);
     let insertDescription = $('<p>').html(description);
-    return $('<div>').addClass('project').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(insertTitle, insertDescription);
+    return $('<div>').addClass('project').attr({
+    'alt': title,
+    'id': 'projectSection'+title.trim()
+}).css({'border': '0px', 'text-align': 'center'}).append(insertTitle, insertDescription);
 }
 
 function createWorkCardElement(information) {

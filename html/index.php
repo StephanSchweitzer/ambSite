@@ -35,18 +35,21 @@ header('Content-Type: text/html; charset=UTF-8');
     <br>
     <br>
 
-    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectWorkCategories')">Select Works</a>
+    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectProjectCategories')">Select Works</a>
 
-    <div id="selectWorkCategories" class="hiddenLinkStuff">
+    <div id="selectProjectCategories" class="hiddenLinkStuff">
+<!--       <br>
+      <a href="#">`title`</a>
       <br>
-      <a href="#" onclick="goToSection('test')">2023</a>
+      <a href="#">2021-2022</a>
       <br>
-      <a href="#" onclick="goToSection('test')">2021-2022</a>
-      <br>
-      <a href="#" onclick="goToSection('test')">2019-2020</a>
+      <a href="#">2019-2020</a>
+      <br><br> -->
     </div>
 
-    <br><br>
+    <div id="breaksForTitles">
+      <br>
+    </div>
 
     <a href="#" class="mainLinkGenres" onclick="toggleSublinks(event, 'hiddenAbout')">About</a>
     <br>

@@ -28,9 +28,9 @@
 
 
 .img-container img {
-/*  width: 100%; /* Make the image fill the container width */*/
+  max-width: 100%; /* Make the image fill the container width */*/
   height: auto; /* Allow the height to adjust based on the image aspect ratio */
-  max-height: 70vh;
+  max-height: 65vh;
   margin: auto;
 }
 
