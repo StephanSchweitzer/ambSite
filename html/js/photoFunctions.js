@@ -21,6 +21,8 @@ $( window ).on( "load", function() {
   //   $('#whiteForTheTop').addClass('headerNoMove3')
   //   $('#navLinksBox').removeClass('navLinksBox')
   //   $('#navLinksBox').addClass('navLinksBoxMobile')
+  //   $('#selectProjectCategories').addClass('hiddenLinkStuff')
+  //   $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
   // }
 
   $('.size12020').each(function(index, element) {
@@ -195,6 +197,8 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     $('#navLinksBox').addClass('navLinksBoxMobile')
     $('#homePageCarousel').removeClass('homePageCarousel')
     $('#homePageCarousel').addClass('homePageCarouselMobile')
+    $('#selectProjectCategories').removeClass('hiddenLinkStuff')
+    $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
 
     const allLinks = document.querySelectorAll('a');
 
