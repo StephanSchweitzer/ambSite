@@ -232,7 +232,8 @@ function loadAndDisplayProjectTitles() {
                 let title = project.title; // Assuming each project has a 'title' property
                 let link = $('<a>')
                 .attr('href', '#projectSection'+project.title)
-                .text(title)            
+                .text(title);
+                link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));        
                 container.append(link, '<br><br>'); // Append link and a line break for spacing
               });
             //container.append('<br>')
@@ -262,8 +263,6 @@ function toggleSublinks(event, sublinksId)
   //$(".hiddenLinkStuff").not(sublinks).slideUp();
   sublinks.slideToggle();
   $("#breaksForTitles").slideToggle();
-  selectWorksAreShown = !selectWorksAreShown;
-  console.log(selectWorksAreShown);
 }
 
 function getWorksInformation(genre) 
@@ -288,8 +287,11 @@ function getWorksInformation(genre)
   });
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-function getProjectsAndWorks()
+function getProjectsAndWorks(partOfThePage)
 {
   if (selectWorksAreShown)
   {
@@ -302,12 +304,29 @@ function getProjectsAndWorks()
     data: {'activity' : 'active'},
     dataType: "json",
     success: function(data) {
-      makeProjectCards(data);
+      makeProjectCards(data, partOfThePage);
     },
     error: function() {
       console.log("An error occurred.");
     },
   });
+
+  //jumpToSection(partOfThePage);
+
+  selectWorksAreShown = true;
+}
+
+function jumpToSection(partOfThePage)
+{
+    if (partOfThePage != null)
+  {
+    //sleep(300).then(() => { 
+    console.log(partOfThePage)
+    var element = document.getElementById(''+partOfThePage);
+    console.log(element);
+    element.scrollIntoView();
+    // });
+  }
 }
 
 function fetchWorkIdsForProject(id) {
@@ -330,7 +349,7 @@ function getWorkFromId(id) {
   });
 }
 
-function makeProjectCards(projects) {
+function makeProjectCards(projects, partOfThePage) {
   $('#imagesAndContent').empty();
   console.log(projects);
   images.length = 0;
@@ -353,9 +372,11 @@ function makeProjectCards(projects) {
       mainProj.append('<hr class="work-separator" />');
       $('#imagesAndContent').append(mainProj);
     });
+    jumpToSection(partOfThePage);
   }).catch(error => {
     console.error('Error:', error);
   });
+
 }
 
 function createProjectElement(project) {

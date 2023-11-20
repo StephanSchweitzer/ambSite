@@ -31,11 +31,11 @@ header('Content-Type: text/html; charset=UTF-8');
 
 <div id="sideBySide">
   <div id="navLinksBox" class="navLinksBox">
-    <a href="https://www.etsy.com/fr/shop/ARTBYAMBAR" target="_blank" class="mainLinkGenres">Shop</a>
+    <a href="https://www.etsy.com/fr/shop/ARTBYAMBAR" target="_blank" class="mainLinkGenres" onclick="selectWorksAreShown = false;">Shop</a>
     <br>
     <br>
 
-    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectProjectCategories')">Select Works</a>
+    <a href="#" class="mainLinkGenres" onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectProjectCategories'); selectWorksAreShown = true;">Select Works</a>
 
     <div id="selectProjectCategories" class="hiddenLinkStuff">
     </div>
@@ -44,7 +44,7 @@ header('Content-Type: text/html; charset=UTF-8');
       <br>
     </div>
 
-    <a href="#" class="mainLinkGenres" onclick="openInfo()">About</a>
+    <a href="#" class="mainLinkGenres" onclick="openInfo(); selectWorksAreShown = false">About</a>
     <br>
     <br>
 
