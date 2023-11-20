@@ -1,5 +1,10 @@
 var pageNumber = 'active';
 
+$( document ).ready(function() {
+getThenPopulateWorks();
+
+});
+
 function getProjects(activity)
 {
 	pageNumber = activity;
@@ -72,7 +77,7 @@ function insertData(data)
 function openProjectInfo(id, title, description, active, orderOfDisplay, deleted) {
 	fetchWorkIdsForProject(id)
 
-	getThenPopulateWorks();
+	//getThenPopulateWorks();
 
 	checkWorkCheckboxes(id);
 	
@@ -388,8 +393,6 @@ function fetchWorkIdsForProject(id) {
 
 
 function checkWorkCheckboxes(id) {
-	console.log("hihi");
-
     fetchWorkIdsForProject(id).done(function(workIds) {
     	
         // First, uncheck all checkboxes
@@ -397,7 +400,6 @@ function checkWorkCheckboxes(id) {
 
         // Now, check the checkboxes corresponding to the fetched workIds
         workIds.forEach(function(workId) {
-        	console.log(workId);
             $('input[type="checkbox"][data-work-id="' + workId + '"]').prop('checked', true);
         });
     }).fail(function() {
