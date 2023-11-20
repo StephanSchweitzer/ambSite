@@ -92,9 +92,10 @@
 
 .work-separator {
   border: none;
-  height: 1px; /* Make the line a bit thicker */
-  background-color: #000; /* Use a darker color for the line */
-  margin-top: 120px; /* Add some space above and below the line */
+  height: 1px;
+  background-color: #000;
+  margin-top: 60px;
+  margin-bottom: 60px;
 }
 
 a {

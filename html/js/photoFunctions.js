@@ -382,8 +382,11 @@ function makeProjectCards(projects, partOfThePage) {
 function createProjectElement(project) {
   let title = project.title;
   let description = project.description.replace(/\n/g, '<br>');
-  let insertTitle = $('<h2>').text(title);
-  let insertDescription = $('<p>').html(description);
+  let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
+  let insertDescription = $('<p>').html(description).css({
+    'color': '#71797E', // Dark grey color
+    'margin-bottom': '40px' // Margin bottom
+  });  
   return $('<div>').addClass('project').attr({
     'alt': title,
     'id': 'projectSection'+title.trim()
@@ -394,7 +397,7 @@ function createWorkCardElement(information) {
   let imageURL = "baseImages/" + information.location;
   let title = information.name;
   let description = information.firstDescription.replace(/\n/g, '<br>');
-  let insertTitle = $('<p>').text(title);
+  let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
   let insertDescription = $('<p>').html(description);
   let imageContainer = $('<div>').addClass('img-container').append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
   let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
