@@ -567,7 +567,7 @@ function changeImage(step) {
 
       document.getElementById('imagesAndContent').innerHTML = `
 
-      <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:400px;">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:600px;">
 
       <br>
       <br>
@@ -596,7 +596,6 @@ function changeImage(step) {
       document.getElementById('imagesAndContent').innerHTML = `
       <div class="`+infoflex+`">
       <div class="size1">
-      <h2>About Me</h2>
       <br>
       <p>
       My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
@@ -614,7 +613,7 @@ function changeImage(step) {
 
       <div class="size2">
       <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-      <img src="imgMid/bioPic.jpeg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:435px; min-width:291px; max-height:435px; max-width:291px; margin-left: -5vw; margin-top:4vh">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:441px; min-width:435px; max-height:441px; max-width:435px; margin-left: -5vw; margin-top:4vh">
       </div>
       <div class="iconsRow">
       <!-- <p>ornament here</p> -->
