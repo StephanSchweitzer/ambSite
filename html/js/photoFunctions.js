@@ -130,7 +130,7 @@ document.getElementById('popUpImage').addEventListener('touchmove', function(e) 
         let currentY = e.touches[0].clientY;
 
         // Calculate the distance moved
-        let deltaX = Math.round(currentX - startX)
+        let deltaX = Math.round((currentX - startX)*.3);
         let deltaY = currentY - startY;
 
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -143,11 +143,12 @@ document.getElementById('popUpImage').addEventListener('touchmove', function(e) 
 }, false);
 
 document.getElementById('popUpImage').addEventListener('touchend', function(e) {
+  this.style.transition = 'transform 0.3s ease';
     if (!isPinching && e.changedTouches.length === 1) {
         let endX = e.changedTouches[0].clientX;
         let deltaX = endX - startX;
 
-        if (Math.abs(deltaX) > window.innerWidth * 0.25) {
+        if (Math.abs(deltaX) > window.innerWidth * 0.1) {
             // Threshold for swipe action
             changeImage(deltaX > 0 ? -1 : 1);
         } else {
