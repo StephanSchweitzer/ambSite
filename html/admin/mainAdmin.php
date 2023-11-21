@@ -26,7 +26,7 @@ if ($_SESSION["ambar"] != "connected")
      <br>
      <a href="pictureAdmin.php"><button type="submit" class="btn btn-info">Change Pictures</button></a>
     <a href="manageProjects.php"><button type="submit" class="btn btn-info">Manage Projects</button></a>
-    <a href="aboutAdmin.php"><button type="submit" class="btn btn-info">Manage About</button></a>
+    <a href="aboutMeAdmin.php"><button type="submit" class="btn btn-info">Manage About</button></a>
 
 
 

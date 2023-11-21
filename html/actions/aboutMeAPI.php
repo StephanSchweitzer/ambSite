@@ -1,10 +1,7 @@
 <?php
-// db.php should contain database connection code.
 session_start();
 
 include '../database/pdo.php';
-
-
 
 // Check if it's a POST request
 if ($_SERVER['REQUEST_METHOD'] === 'POST') 
@@ -19,29 +16,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
     // Retrieve the description from the POST data
     $description = isset($_POST['description']) ? $_POST['description'] : '';
 
+    //echo json_encode($description);
+
     // Set the picture location as "unavailable"
     $pictureLocation = "unavailable";
 
-    // Prepare the SQL statement to avoid SQL injection
+    $theArray = array($description, $pictureLocation);
+
+    try {
     $stmt = $conn->prepare("INSERT INTO aboutMe (description, pictureLocation) VALUES (?, ?)");
 
-    // Bind the parameters to the SQL query
-    $stmt->bind_param("ss", $description, $pictureLocation);
-
-    // Execute the query
-    if ($stmt->execute()) {
-        // If successful, send a JSON response
-        echo json_encode(array('status' => 'success'));
-    } else {
-        // If an error occurs, send a JSON error message
-        echo json_encode(array('status' => 'error', 'message' => 'Failed to insert data'));
-    }
-
-    // Close the statement
-    $stmt->close();
-
-    // Close the DB connection
-    $conn->close();
+    $stmt->execute($theArray);
+    echo json_encode(array('status' => 'success', 'data' => $theArray));
+    } catch (PDOException $e) {
+    // Handle the error appropriately
+    http_response_code(500);
+    echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
+  }
+  die;
 }
 
 
@@ -55,15 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 // Fetch the most recent entry
     $mostRecentEntry = $stmt->fetch();
 
-// Close the statement
-    $stmt->close();
-
 // Output the most recent entry as JSON
     header('Content-Type: application/json');
     echo json_encode($mostRecentEntry);
 
-// Close the DB connection
-    $conn->close();
 }
 
 ?>

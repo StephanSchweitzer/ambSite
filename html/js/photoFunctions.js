@@ -183,6 +183,7 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
   loadAndDisplayProjectTitles()
 
 
+
   if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
   {
     $('#popUpImage').removeClass('popUpImage')
@@ -558,8 +559,19 @@ function changeImage(step) {
     $('#bigPicModal').modal('show');
   }
 
-  function openInfo()
+  function fetchCurrentAboutMe() {
+  return $.ajax({
+    url: '../actions/aboutMeAPI.php', // Replace with the correct path to your PHP script
+    type: 'GET',
+    dataType: 'json',
+  });
+}
+
+  async function openInfo()
   {
+   const aboutMe = await fetchCurrentAboutMe();
+   let description = aboutMe.description.replace(/\n/g, "<br>");;
+    
     let infoflex = 'infoflex';
     if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
     {
@@ -567,23 +579,15 @@ function changeImage(step) {
 
       document.getElementById('imagesAndContent').innerHTML = `
 
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:600px;">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:550px;">
 
       <br>
       <br>
       <div class="iconsRow" style="width:100%">
-      <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
-      <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
-      <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
-      </div>
-      <p>
-      My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
-      </p>
-      <p>
-      I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
-      </p>
-      <p>
-      I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
+           </div>
+      <br>
+      <p style="font-size: 2em;">
+      `+description+`
       </p>
       <br>
 
@@ -595,20 +599,11 @@ function changeImage(step) {
     {
       document.getElementById('imagesAndContent').innerHTML = `
       <div class="`+infoflex+`">
-      <div class="size1">
+      <div class="size1" id="aboutMeInfo">
       <br>
       <p>
-      My name is Ambar Velasco. I am a Mexican-American artist. I was born and raised in Los Angeles, California and I'm currently in my final year of plastic art studies at Paris 1 Panthéon-Sorbonne in Paris, France. I mostly work with acrylic paint and graphite. I also enjoy photography, film, and collaging with fresh leaves.
+      `+description+`
       </p>
-      <p>
-      I have always used painting and drawing as a site of reflection. Throughout the creation process, I discover and rediscover parts of myself. The force and whimsy of personal evolution is very intriguing to me. It involves confronting our inner worlds, recognising the desires and needs that live there. I also look outward, at my surroundings, for signs of evolution-in the people, their clothes, the buildings, the trees. It is the experience of balancing and questioning these inner and outer worlds to create one identity that I am attempting to express.
-      </p>
-      <p>
-      I hope to connect with others and to bring a moment of delight and inspire reflection to those who view my works.
-      </p>
-      <br>
-
-      <br><br>
       </div>
 
       <div class="size2">
@@ -619,10 +614,7 @@ function changeImage(step) {
       <!-- <p>ornament here</p> -->
       </div>
       <div class="iconsRow" style="padding-right:30px;">
-      <a href="https://www.instagram.com/ambar_velasc0/" target="_blank"><img src="img/instaIcon.png"  class = "iconImages" target="_blank"> </a>
-      <!-- <a href="contact.html"><img src="img/emailIcon.png" style="height:20px; width:30px; margin-right : 1.5vw;"></a> -->
-      <a href="https://www.etsy.com/shop/ARTBYAMBAR?ref=seller-platform-mcnav"><img src="img/shopIconShine.png" style="height:60px; width:60px;" target="_blank"></a>
-      </div>
+            </div>
 
       </div>
 
