@@ -296,6 +296,8 @@ function sleep(ms) {
 
 function getProjectsAndWorks(partOfThePage)
 {
+  $('#imagesAndContent').css('padding-top', '50px');
+
   if (selectWorksAreShown)
   {
     return;
@@ -601,6 +603,7 @@ function changeImage(step) {
 
   async function openInfo()
   {
+    $('#imagesAndContent').css('padding-top', '50px');
    const aboutMe = await fetchCurrentAboutMe();
    let description = aboutMe.description.replace(/\n/g, "<br>");;
     

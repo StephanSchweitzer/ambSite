@@ -15,6 +15,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
   <link rel="icon" type="image/x-icon" href="imgMid/transpLeafStack.ico">
   <script src="js/photoFunctions.js"></script>
+  <script src="js/shopFunctions.js"></script>
   <link rel="stylesheet" href="ambar.css">
 
 </head>
@@ -31,7 +32,9 @@ header('Content-Type: text/html; charset=UTF-8');
 
 <div id="sideBySide">
   <div id="navLinksBox" class="navLinksBox">
-    <a href="https://www.etsy.com/fr/shop/ARTBYAMBAR" target="_blank" class="mainLinkGenres" onclick="selectWorksAreShown = false;">Shop</a>
+    
+    <!-- <a href="https://www.etsy.com/fr/shop/ARTBYAMBAR" target="_blank" class="mainLinkGenres" onclick="selectWorksAreShown = false;">Shop</a> -->
+    <a href="#" class="mainLinkGenres" onclick="selectWorksAreShown = false; loadShop()">Shop</a>
     <br>
     <br>
 

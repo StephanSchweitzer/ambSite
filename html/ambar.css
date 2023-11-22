@@ -27,6 +27,30 @@
     margin: 20px 0; /* Add some margin around the list */
 }
 
+.shopItem {
+    display: flex;
+    flex-direction: column; /* Stack the content vertically */
+    justify-content: space-between; /* Space the content evenly */
+    flex: 1 1 auto; /* Flex grow, shrink, and basis */
+    min-width: 200px; /* Minimum width of each item - adjust as needed */
+    max-width: 300px; /* Maximum width of each item - adjust as needed */
+}
+
+.shopItem img {
+    width: 100%; /* Make image responsive */
+    height: auto; /* Maintain aspect ratio */
+    object-fit: cover; /* Cover the area without stretching the image */
+}
+
+.shopItem .item-details {
+    display: flex;
+    flex-direction: column; /* Stack the details vertically */
+}
+
+.shopItem .buy-button {
+    margin-top: auto; /* Pushes the button to the bottom */
+}
+
 /*.lightbox {
     display: none;
     position: fixed;
@@ -276,6 +300,7 @@ a:hover{color:inherit}
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
+  gap: 40px;
 }
 
 /* .imagesAndContent:last-child {
@@ -301,6 +326,14 @@ a:hover{color:inherit}
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
+}
+
+.shop-top-space {
+  display: block;
+  height: 20px;
+  border-top: 1px solid transparent;
+  margin-top: 50px; /* Adjust the value as needed */
+  padding-top: 20px;
 }
 
 .theDatePic
