@@ -287,6 +287,7 @@ function getWorksInformation(genre)
       console.log('Error:', error);
     }
   });
+
 }
 
 function sleep(ms) {
@@ -371,15 +372,46 @@ function makeProjectCards(projects, partOfThePage) {
         let card = createWorkCardElement(information);
         mainProj.append(card);
       });
-      mainProj.append('<hr class="work-separator" />');
+      mainProj.append('<hr class="work-separator" id="seperator'+project.title+'"/>');
       $('#imagesAndContent').append(mainProj);
     });
     jumpToSection(partOfThePage);
+      openFlowerVideo();
+
   }).catch(error => {
     console.error('Error:', error);
   });
 
 }
+
+
+  function openFlowerVideo()
+  {
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
+    {
+      let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
+      let videoLink = 
+      `
+      <br><br>
+      <iframe width="600" height="300" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      `;
+
+      flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
+
+    }
+    else
+    {
+      let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
+      let videoLink = 
+      `
+      <br>
+      <iframe width="750" height="375" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      `;
+      flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
+
+    }
+  }
+
 
 function createProjectElement(project) {
   let title = project.title;
@@ -619,24 +651,6 @@ function changeImage(step) {
       </div>
 
       </div>
-      `;
-    }
-  }
-
-  function openFlowerVideo()
-  {
-    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-    {
-      document.getElementById('imagesAndContent').innerHTML = `
-      <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      `;
-    }
-    else
-    {
-      document.getElementById('imagesAndContent').innerHTML = `
-      <br><br><br>
-      <br>
-      <iframe width="1000" height="500" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       `;
     }
   }
