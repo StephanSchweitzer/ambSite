@@ -29,16 +29,19 @@ if ($_SESSION["ambar"] != "connected")
     <a href="aboutMeAdmin.php"><button type="submit" class="btn btn-info">Manage About</button></a>
     <a href="shopAdmin.php"><button type="submit" class="btn btn-info">Manage Shop</button></a>
 
-    <form action="../signIn/logout.php" method="post">
-    <button type="submit">Logout</button>
-</form>
+<br>
+
+
 
 
      <br><br>
    </div>
 
-
-
+<div class="container" style="background-color:white;">
+    <form action="../signIn/logout.php" method="post">
+    <button type="submit">Logout</button>
+</form>
+</div>
 
      <br><br>
    </div>

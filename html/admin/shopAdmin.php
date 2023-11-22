@@ -16,7 +16,7 @@ if ($_SESSION["ambar"] != "connected")
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <!-- <link rel="stylesheet" href="../ambar.css"> -->
 
-   <script src="../js/shopFunctions.js"></script>
+   <script src="../js/shopAdminFunctions.js"></script>
 
 
 
@@ -39,7 +39,7 @@ if ($_SESSION["ambar"] != "connected")
       overflow-y: auto; /* Scrollbar for overflow content */
       margin: 20px 0; /* Margin around the list */
     }
-    
+
   </style>
  </head>
  <body>
@@ -57,8 +57,9 @@ if ($_SESSION["ambar"] != "connected")
 
        <div class="container" style="background-color:white;">
      <br>
-    <button type="button" class="btn btn-secondary" onclick="getProducts('active')">See all items for sale</button>
-     <button type="button" class="btn btn-secondary" onclick="getProducts('inactive')">See all items not for sale</button>
+    <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('active')">See all items for sale</button>
+     <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('inactive')">See all items not for sale</button>
+     <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('invisible')">See all deleted items</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Create Shop Item</button>
      <br><br>
 
@@ -84,8 +85,8 @@ if ($_SESSION["ambar"] != "connected")
          <div class="modal-body">
            <form>
              <div class="form-group">
-               <label for="productTitle">Name</label>
-               <input type="text" class="form-control" id="titlePostName" >
+               <label for="productName">Name</label>
+               <input type="text" class="form-control" id="productName" >
              </div>
 
              <div class="form-group">
@@ -114,7 +115,7 @@ if ($_SESSION["ambar"] != "connected")
          </div>
          <div class="modal-footer">
            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-           <button id="uploadWorkButton" type="button" class="btn btn-primary" onclick="createProduct()">Upload Item</button>
+           <button id="uploadProductButton" type="button" class="btn btn-primary" onclick="createProduct()">Upload Item</button>
          </div>
        </div>
      </div>
@@ -191,7 +192,6 @@ if ($_SESSION["ambar"] != "connected")
   <!-- Then put toasts within -->
   <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
-      <img src="..." class="rounded mr-2" alt="...">
       <strong class="mr-auto">Bootstrap</strong>
       <small>11 mins ago</small>
       <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
@@ -209,7 +209,7 @@ if ($_SESSION["ambar"] != "connected")
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script type="text/javascript">
 document.addEventListener("DOMContentLoaded", function() {
-  loadShop('active');
+  loadAndInsertProducts('active');
 });
 </script>
 

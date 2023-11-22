@@ -2,13 +2,33 @@
 
 session_start();
 
+error_reporting(E_ALL);
+
+// Display errors on the page
+ini_set('display_errors', 1);
+
 include '../database/pdo.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
-  $query = "SELECT id, name, order, available, buttonCode
-            FROM    projects WHERE available = 1
-            ORDER BY order DESC";
+
+  $activity = $_GET['activity'];
+
+  $statusCondition = "WHERE available = 1 AND visible = 1 ";
+
+  if ($activity == "inactive")
+  {
+    $statusCondition = "WHERE available = 0 AND visible = 1 ";
+  }
+
+  if ($activity == "invisible")
+  {
+    $statusCondition = "WHERE visible = 0 ";
+  }
+
+  $query = "SELECT id, name, productOrder, available, buttonCode, visible
+            FROM    shopItems $statusCondition
+            ORDER BY productOrder DESC";
 
   $projectQuery = $conn->prepare($query);
   $projectQuery->execute();
@@ -21,9 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
     $singleEntry = array(
       'id' => $result[$i][0],
       'name' => $result[$i][1],
-      'order' => $result[$i][2],
+      'productOrder' => $result[$i][2],
       'available' => $result[$i][3],
-      'buttonCode' => $result[$i][4]
+      'buttonCode' => $result[$i][4],
+      'visible' => $result[$i][5]
     );
 
     array_push($data, $singleEntry);
@@ -44,14 +65,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   }
 
   $name = $_POST["name"];
-  $order = $_POST["order"];
+  $productOrder = $_POST["productOrder"];
   $available = $_POST["available"];
   $buttonCode = $_POST["buttonCode"];
+  $visible = $_POST["visible"];
 
-  $query = "INSERT INTO shopItems; (name, order, available, buttonCode)
-          VALUES (?, ?, ?, ?)";
+  $query = "INSERT INTO shopItems (name, productOrder, available, buttonCode, visible)
+          VALUES (?, ?, ?, ?, ?)";
 
-  $theArray = array($name, $order, $available, $buttonCode);
+
+
+  $theArray = array($name, $productOrder, $available, $buttonCode, $visible);
+
+  // echo json_encode(array('query' => $query, 'data' => $theArray));
+  //   die;
 
   try {
     $uploadQuery = $conn->prepare($query);
@@ -81,16 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 
   $id = $_PATCH['id'];
   $name = $_PATCH['name'];
-  $order = $_PATCH['order'];
+  $productOrder = $_PATCH['productOrder'];
   $available = $_PATCH['available'];
-  $active = $_PATCH['active'];
   $buttonCode = $_PATCH['buttonCode'];
+  $visible = $_PATCH["visible"];
 
+  $theQuery = "UPDATE shopItems SET name = ?, productOrder = ?, available = ?, buttonCode = ?, visible = ? WHERE id = ?";
 
-
-  $theQuery = "UPDATE shopItems SET name = ?, order = ?, active = ?, available = ?, buttonCode = ? WHERE id = ?";
-
-  $theArray = array($name, $order, $active, $available, $buttonCode, $id);
+  $theArray = array($name, $productOrder, $available, $buttonCode, $visible, $id);
   
   // echo json_encode($theArray);
   // die;
@@ -124,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 
   $id = $_DELETE['id'];
 
-  $theQuery = "UPDATE shopItems SET active = 0 WHERE id = ?";
+  $theQuery = "UPDATE shopItems SET visible = 0 WHERE id = ?";
   //echo $theQuery;
 
   $theArray = array($id);
