@@ -28,7 +28,9 @@ if ($_SESSION["ambar"] != "connected")
     <a href="manageProjects.php"><button type="submit" class="btn btn-info">Manage Projects</button></a>
     <a href="aboutMeAdmin.php"><button type="submit" class="btn btn-info">Manage About</button></a>
 
-
+    <form action="../signIn/logout.php" method="post">
+    <button type="submit">Logout</button>
+</form>
 
 
      <br><br>
