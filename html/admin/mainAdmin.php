@@ -2,7 +2,7 @@
 session_start();
 if ($_SESSION["ambar"] != "connected")
 {
-  header("Location: signIn/signIn.php?status=needCredentials");
+  header("Location: ../signIn/signIn.php?status=needCredentials");
   die;
 }
 
@@ -27,6 +27,7 @@ if ($_SESSION["ambar"] != "connected")
      <a href="pictureAdmin.php"><button type="submit" class="btn btn-info">Change Pictures</button></a>
     <a href="manageProjects.php"><button type="submit" class="btn btn-info">Manage Projects</button></a>
     <a href="aboutMeAdmin.php"><button type="submit" class="btn btn-info">Manage About</button></a>
+    <a href="shopAdmin.php"><button type="submit" class="btn btn-info">Manage Shop</button></a>
 
     <form action="../signIn/logout.php" method="post">
     <button type="submit">Logout</button>
