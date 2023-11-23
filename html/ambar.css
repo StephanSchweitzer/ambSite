@@ -34,6 +34,7 @@
     flex: 1 1 auto; /* Flex grow, shrink, and basis */
     min-width: 200px; /* Minimum width of each item - adjust as needed */
     max-width: 300px; /* Maximum width of each item - adjust as needed */
+    margin-bottom: 4vh;
 }
 
 .shopItem img {
@@ -151,6 +152,10 @@ a:hover{color:inherit}
   cursor: pointer;
 }
 
+.card p {
+  font-size: .85em !important;
+}
+
 /* .card:hover {
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 } */
@@ -261,7 +266,8 @@ a:hover{color:inherit}
 
 .homePageCarouselMobile
 {
-    margin-top: 7vh;
+    margin-top: 9vh;
+    padding-right: 2vw;
 /*  margin-left: 35vw;
     height: 70vh;
     width: 100%;*/
@@ -345,7 +351,7 @@ a:hover{color:inherit}
 
 .imagesAndContentMobile
 {
-  width: 60vw;
+  width: 63vw;
   /* height: 100vh; */
   /* background-color: pink; */
   margin-top: 8vh;
@@ -924,6 +930,7 @@ body
 
 .shopify-buy-button {
     padding: 12px 18px; /* Larger tap area */
+/*    margin-bottom: 2vh;*/
     font-size: 16px; /* Larger text */
 }
 
@@ -1058,7 +1065,8 @@ body
   width: 75vw;
   /* margin-top: 8vh; */
   height: 70vh;
-  padding-left: 5vw;
+  margin-left: 2vw;
+  margin-right: 3vw;
 }
 
 .CVflex
