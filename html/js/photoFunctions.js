@@ -179,8 +179,21 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     $('#whiteForTheTop').addClass('headerNoMove3')
   })
 
-  getCarousel();
-  loadAndDisplayProjectTitles()
+
+    var path = window.location.pathname;
+
+    if (path === '/shop') {
+        loadShop(); // Function to load the shop
+    } else if (path === '/select-works') {
+        getProjectsAndWorks(); // Function to load select works
+    } else if (path === '/about') {
+        openInfo(); // Function to load about
+    }
+    else 
+    {
+      getCarousel();
+      loadAndDisplayProjectTitles();
+    }
 
 
 
@@ -312,6 +325,7 @@ function getProjectsAndWorks(partOfThePage)
     dataType: "json",
     success: function(data) {
       makeProjectCards(data, partOfThePage);
+
     },
     error: function() {
       console.log("An error occurred.");
@@ -381,7 +395,8 @@ function makeProjectCards(projects, partOfThePage) {
     });
     jumpToSection(partOfThePage);
       openFlowerVideo();
-
+              history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
+  document.title = 'Select Works - Ambar Velasco';
   }).catch(error => {
     console.error('Error:', error);
   });
@@ -655,4 +670,6 @@ function changeImage(step) {
       </div>
       `;
     }
+       history.pushState({ page: 'about' }, 'About - Ambar Velasco', '/about');
+    document.title = 'About - Ambar Velasco'; // Optionally, update the document title
   }

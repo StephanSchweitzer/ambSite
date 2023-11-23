@@ -8,14 +8,14 @@ header('Content-Type: text/html; charset=UTF-8');
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Cache-Control" content="no-cache">
-  <title>Portfolio</title>
-  <meta name="description" content="Artistic Portfolio of Ambar Velasco">
+  <title>Ambar Velasco Portfolio</title>
+  <meta name="description" content="Artistic Portfolio of Ambar Velasco, professional website and shop">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
   <link rel="icon" type="image/x-icon" href="imgMid/transpLeafStack.ico">
-  <script src="js/photoFunctions.js"></script>
-  <script src="js/shopFunctions.js"></script>
+  <script src="js/photoFunctions.js" defer></script>
+  <script src="js/shopFunctions.js" defer></script>
   <link rel="stylesheet" href="ambar.css">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 

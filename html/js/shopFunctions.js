@@ -22,6 +22,9 @@ function loadShop()
             // Create the shopItem and append to the imagesAndContent container
 				$('#imagesAndContent').append(createShopItem(item));
 			});
+			
+			history.pushState({page: 'shop'}, 'Shop', '/shop');
+  			document.title = 'Shop - Ambar Velasco';
 		},
 		error: function() {
 			console.log("An error occurred.");

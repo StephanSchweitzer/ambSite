@@ -1,6 +1,5 @@
-Redirect permanent / https://yourdomain.com
-
 RewriteEngine On
+
 RewriteCond %{HTTP_HOST} ^www.ambarvelasco.com$
 RewriteRule ^(.*)$ http://ambarvelasco.com/$1 [R=301]
 
@@ -8,3 +7,8 @@ RewriteCond %{HTTP_HOST} ^www.ambarvelasco.com$
 RewriteCond %{SERVER_PORT} ^443
 RewriteRule ^(.*)$ https://ambarvelasco.com/$1 [R=301]
 
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
