@@ -201,6 +201,8 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     $('#homePageCarousel').addClass('homePageCarouselMobile')
     $('#selectProjectCategories').removeClass('hiddenLinkStuff')
     $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
+    $('#ambName').removeClass('ambarNamePic')
+    $('#ambName').addClass('ambarNamePicMobile')
 
     const allLinks = document.querySelectorAll('a');
 
@@ -395,7 +397,7 @@ function makeProjectCards(projects, partOfThePage) {
       let videoLink = 
       `
       <br><br>
-      <iframe width="600" height="300" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      <iframe width="100%" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       `;
 
       flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
@@ -613,20 +615,17 @@ function changeImage(step) {
       infoflex = 'infoflexMobile';
 
       document.getElementById('imagesAndContent').innerHTML = `
+      <div class="`+infoflex+`">
 
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:550px;">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:100%;">
 
-      <br>
-      <br>
       <div class="iconsRow" style="width:100%">
            </div>
-      <br>
-      <p style="font-size: 2em;">
+      <p style="">
       `+description+`
       </p>
       <br>
-
-      <br><br>
+      </div>
       `;
 
     }

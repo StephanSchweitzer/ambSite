@@ -8,6 +8,7 @@ function loadShop()
 		dataType: "json",
 		success: function(data) {
 			$('#imagesAndContent').empty();
+			$('#imagesAndContent').css('padding-top', '50px');
 			//$('#imagesAndContent').css('padding-top', '7vh');
 			$('<div>', {
 				class: 'shop-top-space',
