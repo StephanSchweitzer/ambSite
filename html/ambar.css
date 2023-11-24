@@ -259,8 +259,9 @@ a:hover{color:inherit}
 .homePageCarousel
 {
   padding-top: 13vh;
-  height: 70vh;
-  width: 70vh;
+/*  height: 70vh;
+  width: 70vh;*/
+  margin-left: -10vw;
 }
 
 /*.homePageCarouselMobile
