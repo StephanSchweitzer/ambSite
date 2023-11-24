@@ -332,23 +332,54 @@ function getThenPopulateWorks()
   });
 }
 
-function populateWorksList(works) {
+// function populateWorksList(works) {
 
-	console.log(works);
+// 	console.log(works);
+
+//     const worksList = document.getElementById('worksList');
+//     worksList.innerHTML = ''; // Clear existing list
+
+//     works.forEach(work => {
+//         const listItem = document.createElement('li');
+//         listItem.textContent = work.name; // or work.title
+
+//         // Optional: Add a checkbox or another way to select works
+//         const checkbox = document.createElement('input');
+//         checkbox.type = 'checkbox';
+//         checkbox.setAttribute('data-work-id', work.id);
+//         listItem.prepend(checkbox);
+
+//         worksList.appendChild(listItem);
+//     });
+// }
+
+function populateWorksList(works) {
+    console.log(works);
 
     const worksList = document.getElementById('worksList');
     worksList.innerHTML = ''; // Clear existing list
 
     works.forEach(work => {
         const listItem = document.createElement('li');
-        listItem.textContent = work.name; // or work.title
 
-        // Optional: Add a checkbox or another way to select works
+        // Create a checkbox
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.setAttribute('data-work-id', work.id);
-        listItem.prepend(checkbox);
 
+        // Create an image element for the thumbnail
+        const thumbnail = document.createElement('img');
+        thumbnail.src = '../baseImages/'+work.location; // Set the source to the file location
+        thumbnail.alt = work.name; // Alt text for accessibility
+        thumbnail.style.maxWidth = '50px'; // Set a max width for the thumbnail
+        thumbnail.style.marginRight = '10px'; // Add some margin to the right of the thumbnail
+
+        // Append elements to the list item
+        listItem.appendChild(checkbox);
+        listItem.appendChild(thumbnail);
+        listItem.appendChild(document.createTextNode(work.name));
+
+        // Append the list item to the list
         worksList.appendChild(listItem);
     });
 }
