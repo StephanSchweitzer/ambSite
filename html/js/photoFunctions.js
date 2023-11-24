@@ -106,6 +106,14 @@ $( document ).ready(function() {
       }
     });
 
+  document.addEventListener('keydown', function(event) {
+    if (event.keyCode === 37) { // Left arrow key
+        changeImage(-1); // Go to the previous image
+    } else if (event.keyCode === 39) { // Right arrow key
+        changeImage(1); // Go to the next image
+    }
+});
+
 
 document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
   isPinching = false;
@@ -192,8 +200,10 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     else 
     {
       getCarousel();
-      loadAndDisplayProjectTitles();
+      
     }
+
+    loadAndDisplayProjectTitles();
 
 
 
@@ -632,7 +642,7 @@ function changeImage(step) {
       document.getElementById('imagesAndContent').innerHTML = `
       <div class="`+infoflex+`">
 
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:100%;">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
 
       <div class="iconsRow" style="width:100%">
            </div>

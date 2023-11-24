@@ -142,13 +142,18 @@ a:hover{color:inherit}
 .hiddenLinkStuffMobile
 {
 /*    margin-left: 25px;*/
-    font-size: 1em;
+  width: 75%;
+    font-size: .8em;
     display: none;
     font-family: 'NunitoBold', Arial, sans-serif;
 }
 
 .card {
-  margin: 25px;
+  margin-top: 25px;
+  margin-right: 2px;
+  margin-left: 2px;
+  margin-bottom: 25px;
+
   cursor: pointer;
 }
 
@@ -183,7 +188,7 @@ a:hover{color:inherit}
 
   margin-top: 200px;
   margin-left: 5vw;
-  width: 30vw;
+  width: 20vw;
   font-family: 'Nunito', Arial, sans-serif;
 }
 
@@ -321,11 +326,11 @@ a:hover{color:inherit}
 
 .imagesAndContent
 {
-  width: 65vw;
+  width: 75vw;
   /* height: 100vh; */
   /* background-color: pink; */
-  padding-top: 50px;
-  margin-left: 33vw;
+  padding: 5vw;
+  margin-left: 25vw;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -356,6 +361,7 @@ a:hover{color:inherit}
   /* background-color: pink; */
   margin-top: 8vh;
   margin-left: 35vw;
+  margin-right: 2vw;
 
   display: flex;
   flex-direction: row;
@@ -513,9 +519,8 @@ a:hover{color:inherit}
 
 .ambarNamePic
 {
-  margin-top: 17px;
-  height:133px;
-  width:400px;
+  margin-top: 2vh;
+  width:100%;
   margin-left: -12px;
 }
 
@@ -609,15 +614,16 @@ body
 
 .blockForHeader
 {
-  height: 132px;
-  width: 400px;
+/*  height: 132px;*/
+  max-width: 25vw;
   margin-left: 4.5vw;
+
   padding: 0px;
   /* background-color: white; */
   display: flex;
   align-items: center;
   flex-direction: row;
-}
+}       
 
 .blockForHeaderMobile
 {
