@@ -50,7 +50,7 @@ if ($_SESSION["ambar"] != "connected")
      <button type="button" class="btn btn-dark" onclick="getAllWorks('invisible')">See Deleted Works</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Post Work</button>
      <br><br>
-
+     <select id="projectsDropdown"></select>
    </div>
 
    <div class="container" style="background-color:white;">

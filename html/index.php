@@ -27,7 +27,7 @@ header('Content-Type: text/html; charset=UTF-8');
   </div>
   <div class="headerNoMove" id="modifyZIndex">
     <div id="blockForHeader" class="blockForHeader">
-      <a href="index.php"><img src="imgMid/colorAmbar.png" id="ambName" fetchpriority="high" class="ambarNamePic" alt="Ambar Velasco Logo"></img></a>
+      <a href="index.php"><img src="imgMid/colorAmbarNew.png" id="ambName" fetchpriority="high" class="ambarNamePic" alt="Ambar Velasco Logo"></img></a>
     </div>
   </div>
 

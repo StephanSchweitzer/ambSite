@@ -1,5 +1,12 @@
 var pageNumber = 0;
 
+
+$( document ).ready(function() {
+loadAndDisplayProjectTitles()
+
+});
+
+
 function getAllWorks(theYear)
 {
   pageNumber = theYear;
@@ -18,6 +25,113 @@ function getAllWorks(theYear)
     error: function() {
       console.log("An error occurred.");
     },
+  });
+}
+
+function loadAndDisplayProjectTitles() {
+    $.ajax({
+        url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
+        type: 'GET',
+        dataType: 'json',
+        success: function(projects) {
+            let dropdown = $('#projectsDropdown');
+            dropdown.empty(); // Clear existing content
+
+            // Add a default option
+            dropdown.append($('<option>').text('Select a Project').attr('disabled', true).attr('selected', true));
+
+            projects.forEach(function(project) {
+                let title = project.title; // Assuming each project has a 'title' property
+                let option = $('<option>').text(title).val(title);
+                dropdown.append(option); // Append option to the dropdown
+            });
+
+            // Event listener for when a new project is selected
+            dropdown.change(function() {
+                let selectedTitle = $(this).val(); // Get the selected project title
+                if (selectedTitle) {
+                    getProjectWorks(selectedTitle); // Call function to get project works
+                }
+            });
+        },
+        error: function() {
+            console.log('Error loading project titles.');
+        }
+    });
+}
+
+function getProjectWorks(project)
+{
+  pageNumber = 'active';
+  whichProject = {
+    project: project
+  }
+  $.ajax({
+    url: "../actions/getWorksForPictureAdminBS.php",
+    type: "GET",
+    data: whichProject,
+    dataType: "json",
+    success: function(data) {
+      console.log(data);
+      makeProjectCards(data);
+    },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+}
+
+function makeProjectCards(projects) {
+  $('#existingPhotoInformation').empty();
+  console.log(projects);
+
+  let projectPromises = projects.map(project => {
+    return fetchWorkIdsForProject(project.id).then(workIds => {
+      return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
+                return { project, allWorksForProject }; // Return project info with its works
+              });
+    });
+  });
+
+  Promise.all(projectPromises).then(results => {
+    results.forEach(({ project, allWorksForProject }) => {
+      let mainProj = insertData(allWorksForProject);
+      //$('#existingPhotoInformation').append(mainProj);
+    });
+  }).catch(error => {
+    console.error('Error:', error);
+  });
+
+}
+
+function fetchWorkIdsForProject(id) {
+
+  return $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'GET',
+    data: { 'projectId': id },
+    dataType: 'json'
+  });
+}
+
+function getWorkFromId(id) {
+
+  return $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'GET',
+    data: { 'projectId': id },
+    dataType: 'json'
+  });
+}
+
+function getWorksInfoFromIdsArray(projectIds) 
+{
+  return $.ajax({
+    url: '../actions/getWorksByIdArray.php',
+    method: 'GET',
+    data: {'projectIds' : projectIds},
+    dataType: 'json',
+
   });
 }
 
@@ -83,7 +197,7 @@ function insertData(data)
 
 function openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork) {
 
-  console.log(isSelectWork);
+  console.log(visible);
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete post</button>';
 
   if (visible == 0)
@@ -351,10 +465,11 @@ function restoreWork()
   {
     var formData = {
       id: $('#photoId').val(),
+      restore : 'restore'
     };
     $.ajax({
       url: '../actions/picturesAPI.php',
-      type: 'PUT',
+      type: 'PATCH',
       data: formData,
       success: function(response) {
         getAllWorks('invisible')

@@ -361,6 +361,7 @@ function populateWorksList(works) {
 
     works.forEach(work => {
         const listItem = document.createElement('li');
+        listItem.style.paddingBottom = '10px';
 
         // Create a checkbox
         const checkbox = document.createElement('input');

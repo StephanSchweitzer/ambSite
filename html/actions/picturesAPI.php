@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                     desc2, desc3, medium,
                     color, isAvailable, year,
                     orderOfDisplay, carousel,
-                    isSelectWork
+                    isSelectWork, visible
             FROM    allWorks $yearCondition
             ORDER BY orderOfDisplay DESC";
 
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                       workId, fileLocation, name,
                       desc2, desc3, medium,
                       color, isAvailable, year,
-                      orderOfDisplay, isSelectWork
+                      orderOfDisplay, isSelectWork, visible
               FROM    allWorks
               WHERE carousel = 1
               ORDER BY orderOfDisplay DESC";
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                       workId, fileLocation, name,
                       desc2, desc3, medium,
                       color, isAvailable, year,
-                      orderOfDisplay, isSelectWork
+                      orderOfDisplay, isSelectWork, visible
               FROM    allWorks
               WHERE isSelectWork = 1
               ORDER BY name ASC";
@@ -175,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
       'creationYear' => $result[$i][8],
       'orderOfDisplay' => $result[$i][9],
       'carousel' => $result[$i][10],
-      'isSelectWork' => $result[$i][11]
+      'isSelectWork' => $result[$i][11],
+      'visible' => $result[$i][12]
     );
 
     array_push($data, $singleEntry);
@@ -271,6 +272,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $carousel = $_PATCH['carousel'];
   $selectWork = $_PATCH['selectWork'];
 
+  $restoreTest = $_PATCH['restore'];
+
+  if ($restoreTest == "restore")
+  {
+    $theQuery = "UPDATE allWorks SET visible = 1 WHERE workID = ?";
+    $theArray = array($id);
+    $updateQuery = $conn->prepare($theQuery);
+
+    if ($updateQuery->execute($theArray)) {
+        echo "Work restored successfully!";
+    } else {
+        echo "Error: ";
+    }
+    die;
+  }
+
   $theQuery = "UPDATE allWorks SET name = ?, desc2 = ?, desc3 = ?, medium = ?, color = ?, isAvailable = ?, year = ?, orderOfDisplay = ?, carousel = ?, isSelectWork = ? WHERE workID = ?";
 
   $theArray = array($name, $firstDescription, $secondDescription, $medium, $isColor, $availability, $creationYear, $orderOfDisplay, $carousel, $selectWork, $id,);
@@ -294,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
       $updateQuery = $conn->prepare($theQuery);
 
   if ($updateQuery->execute($theArray)) {
-      echo "Data updated successfully!";
+      echo "Deleted from projects!";
   } else {
       echo "Error: ";
   }
