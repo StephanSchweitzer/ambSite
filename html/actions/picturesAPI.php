@@ -286,19 +286,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
       echo "Error: ";
   }
 
-  if (selectWork == 0)
+  if ($selectWork == 0)
   {
     $theQuery = "DELETE FROM worksInProjects WHERE workId = ?";
     $theArray = array($id);
-  }
 
-  $updateQuery = $conn->prepare($theQuery);
+      $updateQuery = $conn->prepare($theQuery);
 
   if ($updateQuery->execute($theArray)) {
       echo "Data updated successfully!";
   } else {
       echo "Error: ";
   }
+
+  }
+
+
 
   die;
 }
