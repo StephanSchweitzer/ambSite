@@ -654,6 +654,26 @@ function changeImage(step) {
       `;
 
     }
+    else if (window.matchMedia('(max-width: 1450px)').matches) {
+      infoflex = 'infoflexMobile';
+
+      document.getElementById('imagesAndContent').innerHTML = `
+      <div class="`+infoflex+`">
+
+      <div class="size2">
+      <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-height:55vh; margin-top:7vh">
+      </div>
+      </div>
+      <div class="iconsRow" style="width:100%">
+           </div>
+      <p style="">
+      `+description+`
+      </p>
+      <br>
+      </div>
+      `;
+    }
     else
     {
       document.getElementById('imagesAndContent').innerHTML = `
@@ -667,7 +687,7 @@ function changeImage(step) {
 
       <div class="size2">
       <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; min-height:441px; min-width:435px; max-height:441px; max-width:435px; margin-left: -5vw; margin-top:4vh">
+      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-width:28vw; margin-left: -5vw; margin-top:4vh">
       </div>
       <div class="iconsRow">
       <!-- <p>ornament here</p> -->
