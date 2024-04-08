@@ -473,7 +473,7 @@ function createProjectElement(project) {
     'color': '#71797E', // Dark grey color
     'margin-bottom': '40px' // Margin bottom
   });
-  titleAndDescriptionDiv.append(insertTitle, insertDescription);
+  //titleAndDescriptionDiv.append(insertTitle, insertDescription);
   let projectDiv = $('<div>').addClass('project').attr({
     'alt': title,
     'id': 'projectSection'+title.trim()
