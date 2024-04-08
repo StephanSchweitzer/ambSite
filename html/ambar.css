@@ -13,8 +13,14 @@
 }
 
 .img-container {
-  max-width: 20vw;
   margin:auto;
+  /* max-height: 600px; */
+}
+
+.img-containerForRows {
+  
+  margin:auto;
+  max-width: 20vw;
   /* max-height: 600px; */
 }
 
@@ -27,6 +33,10 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.projectWorksMobile{
+  display: flex;
 }
 
 #worksList {

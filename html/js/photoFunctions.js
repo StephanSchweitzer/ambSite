@@ -3,27 +3,7 @@ let currentImageIndex = 0; // Global variable to track the current image index
 let images = []; // Global array to store image URLs
 let startX, startY, initialTouchDistance, currentX;
 let isPinching = false;
-
-function createAndShowSideBarLinks()
-{
-  $.ajax({
-    url: 'actions/sidebarAPI.php',
-    method: 'GET',
-    data: genre,
-    dataType: 'json',
-    success: function(response) {
-      orderSideBar(response);
-    },
-    error: function(xhr, status, error) {
-      console.log('Error:', error);
-    }
-  });
-}
-
-function orderSideBar(sideBarInformation)
-{
-
-}
+var mobileColumnOrDesktopRows = 'img-containerForRows';
 
 $( window ).on( "load", function() {
 
@@ -247,6 +227,8 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
     $('#ambName').removeClass('ambarNamePic')
     $('#ambName').addClass('ambarNamePicMobile')
+    mobileColumnOrDesktopRows = ''
+
 
     const allLinks = document.querySelectorAll('a');
 
@@ -269,27 +251,48 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
 
 function loadAndDisplayProjectTitles() {
   $.ajax({
-        url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
-        type: 'GET',
-        dataType: 'json',
-        success: function(projects) {
-          let container = $('#selectProjectCategories');
-            container.empty(); // Clear existing content
-            container.append('<br>')
-            projects.forEach(function(project) {
-                let title = project.title; // Assuming each project has a 'title' property
-                let link = $('<a>')
-                .attr('href', '#projectSection'+project.title.trim())
-                .text(title);
-                link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));        
-                container.append(link, '<br><br>'); // Append link and a line break for spacing
-              });
-            //container.append('<br>')
-          },
-          error: function() {
-            console.log('Error loading project titles.');
-          }
-        });
+    url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
+    type: 'GET',
+    dataType: 'json',
+    success: function(projects) {
+      let container = $('#selectProjectCategories');
+        container.empty(); // Clear existing content
+        container.append('<br>')
+        projects.forEach(function(project) {
+            let title = project.title; // Assuming each project has a 'title' property
+            let link = $('<a>')
+            .attr('href', '#projectSection'+project.title.trim())
+            .text(title);
+            link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));        
+            container.append(link, '<br><br>'); // Append link and a line break for spacing
+          });
+        //container.append('<br>')
+      },
+      error: function() {
+        console.log('Error loading project titles.');
+      }
+    });
+}
+
+function createAndShowSideBarLinks()
+{
+  return;
+  // $.ajax({
+  //   url: 'actions/sidebarAPI.php',
+  //   method: 'GET',
+  //   dataType: 'json',
+  //   success: function(response) {
+  //     orderSideBar(response);
+  //   },
+  //   error: function(xhr, status, error) {
+  //     console.log('Error:', error);
+  //   }
+  // });
+}
+
+function orderSideBar(sideBarInformation)
+{
+
 }
 
 function accessPictureForm(divName)
@@ -403,7 +406,6 @@ function getWorkFromId(id) {
 
 function makeProjectCards(projects, partOfThePage) {
   $('#imagesAndContent').empty();
-  //console.log(projects);
   images.length = 0;
 
   let projectPromises = projects.map(project => {
@@ -425,13 +427,13 @@ function makeProjectCards(projects, partOfThePage) {
       $('#imagesAndContent').append(mainProj);
     });
     jumpToSection(partOfThePage);
-      openFlowerVideo();
+      //below is where the code to initialize the little window for the youtube video
+      //openFlowerVideo();
               history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
   document.title = 'Select Works - Ambar Velasco';
   }).catch(error => {
     console.error('Error:', error);
   });
-
 }
 
 
@@ -464,7 +466,8 @@ function makeProjectCards(projects, partOfThePage) {
 
 
 function createProjectElement(project) {
-  let worksOfProjectDiv = $('<div>').addClass('projectWorks')
+  console.log(mobileColumnOrDesktopRows)
+  let worksOfProjectDiv = $('<div>').addClass('projectWorks');
   let titleAndDescriptionDiv = $('<div>')
   let title = project.title;
   let description = project.description.replace(/\n/g, '<br>');
@@ -473,6 +476,7 @@ function createProjectElement(project) {
     'color': '#71797E', // Dark grey color
     'margin-bottom': '40px' // Margin bottom
   });
+  //decomment below if you want to redisplay the title and description of projects
   //titleAndDescriptionDiv.append(insertTitle, insertDescription);
   let projectDiv = $('<div>').addClass('project').attr({
     'alt': title,
@@ -488,7 +492,7 @@ function createWorkCardElement(information) {
   let description = information.firstDescription.replace(/\n/g, '<br>');
   let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
   let insertDescription = $('<p>').html(description);
-  let imageContainer = $('<div>').addClass('img-container').append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
+  let imageContainer = $('<div>').addClass('img-container ' + mobileColumnOrDesktopRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
   let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
   card.click(() => makeBigPic(imageURL));
   images.push(imageURL);
