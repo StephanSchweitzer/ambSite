@@ -53,7 +53,7 @@ if ($_SESSION["ambar"] != "connected")
   <h2>New About Me</h2>
   <textarea class="form-control" aria-label="With textarea" id="aboutMeText"></textarea>
   <br>
-  <button id="uploadWorkButton" type="button" class="btn btn-primary" onclick="postNewAboutMe()">Update</button>
+  <button id="uploadWorkButton" type="button" class="btn btn-primary" onclick="postNewAboutMe()">Upload Work</button>
 
 </div>
 

@@ -4,6 +4,27 @@ let images = []; // Global array to store image URLs
 let startX, startY, initialTouchDistance, currentX;
 let isPinching = false;
 
+function createAndShowSideBarLinks()
+{
+  $.ajax({
+    url: 'actions/sidebarAPI.php',
+    method: 'GET',
+    data: genre,
+    dataType: 'json',
+    success: function(response) {
+      orderSideBar(response);
+    },
+    error: function(xhr, status, error) {
+      console.log('Error:', error);
+    }
+  });
+}
+
+function orderSideBar(sideBarInformation)
+{
+
+}
+
 $( window ).on( "load", function() {
 
   //this fixes the width of all thumbnails
@@ -87,7 +108,7 @@ $( window ).on( "load", function() {
     });
   }, 500);
 
-
+  createAndShowSideBarLinks();
 
 })
 
@@ -258,7 +279,7 @@ function loadAndDisplayProjectTitles() {
             projects.forEach(function(project) {
                 let title = project.title; // Assuming each project has a 'title' property
                 let link = $('<a>')
-                .attr('href', '#projectSection'+project.title)
+                .attr('href', '#projectSection'+project.title.trim())
                 .text(title);
                 link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));        
                 container.append(link, '<br><br>'); // Append link and a line break for spacing
@@ -382,7 +403,7 @@ function getWorkFromId(id) {
 
 function makeProjectCards(projects, partOfThePage) {
   $('#imagesAndContent').empty();
-  console.log(projects);
+  //console.log(projects);
   images.length = 0;
 
   let projectPromises = projects.map(project => {
@@ -398,7 +419,7 @@ function makeProjectCards(projects, partOfThePage) {
       let mainProj = createProjectElement(project);
       allWorksForProject.forEach(information => {
         let card = createWorkCardElement(information);
-        mainProj.append(card);
+        mainProj.find('.projectWorks').first().append(card);
       });
       mainProj.append('<hr class="work-separator" id="seperator'+project.title+'"/>');
       $('#imagesAndContent').append(mainProj);
@@ -443,17 +464,22 @@ function makeProjectCards(projects, partOfThePage) {
 
 
 function createProjectElement(project) {
+  let worksOfProjectDiv = $('<div>').addClass('projectWorks')
+  let titleAndDescriptionDiv = $('<div>')
   let title = project.title;
   let description = project.description.replace(/\n/g, '<br>');
   let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
   let insertDescription = $('<p>').html(description).css({
     'color': '#71797E', // Dark grey color
     'margin-bottom': '40px' // Margin bottom
-  });  
-  return $('<div>').addClass('project').attr({
+  });
+  titleAndDescriptionDiv.append(insertTitle, insertDescription);
+  let projectDiv = $('<div>').addClass('project').attr({
     'alt': title,
     'id': 'projectSection'+title.trim()
-  }).css({'border': '0px', 'text-align': 'center'}).append(insertTitle, insertDescription);
+  }).css({'border': '0px', 'text-align': 'center'});
+  projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
+  return projectDiv;
 }
 
 function createWorkCardElement(information) {

@@ -13,9 +13,20 @@
 }
 
 .img-container {
-  max-width: 900px;
+  max-width: 300px;
   margin:auto;
   /* max-height: 600px; */
+}
+
+.project {
+  min-width: 51vw;
+}
+
+.projectWorks {
+  min-width: 51vw;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 #worksList {
@@ -110,7 +121,8 @@
 
 
 .img-container img {
-  max-width: 100%; /* Make the image fill the container width */*/
+
+  max-width: 100%; /* Make the image fill the container width */
   height: auto; /* Allow the height to adjust based on the image aspect ratio */
   max-height: 65vh;
   margin: auto;
@@ -280,22 +292,10 @@ a:hover{color:inherit}
     width: 100%;*/
 }
 
-
-
-#insertImagesHere
-{
-  /* max-height: 70vh;
-  max-width: 70vh;
-  width:
-  margin: auto;
-  padding: auto; */
-}
-
 .insertImagesHere
 {
   max-height: 70vh;
   max-width: 70vh;
-  width:
   margin: auto;
   padding: auto;
 }
@@ -306,7 +306,6 @@ a:hover{color:inherit}
 {
   max-height: 70vh;
   max-width: 70vh;
-  width:
   margin: auto;
   padding: auto;
 }
