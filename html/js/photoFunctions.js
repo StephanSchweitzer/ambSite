@@ -3,7 +3,8 @@ let currentImageIndex = 0; // Global variable to track the current image index
 let images = []; // Global array to store image URLs
 let startX, startY, initialTouchDistance, currentX;
 let isPinching = false;
-var mobileColumnOrDesktopRows = 'img-containerForRows';
+var imageIsRows = 'img-containerForRows';
+var projectIsRows = 'projectWorksForRows';
 
 $( window ).on( "load", function() {
 
@@ -227,7 +228,8 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
     $('#ambName').removeClass('ambarNamePic')
     $('#ambName').addClass('ambarNamePicMobile')
-    mobileColumnOrDesktopRows = ''
+    imageIsRows = ''
+    projectIsRows = ''
 
 
     const allLinks = document.querySelectorAll('a');
@@ -423,8 +425,12 @@ function makeProjectCards(projects, partOfThePage) {
         let card = createWorkCardElement(information);
         mainProj.find('.projectWorks').first().append(card);
       });
-      mainProj.append('<hr class="work-separator" id="seperator'+project.title+'"/>');
+      if (projects[projects.length - 1].title != project.title)
+      {
+        mainProj.append('<div class="work-separator" id="seperator'+project.title+'"> 𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢</div>');
+      }
       $('#imagesAndContent').append(mainProj);
+      console.log(projects, project.title)
     });
     jumpToSection(partOfThePage);
       //below is where the code to initialize the little window for the youtube video
@@ -466,8 +472,7 @@ function makeProjectCards(projects, partOfThePage) {
 
 
 function createProjectElement(project) {
-  console.log(mobileColumnOrDesktopRows)
-  let worksOfProjectDiv = $('<div>').addClass('projectWorks');
+  let worksOfProjectDiv = $('<div>').addClass('projectWorks ' + projectIsRows);
   let titleAndDescriptionDiv = $('<div>')
   let title = project.title;
   let description = project.description.replace(/\n/g, '<br>');
@@ -490,12 +495,21 @@ function createWorkCardElement(information) {
   let imageURL = "baseImages/" + information.location;
   let title = information.name;
   let description = information.firstDescription.replace(/\n/g, '<br>');
-  let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-  let insertDescription = $('<p>').html(description);
-  let imageContainer = $('<div>').addClass('img-container ' + mobileColumnOrDesktopRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title));
+
+  let imageInfo = {
+    url: imageURL,
+    title: title,
+    description: description
+  };
+  //decomment below for name and description to show below the painting
+  // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
+  // let insertDescription = $('<p>').html(description);
+  let insertTitle = '';
+  let insertDescription = '';
+  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
   let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
   card.click(() => makeBigPic(imageURL));
-  images.push(imageURL);
+  images.push(imageInfo);
   return card;
 }
 
@@ -614,8 +628,11 @@ function insertWorks(informations) {
 
 function makeBigPic(clickedImageUrl)
 {
-  currentImageIndex = images.indexOf(clickedImageUrl);
-  document.getElementById('popUpImage').src = images[currentImageIndex];
+  let currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
+  let currentImage = images[currentImageIndex];
+  document.getElementById('popUpImage').src = currentImage.url;
+  document.getElementById('imageTitle').textContent = currentImage.title;
+  document.getElementById('imageDescription').innerHTML = currentImage.description;
   $('#bigPicModal').modal('show');
 }
 

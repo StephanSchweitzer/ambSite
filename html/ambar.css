@@ -18,9 +18,11 @@
 }
 
 .img-containerForRows {
-  
-  margin:auto;
-  max-width: 20vw;
+  width: 100%; /* Images fill the column width */
+  height: auto; /* Maintain aspect ratio */
+  display: block; /* Remove default inline spacing */
+  break-inside: avoid; /* Prevents images from splitting across columns */
+  padding: 10px; /* Adjust based on desired spacing between images */
   /* max-height: 600px; */
 }
 
@@ -28,15 +30,16 @@
   min-width: 51vw;
 }
 
-.projectWorks {
-  min-width: 51vw;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+.projectWorksForRows {
+  /* min-width: 51vw; */
+  column-count: 3; /* Adjust the number of columns */
+  column-gap: 0; /* Adjust the gap between columns if needed */
+  margin-top: 50px;
+  margin-left: 33px;
 }
 
-.projectWorksMobile{
-  display: flex;
+.projectWorks{
+  min-width: 51vw;
 }
 
 #worksList {
@@ -140,10 +143,15 @@
 
 .work-separator {
   border: none;
-  height: 1px;
-  background-color: #000;
-  margin-top: 60px;
-  margin-bottom: 60px;
+  margin-top: 80px;
+  margin-bottom: 30px;
+  content: '𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢'; /* Your emoji */
+  font-size: 16px;
+
+
+}
+.work-separator.last {
+  visibility: hidden; /* Hides the content */
 }
 
 a {
@@ -171,7 +179,6 @@ a:hover{color:inherit}
 }
 
 .card {
-  margin-top: 25px;
   margin-right: 2px;
   margin-left: 2px;
   margin-bottom: 25px;
