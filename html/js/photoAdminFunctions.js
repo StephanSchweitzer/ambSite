@@ -370,10 +370,11 @@ document.getElementById('uploadWorkButton').disabled = true;
       getAllWorks(pageNumber);
       $('#photoPostModal').modal('hide');
       document.getElementById('uploadWorkButton').disabled = false;
-      const successToast = new bootstrap.Toast(document.getElementById('successToast'));
-      successToast.show();
+      showToast('Your work has been successfully posted!', 'success');
+
     },
     error: function(xhr, status, error) {
+      showToast('There has been a problem, tell bubbers', 'error');
       console.error('Error:', error);
       document.getElementById('uploadWorkButton').disabled = false;
     }
