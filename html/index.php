@@ -67,7 +67,7 @@ header('Content-Type: text/html; charset=UTF-8');
           <div class="centerLargePhoto">
             <img id="popUpImage" class="popUpImage" alt="largeImage">
           </div>
-          <div id="imageInfo">
+          <div id="imageInfo" class="imageInfo">
       <h2 id="imageTitle">fs</h2>
       <p id="imageDescription">test</p>
     </div>

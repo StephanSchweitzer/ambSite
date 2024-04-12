@@ -633,7 +633,13 @@ function makeBigPic(clickedImageUrl)
   document.getElementById('popUpImage').src = currentImage.url;
   document.getElementById('imageTitle').textContent = currentImage.title;
   document.getElementById('imageDescription').innerHTML = currentImage.description;
+
+  // const imageContainer = document.querySelector('.imageInfo');
+  // if (imageContainer) {
+  //     imageContainer.style.width = `${document.getElementById('popUpImage').clientWidth}px`;
+  // }
   $('#bigPicModal').modal('show');
+
 }
 
 

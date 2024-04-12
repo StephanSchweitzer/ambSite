@@ -740,6 +740,32 @@ body
   opacity: 1;
 }
 
+.imageInfo {
+  background-color: #d3d3d3; /* Nice grey background */
+  color: black; /* Ensures the text is black */
+  text-align: center; /* Centers the text horizontally */
+  padding: 20px; /* Provides padding around the content */
+  width: 100%; /* Ensures the div takes full width of its container */
+  box-sizing: border-box; /* Ensures padding is included in width */
+}
+
+.imageInfo h2, .imageInfo p {
+  margin: 0 0 10px; /* Removes default margins, adds a small bottom margin */
+  padding: 0; /* Removes any default padding */
+}
+
+.imageInfo h2 {
+  font-size: 1.8em; /* Slightly larger font for the title */
+  font-weight: bold; /* Makes the title bold */
+}
+
+.imageInfo p {
+  font-size: 1em; /* Standard size for description text */
+  opacity: 0.85; /* Slightly reduces opacity for a softer look */
+  line-height: 1.5; /* Improves readability by spacing lines out a bit more */
+}
+
+
 .deadCenter
 {
   position: absolute;
@@ -752,10 +778,64 @@ body
   width: 400px;
 }
 
-.centerLargePhoto:hover
-{
-
+#myToastContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px; /* space between toasts */
 }
+
+.myToast {
+  color: #fff; /* White text for contrast */
+  background-color: #f2f2f2; /* Soft light grey background */
+  border: 1px solid #ddd; /* Light grey border for a subtle outline */
+  border-left: 5px solid #00b894; /* Bright color accent to distinguish type */
+  padding: 12px 20px;
+  border-radius: 8px; /* Rounded edges */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+  width: 300px; /* Fixed width */
+  transition: transform 0.3s ease, opacity 0.3s ease; /* Smooth transitions for appearance */
+  transform: translateX(100%);
+  opacity: 0;
+  background-color: #ffffff; /* Change to a white background for a cleaner look */
+}
+
+#myToastContainer .myToast {
+  color: #fff; 
+  background-color: #f2f2f2;
+  border: 1px solid #ddd;
+  border-left: 5px solid #00b894;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  width: 300px;
+  transition: transform 0.3s, opacity 0.3s;
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* .myToast.show {
+  transform: translateX(0);
+  opacity: 1;
+} */
+
+/* Animation for the toast fading out */
+@keyframes fadeOut {
+  to {
+      transform: translateX(100%);
+      opacity: 0;
+  }
+}
+.modal {
+  z-index: 1040;  /* This should be lower than the toastContainer's z-index */
+}
+
+/* Animation to fade in and then out */
+@keyframes fadeinout {
+0%, 100% { opacity: 0; }
+10%, 90% { opacity: 1; }
+}
+
 
 .holdPhotoandBlack
 {

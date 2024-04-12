@@ -16,6 +16,7 @@ if ($_SESSION["ambar"] != "connected")
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
    <script src="../js/photoAdminFunctions.js"></script>
+   <!-- <link rel="stylesheet" href="../ambar.css"> -->
 
 
 
@@ -325,11 +326,9 @@ if ($_SESSION["ambar"] != "connected")
      </div>
    </div>
 
-   <div id="errorToast" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
-  <div class="toast-body">
-    <strong>Error:</strong> There was a problem processing your request.
+   <div id="myToastContainer" style="position: fixed; top: 100px; right: 100px; z-index: 1050;"></div>
   </div>
-</div>
+
 
 <!-- Modal -->
 
