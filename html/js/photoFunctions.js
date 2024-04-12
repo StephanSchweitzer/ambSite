@@ -553,13 +553,22 @@ function createCarousel(informations)
   active = 'active';
 
   informations.forEach(function(information){
-    let imageURL = "baseImages/"+information.location;
+    let imageURL = "baseImages/" + information.location;
+    let title = information.name;
+    let description = information.firstDescription.replace(/\n/g, '<br>');
+  
+    let imageInfo = {
+      url: imageURL,
+      title: title,
+      description: description
+    };
+
     let thisImage = `<div id="`+information.name+`" class="carousel-item `+active+` " >
     <img class="d-block carousel-pic" src="`+imageURL+`" onclick="makeBigPic('`+imageURL+`')">
     </div>`;
     carouselHtml += thisImage;
     active = '';
-    images.push(imageURL);
+    images.push(imageInfo);
   });
 
   carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
