@@ -644,23 +644,29 @@ function makeBigPic(clickedImageUrl)
 
 
 
-function changeImage(step) {
+function changeImage(step)
+{
   currentImageIndex += step;
-  if (currentImageIndex >= images.length) {
+  if (currentImageIndex >= images.length) 
+  {
     currentImageIndex = 0;
   } else if (currentImageIndex < 0) {
     currentImageIndex = images.length - 1;
   }
   const imgElement = document.getElementById('popUpImage');
-    imgElement.style.transform = ''; // Reset transform for new image
-    imgElement.src = images[currentImageIndex];
-  }
+  imgElement.style.transform = ''; // Reset transform for new image
+  imgElement.src = images[currentImageIndex].url;
 
-  function getDistanceBetweenTouches(touches) {
+  document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
+  document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
+}
+
+  function getDistanceBetweenTouches(touches) 
+  {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
-  }
+}
 
 
 
