@@ -731,6 +731,11 @@ body
     border-style: none !important;
 }
 
+.modal-backdrop.show {
+  opacity: .75;
+}
+
+
 
 .centerLargePhoto
 {
