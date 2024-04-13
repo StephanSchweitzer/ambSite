@@ -46,7 +46,7 @@ if ($_SESSION["ambar"] != "connected")
  <div class="admin-container" style="background-color:white;">
    <div class="container">
      <br>
-     <h1 class="display-1 text-primary" style="text-align:center;">Project admin page</h1>
+     <h1 class="display-1" style="text-align:center; color: white;">Project admin page</h1>
      <br>
      <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
 

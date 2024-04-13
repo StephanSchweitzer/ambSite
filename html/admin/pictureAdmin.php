@@ -37,7 +37,7 @@ if ($_SESSION["ambar"] != "connected")
    <div class="admin-container" style="background-color:white;">
      <br>
      <div class="container">
-     <h1 class="display-1 text-primary" style="text-align:center;">Picture admin page</h1>
+     <h1 class="display-1" style="text-align:center; color:white">Picture admin page</h1>
      <br>
      <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
 
