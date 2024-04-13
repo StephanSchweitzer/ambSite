@@ -16,7 +16,7 @@ body {
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* This remains the same as it was */
   padding: 2rem;
   margin: auto;
-  max-width: 1200px;
+  max-width: 90vw;
 }
 .admin-header {
     font-size: 2.5rem;

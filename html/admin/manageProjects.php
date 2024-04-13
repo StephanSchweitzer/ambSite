@@ -184,15 +184,8 @@ if ($_SESSION["ambar"] != "connected")
  </div>
 </div>
 
-<div id="errorToast" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
-  <div class="toast-body">
-    <strong>Error:</strong> There was a problem processing your request.
-  </div>
-</div>
+   <div id="myToastContainer" style="position: fixed; top: 100px; right: 100px; z-index: 1050;"></div>
 
-<div id="successToast" class="toast" role="alert" aria-live="polite" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
-  <div class="toast-body">Works added to the project</div>
-</div>
 
 <!-- Modal -->
 

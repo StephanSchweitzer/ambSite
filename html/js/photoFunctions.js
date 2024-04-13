@@ -27,6 +27,16 @@ $( window ).on( "load", function() {
   //   $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
   // }
 
+  $(document).ready(function() {
+    $('#bigPicModal').on('click', function(event) {
+        // Check if the clicked element is not the title, description, or image
+        if (!$(event.target).closest('#imageTitle, #imageDescription, #popUpImage').length) {
+            // If the clicked area is not the title, description, or image, close the modal
+            $('#bigPicModal').modal('hide');
+        }
+    });
+});
+
   $('.size12020').each(function(index, element) {
     let theWidth = this.width;
     $(this).closest('.holdForNow').css("min-width",(theWidth-1)+"px");

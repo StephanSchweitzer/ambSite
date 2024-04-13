@@ -17,6 +17,14 @@
   /* max-height: 600px; */
 }
 
+#imageTitle, #imageDescription, #popUpImage {
+    cursor: pointer;  /* Indicates clickable items */
+}
+
+.centerLargePhoto, .imageInfo {
+    cursor: auto;  /* Indicates non-clickable area, optional based on your design */
+}
+
 .img-containerForRows {
   width: 100%; /* Images fill the column width */
   height: auto; /* Maintain aspect ratio */

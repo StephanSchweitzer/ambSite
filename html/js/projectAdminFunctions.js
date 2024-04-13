@@ -1,29 +1,38 @@
 var pageNumber = 'active';
-
+var allProjects = [];
 $( document ).ready(function() {
-getThenPopulateWorks();
-
+    getProjects(pageNumber)
 });
 
-function getProjects(activity)
-{
-	pageNumber = activity;
-  yearData = {
-    activity: activity
-  }
-  $.ajax({
-    url: "../actions/projectsAPI.php",
-    type: "GET",
-    data: yearData,
-    dataType: "json",
-    success: function(data) {
-      console.log(data);
-      insertData(data);
-    },
-    error: function() {
-      console.log("An error occurred.");
-    },
-  });
+function getProjects(activity) {
+    pageNumber = activity;
+    yearData = { activity: activity };
+
+    $.ajax({
+        url: "../actions/projectsAPI.php",
+        type: "GET",
+        data: yearData,
+        dataType: "json",
+        success: function(data) {
+            allProjects = data.map(project => ({
+                ...project,
+                works: []  // Initialize an empty array to hold work IDs
+            }));
+
+            document.querySelectorAll('.project-info').forEach(el => el.remove());
+
+            allProjects.forEach(project => {
+                fetchWorkIdsForProject(project.id).then(workIds => {
+                    project.works = workIds;  // Store work IDs in the project object
+                });
+            });
+            insertData(data);  // You might want to call this after all IDs are fetched if necessary
+            getThenPopulateWorks();
+        },
+        error: function() {
+            console.log("An error occurred.");
+        },
+    });
 }
 
 function insertData(data)
@@ -144,13 +153,14 @@ function createProject() {
     processData: false,
     contentType: false,
     success: function(response) {
-      console.log('Data saved successfully!');
+        showToast('Project successfully created!', 'success');
       getProjects(pageNumber);
       $('#projectPostModal').modal('hide');
       document.getElementById('uploadWorkButton').disabled = false;
     },
     error: function(xhr, status, error) {
       console.error('Error:', error);
+      showToast('Project not created, error', 'error');
       document.getElementById('uploadWorkButton').disabled = false;
     }
   });
@@ -184,9 +194,9 @@ console.log(formData);
     type: 'PATCH',
     data: formData,
     success: function(response) {
-
+        showToast('Project successfully updated!', 'success');
       getProjects(pageNumber);
-
+      addWorksToProject()
       console.log('Data updated successfully!');
       console.log(formData);
       $('#projectUpdateModal').modal('hide');
@@ -195,7 +205,7 @@ console.log(formData);
     },
     error: function(xhr, status, error) {
       // Handle the error response
-      $('#errorToast').toast('show');
+      showToast('There was an error', 'error');
       console.error('Error:', error);
       // You can perform error handling here
     }
@@ -214,10 +224,11 @@ function deleteWork()
       data: formData,
       success: function(response) {
         getProjects('everything')
+          showToast('Project successfully deleted!', 'success');
         $('#projectUpdateModal').modal('hide');
       },
       error: function(xhr, status, error) {
-        $('#errorToast').toast('show');
+        showToast('There was a problem', 'error');
         console.error('Error:', error);
       }
     });
@@ -250,10 +261,11 @@ function restoreWork()
       data: formData,
       success: function(response) {
         getProjects('invisible')
+        showToast('Project successfully restored!', 'success');
         $('#projectUpdateModal').modal('hide');
       },
       error: function(xhr, status, error) {
-        $('#errorToast').toast('show');
+        showToast('Error, contact Stef', 'error');
         console.error('Error:', error);
       }
     });
@@ -332,84 +344,33 @@ function getThenPopulateWorks()
   });
 }
 
-// function populateWorksList(works) {
 
-// 	console.log(works);
 
-//     const worksList = document.getElementById('worksList');
-//     worksList.innerHTML = ''; // Clear existing list
-
-//     works.forEach(work => {
-//         const listItem = document.createElement('li');
-//         listItem.textContent = work.name; // or work.title
-
-//         // Optional: Add a checkbox or another way to select works
-//         const checkbox = document.createElement('input');
-//         checkbox.type = 'checkbox';
-//         checkbox.setAttribute('data-work-id', work.id);
-//         listItem.prepend(checkbox);
-
-//         worksList.appendChild(listItem);
-//     });
-// }
-
-function populateWorksList(works) {
-    console.log(works);
-
-    const worksList = document.getElementById('worksList');
-    worksList.innerHTML = ''; // Clear existing list
-
-    works.forEach(work => {
-        const listItem = document.createElement('li');
-        listItem.style.paddingBottom = '10px';
-        listItem.style.cursor = 'pointer';  // Makes the cursor a pointer when hovering over the list items
-
-        // Create a checkbox
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.setAttribute('data-work-id', work.id);
-        checkbox.style.transform = "scale(1.5)";  // Make the checkbox larger
-        checkbox.style.marginRight = "20px";  // Space between checkbox and image
-
-        // Create an image element for the thumbnail
-        const thumbnail = document.createElement('img');
-        thumbnail.src = '../baseImages/'+work.location;  // Image source
-        thumbnail.alt = work.name;  // Alt text for accessibility
-        thumbnail.style.maxWidth = '50px';  // Max width for the thumbnail
-        thumbnail.style.marginRight = "20px";  // Space between image and text
-
-        // Text node for work's name
-        const textNode = document.createTextNode(work.name);
-        const textSpan = document.createElement('span');  // Span to hold the text
-        textSpan.appendChild(textNode);
-        textSpan.style.marginLeft = "10px";  // Margin for text
-
-        // Append elements to the list item
-        listItem.appendChild(checkbox);
-        listItem.appendChild(thumbnail);
-        listItem.appendChild(textSpan);
-
-        // Event listener to toggle checkbox when any part of the list item is clicked
-        listItem.addEventListener('click', function(event) {
-            // Toggle the checkbox unless the click came directly from the checkbox
-            if (event.target !== checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
-        });
-
-        // Append the list item to the list
-        worksList.appendChild(listItem);
-    });
-}
 
 
 function addWorksToProject() {
-        const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
-        const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id'));
-        //console.log(workIds);
-        projectId = document.getElementById('projectId').value;
-        
-        postWorksProjectsDB(projectId, workIds);
+    const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
+    const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id')).sort();
+    const projectId = document.getElementById('projectId').value;
+
+    // Fetch existing work IDs for this project from allProjects array (assuming it's available globally)
+    const currentProject = allProjects.find(project => project.id === projectId);
+    if (!currentProject) {
+        console.error('Current project not found');
+        return;
+    }
+
+    // Compare existing work IDs with newly selected work IDs
+    const existingWorkIds = currentProject.works.sort();
+
+    // Using JSON.stringify for simple array comparison; consider a more robust method for larger data sets or critical use cases
+    if (JSON.stringify(existingWorkIds) === JSON.stringify(workIds)) {
+        console.log('No changes in project works; not updating the database.');
+        return; // Stop further execution if no changes
+    }
+
+    // Continue with database update if there are changes
+    postWorksProjectsDB(projectId, workIds);
 }
 
 function postWorksProjectsDB(projectId, workIds)
@@ -422,13 +383,59 @@ $.ajax({
     data: {'projectId': projectId, 'workIds': workIds},
     dataType: "json",
     success: function(data) {
-        $('#successToast').toast('show');
+        showToast('Works successfully added to project', 'success');
+        getProjects(pageNumber);
     },
     error: function(jqXHR, textStatus, errorThrown) {
         console.log("An error occurred: " + textStatus + ", " + errorThrown);
+        showToast('There has been a problem, tell bubbers', 'error');
     }
 });
 
+}
+
+function showToast(message, type = 'info') {
+  const toastContainer = document.getElementById('myToastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'myToast'; // Base class
+  toast.textContent = message;
+
+  // Apply styles directly
+  toast.style.color = '#fff';
+  toast.style.backgroundColor = '#25252f';
+  toast.style.border = '1px solid #ddd';
+  toast.style.borderLeft = '15px solid #00b894';
+  toast.style.padding = '12px 20px';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+  toast.style.width = '300px';
+  toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+  toast.style.transform = 'translateX(100%)';
+  toast.style.opacity = '0';
+
+  // Setting background color based on the type of message
+  switch (type) {
+      case 'success':
+          toast.style.borderLeftColor = '#2ecc71'; // Green for success
+          break;
+      case 'error':
+          toast.style.borderLeftColor = '#e74c3c'; // Red for error
+          break;
+      default:
+          toast.style.borderLeftColor = '#3498db'; // Blue for general info
+  }
+
+  // Append the toast to the container
+  toastContainer.appendChild(toast);
+  setTimeout(() => {
+      toast.style.transform = 'translateX(0)';
+      toast.style.opacity = '1';
+  }, 100); // Delay to allow CSS transition
+
+  // Automatically remove the toast
+  setTimeout(() => {
+      toastContainer.removeChild(toast);
+  }, 5000); // Display for 4 seconds
 }
 
 function fetchWorkIdsForProject(id) {
@@ -442,21 +449,97 @@ function fetchWorkIdsForProject(id) {
 }
 
 
-function checkWorkCheckboxes(id) {
-    fetchWorkIdsForProject(id).done(function(workIds) {
-    	
-        // First, uncheck all checkboxes
-        $('input[type="checkbox"][data-work-id]').prop('checked', false);
+function checkWorkCheckboxes(currentProjectId) {
+    // Retrieve the current project from the allProjects array
+    var currentProject = allProjects.find(project => project.id === currentProjectId);
 
-        // Now, check the checkboxes corresponding to the fetched workIds
-        workIds.forEach(function(workId) {
-            $('input[type="checkbox"][data-work-id="' + workId + '"]').prop('checked', true);
-        });
-    }).fail(function() {
-        console.error('Error fetching work IDs for project');
+    if (!currentProject) {
+        console.error('Current project not found');
+        return; // Exit if the current project is not found
+    }
+
+    // Get the work IDs from the current project
+    const workIds = currentProject.works || [];
+
+    // First, uncheck all checkboxes
+    $('input[type="checkbox"][data-work-id]').prop('checked', false);
+
+    // Check the checkboxes corresponding to the fetched workIds
+    workIds.forEach(function(workId) {
+        $('input[type="checkbox"][data-work-id="' + workId + '"]').prop('checked', true);
+        // Get the list item that contains this checkbox
+        var listItem = $('input[type="checkbox"][data-work-id="' + workId + '"]').closest('li');
+        appendProjectInfo(workId, listItem[0], currentProjectId);  // Pass the current project ID to exclude it
     });
 }
 
+function appendProjectInfo(workId, listItem, excludeProjectId = null) {
+    // Remove any existing 'used in' info to avoid duplication
+    const existingInfo = listItem.querySelector('.project-info');
+    if (existingInfo) {
+        listItem.removeChild(existingInfo);
+    }
+    // Optionally exclude one project from the "Also in" list
+    const projects = allProjects.filter(p => p.works.includes(workId) && p.id !== excludeProjectId);
+    if (projects.length > 0) {
+
+        const projectNames = projects.map(p => p.title).join(", ");
+        const projectInfo = document.createElement('small');
+        projectInfo.classList.add('project-info');  // Add class for easy selection/removal
+        projectInfo.textContent = "In " + projectNames;
+        projectInfo.style.marginLeft = '10px';
+        listItem.appendChild(projectInfo);
+    }
+}
+
+
+function populateWorksList(works) {
+    const worksList = document.getElementById('worksList');
+    worksList.innerHTML = '';
+    works.forEach(work => {
+        const listItem = createListItem(work);
+        worksList.appendChild(listItem);
+        appendProjectInfo(work.id, listItem);
+    });
+}
+
+function createListItem(work)
+{
+    const listItem = document.createElement('li');
+    listItem.style.paddingBottom = '10px';
+    listItem.style.cursor = 'pointer';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.setAttribute('data-work-id', work.id);
+    checkbox.style.transform = "scale(1.5)";
+    checkbox.style.marginRight = "20px";
+
+    const thumbnail = document.createElement('img');
+    thumbnail.src = '../baseImages/'+work.location;
+    thumbnail.alt = work.name;
+    thumbnail.style.maxWidth = '50px';
+    thumbnail.style.marginRight = "20px";
+
+    const textNode = document.createTextNode(work.name);
+    const textSpan = document.createElement('span');
+    textSpan.appendChild(textNode);
+    textSpan.style.marginLeft = "10px";
+
+    listItem.appendChild(checkbox);
+    listItem.appendChild(thumbnail);
+    listItem.appendChild(textSpan);
+
+    // Use local data to check project association
+
+    listItem.addEventListener('click', function(event) {
+        if (event.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+        }
+    });
+
+    return listItem;
+}
 
 
 

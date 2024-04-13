@@ -1,5 +1,6 @@
 <?php
 
+global $conn;
 session_start();
 
 include '../database/pdo.php';
@@ -11,14 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   
   $activityCondition = "WHERE active = 1 ";
 
-  if($activity == 'active')
-  {
-    $activityCondition = "WHERE active = 1 ";
-  }
-
     if($activity == 'inactive')
   {
-    $activityCondition = "WHERE active = 0 ";
+    $activityCondition = "WHERE deleted = 0 and active = 0 ";
   }
 
   if($activity == 'deleted')

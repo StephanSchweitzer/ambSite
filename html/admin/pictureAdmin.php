@@ -324,7 +324,6 @@ if ($_SESSION["ambar"] != "connected")
    </div>
 
    <div id="myToastContainer" style="position: fixed; top: 100px; right: 100px; z-index: 1050;"></div>
-  </div>
 
 
 <!-- Modal -->
