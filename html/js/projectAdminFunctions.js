@@ -362,28 +362,46 @@ function populateWorksList(works) {
     works.forEach(work => {
         const listItem = document.createElement('li');
         listItem.style.paddingBottom = '10px';
+        listItem.style.cursor = 'pointer';  // Makes the cursor a pointer when hovering over the list items
 
         // Create a checkbox
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.setAttribute('data-work-id', work.id);
+        checkbox.style.transform = "scale(1.5)";  // Make the checkbox larger
+        checkbox.style.marginRight = "20px";  // Space between checkbox and image
 
         // Create an image element for the thumbnail
         const thumbnail = document.createElement('img');
-        thumbnail.src = '../baseImages/'+work.location; // Set the source to the file location
-        thumbnail.alt = work.name; // Alt text for accessibility
-        thumbnail.style.maxWidth = '50px'; // Set a max width for the thumbnail
-        thumbnail.style.marginRight = '10px'; // Add some margin to the right of the thumbnail
+        thumbnail.src = '../baseImages/'+work.location;  // Image source
+        thumbnail.alt = work.name;  // Alt text for accessibility
+        thumbnail.style.maxWidth = '50px';  // Max width for the thumbnail
+        thumbnail.style.marginRight = "20px";  // Space between image and text
+
+        // Text node for work's name
+        const textNode = document.createTextNode(work.name);
+        const textSpan = document.createElement('span');  // Span to hold the text
+        textSpan.appendChild(textNode);
+        textSpan.style.marginLeft = "10px";  // Margin for text
 
         // Append elements to the list item
         listItem.appendChild(checkbox);
         listItem.appendChild(thumbnail);
-        listItem.appendChild(document.createTextNode(work.name));
+        listItem.appendChild(textSpan);
+
+        // Event listener to toggle checkbox when any part of the list item is clicked
+        listItem.addEventListener('click', function(event) {
+            // Toggle the checkbox unless the click came directly from the checkbox
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+        });
 
         // Append the list item to the list
         worksList.appendChild(listItem);
     });
 }
+
 
 function addWorksToProject() {
         const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');

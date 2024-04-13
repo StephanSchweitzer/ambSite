@@ -82,7 +82,7 @@ if ($_SESSION["ambar"] != "connected")
        <div class="modal-body">
          <form>
            <div class="form-group">
-             <label for="projectTitle">Title</label>
+             <label for="titlePostName">Title</label>
              <input type="text" class="form-control" id="titlePostName" >
            </div>
 

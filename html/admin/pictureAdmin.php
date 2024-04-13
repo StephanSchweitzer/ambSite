@@ -205,7 +205,7 @@ if ($_SESSION["ambar"] != "connected")
          </div>
          <div class="modal-body">
            <form>
-             <label for="photoUpload" class="required">Photo</label>
+             <label for="photoPostUpload" class="required">Photo</label>
              <div class="input-group">
                <div class="custom-file">
 

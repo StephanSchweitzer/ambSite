@@ -22,7 +22,7 @@ document.getElementById('photoPostUpload').addEventListener('change', function(e
 function getAllWorks(theYear)
 {
   pageNumber = theYear;
-  yearData = {
+  let yearData = {
     theYear: theYear
   }
   $.ajax({
@@ -107,7 +107,7 @@ function makeProjectCards(projects) {
 
   Promise.all(projectPromises).then(results => {
     results.forEach(({ project, allWorksForProject }) => {
-      let mainProj = insertData(allWorksForProject);
+      insertData(allWorksForProject);
       //$('#existingPhotoInformation').append(mainProj);
     });
   }).catch(error => {
@@ -147,6 +147,11 @@ function getWorksInfoFromIdsArray(projectIds)
   });
 }
 
+  function createCardText(label, text) {
+    return $('<p>').addClass('card-text').css('margin-bottom', '.1rem')
+            .html('<strong><em>' + label + ':</em></strong> ' + text);
+  }
+
 function insertData(data)
 {
   let items = data;
@@ -172,16 +177,15 @@ function insertData(data)
     let card = $('<div>').addClass('card shadow-grow mb-4');
     let image = $('<img>').addClass('card-img-top').attr('src', location).attr('alt', name).css('max-width', '300px');
     let cardBody = $('<div>').addClass('card-body');
-    $('<h5>').addClass('card-title').text(name).appendTo(cardBody);
-    //$('<p>').addClass('card-text').text('Location: ' + location).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('ID: ' + id).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Description: ' + firstDescription).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Medium: ' + medium).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Is Color: ' + isColor).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Availability: ' + availability).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Creation Year: ' + creationYear).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('OrderOfDisplay: ' + orderOfDisplay).appendTo(cardBody);
-    $('<p>').addClass('card-text').text('Included in the carousel: ' + carousel).appendTo(cardBody);
+    cardBody.append($('<h5>').addClass('card-title').text(item.name));
+    cardBody.append(createCardText('ID', item.id));
+    cardBody.append(createCardText('Description', item.firstDescription));
+    cardBody.append(createCardText('Medium', item.medium));
+    cardBody.append(createCardText('Is Color', item.isColor));
+    cardBody.append(createCardText('Availability', item.availability));
+    cardBody.append(createCardText('Creation Year', item.creationYear));
+    cardBody.append(createCardText('Order Of Display', item.orderOfDisplay));
+    cardBody.append(createCardText('Included in the carousel', item.carousel));
     card.append(image, cardBody);
 
     // Add padding to the card
