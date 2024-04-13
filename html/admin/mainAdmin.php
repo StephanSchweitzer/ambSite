@@ -26,7 +26,7 @@ if ($_SESSION["ambar"] != "connected")
     <div class="d-grid gap-3">
         <a href="pictureAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Change Pictures</a>
         <a href="manageProjects.php" class="btn btn-outline-primary btn-lg" role="button">Manage Projects</a>
-        <a href="aboutMeAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage About</a>
+        <a href="aboutMeAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage About Section</a>
         <a href="shopAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Shop</a>
     </div>
     <form action="../signIn/logout.php" method="post" class="mt-4">

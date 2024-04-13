@@ -1,13 +1,12 @@
 body {
     background-color: #212529; /* Dark background for the whole page */
-    color: #fff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    height: 100vh;
+/*    height: 100vh;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: center;*/
 }
 
 .admin-container {
@@ -43,6 +42,45 @@ body {
 }
 
 .d-grid {
-    max-width: 400px;
-    margin: auto;
+display: flex;
+justify-content: center;
+}
+
+
+.btn-outline-light {
+  color: #e0e0e0; /* Button text color */
+  border-color: #e0e0e0; /* Button border color */
+  font-weight: bold;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+  background-color: #e0e0e0;
+  color: #1f4037; /* Dark green from the gradient */
+}
+
+.button-group .btn {
+  margin-right: 10px; /* Spacing between buttons */
+}
+
+.custom-select-lg {
+  font-size: 1.25rem;
+  height: auto;
+  padding: 0.5rem 1rem;
+}
+
+.photo-grid {
+  justify-content: start;
+  align-items: stretch;
+}
+
+.card
+{
+  max-width: 20vw;
+}
+
+.d-inline-flex
+{
+  justify-content: center;
 }

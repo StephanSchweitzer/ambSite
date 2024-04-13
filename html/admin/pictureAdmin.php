@@ -14,6 +14,7 @@ if ($_SESSION["ambar"] != "connected")
    <meta charset="utf-8">
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+   <link rel="stylesheet" href="admin.css"> <!-- Link to your custom admin CSS -->
 
    <script src="../js/photoAdminFunctions.js"></script>
    <!-- <link rel="stylesheet" href="../ambar.css"> -->
@@ -34,17 +35,16 @@ if ($_SESSION["ambar"] != "connected")
  <body>
    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script> -->
 
-   <div class="container" style="background-color:white;">
+   <div class="admin-container" style="background-color:white;">
      <br>
+     <div class="container">
      <h1 class="display-1 text-primary" style="text-align:center;">Picture admin page</h1>
      <br>
      <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
 
      <br><br>
-   </div>
 
 
-       <div class="container" style="background-color:white;">
      <br>
     <button type="button" class="btn btn-secondary" onclick="getAllWorks('Select Works')">See all selected works</button>
      <button type="button" class="btn btn-secondary" onclick="getAllWorks(0)">See all unselected works</button>
@@ -52,12 +52,10 @@ if ($_SESSION["ambar"] != "connected")
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Post Work</button>
      <br><br>
      <select id="projectsDropdown"></select>
-   </div>
-
-   <div class="container" style="background-color:white;">
+     </div>
+     <br><br>
      <div class="d-inline-flex flex-wrap p-2" style="" id="existingPhotoInformation">
      </div>
-   </div>
 
      <br><br>
    </div>
