@@ -14,10 +14,9 @@ if ($_SESSION["ambar"] != "connected")
    <meta charset="utf-8">
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-   <link rel="stylesheet" href="admin.css"> <!-- Link to your custom admin CSS -->
+   <link rel="stylesheet" href="admin.css">
 
    <script src="../js/photoAdminFunctions.js"></script>
-   <!-- <link rel="stylesheet" href="../ambar.css"> -->
 
 
 

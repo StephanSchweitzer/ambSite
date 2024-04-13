@@ -78,9 +78,17 @@ justify-content: center;
 .card
 {
   max-width: 20vw;
+  min-width: 20vw;
 }
 
 .d-inline-flex
 {
   justify-content: center;
+}
+
+.projectCardContainer
+{
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
 }
