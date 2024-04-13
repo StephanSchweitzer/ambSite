@@ -1,0 +1,48 @@
+body {
+    background-color: #212529; /* Dark background for the whole page */
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.admin-container {
+    background: linear-gradient(135deg, #1f4037 0%, #99f2c8 100%); /* Futuristic gradient */
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0px 0px 30px rgba(0, 0, 0, 0.5);
+}
+
+.admin-header {
+    font-size: 2.5rem;
+    color: #e0e0e0; /* Soft white for contrast and visibility */
+    margin-bottom: 1rem;
+}
+
+.btn-outline-primary {
+    border-color: #e0e0e0;
+    color: #e0e0e0;
+    font-weight: bold;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+    background-color: #e0e0e0;
+    color: #1f4037; /* Dark green from the gradient for a cohesive look */
+}
+
+.btn-danger {
+    font-weight: bold;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.d-grid {
+    max-width: 400px;
+    margin: auto;
+}
