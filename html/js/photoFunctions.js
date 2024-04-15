@@ -30,7 +30,7 @@ $( window ).on( "load", function() {
   $(document).ready(function() {
     $('#bigPicModal').on('click', function(event) {
         // Check if the clicked element is not the title, description, or image
-        if (!$(event.target).closest('#imageTitle, #imageDescription, #popUpImage').length) {
+        if (!$(event.target).closest('#popUpImage').length) {
             // If the clicked area is not the title, description, or image, close the modal
             $('#bigPicModal').modal('hide');
         }
@@ -128,56 +128,60 @@ $( document ).ready(function() {
 
 
 document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
-  isPinching = false;
+    isPinching = false;
     if (e.touches.length === 1) {
-      this.style.transition = 'none';
+        this.style.transition = 'none';  // Disable transitions for immediate feedback
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
-        isPinching = false; // Single touch, so not pinching
     } else if (e.touches.length === 2) {
-        // Two fingers - potential pinch
+        // Prepare for a pinch gesture
         isPinching = true;
     }
 }, false);
 
 document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
     if (e.touches.length === 2) {
-        // Two fingers moving - continue to treat as a pinch
+        // Continue to handle pinch gesture
         isPinching = true;
     } else if (e.touches.length === 1 && !isPinching) {
-        // Single finger swipe action
+        // Handle single finger swipe
         let currentX = e.touches[0].clientX;
         let currentY = e.touches[0].clientY;
-
-        // Calculate the distance moved
-        let deltaX = Math.round((currentX - startX)*.3);
+        let deltaX = Math.round((currentX - startX) * 0.3);  // Reduced movement for more control
         let deltaY = currentY - startY;
 
+        // Provide feedback by translating image based on finger movement
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            // More horizontal movement than vertical
-            e.preventDefault(); // Prevent scrolling
-            // Apply the movement for visual feedback
+            e.preventDefault();  // Prevent scrolling when moving horizontally
             this.style.transform = `translateX(${deltaX}px)`;
         }
     }
 }, false);
 
 document.getElementById('popUpImage').addEventListener('touchend', function(e) {
-  this.style.transition = 'transform 0.3s ease';
+    this.style.transition = 'transform 0.3s ease';  // Re-enable transitions
     if (!isPinching && e.changedTouches.length === 1) {
         let endX = e.changedTouches[0].clientX;
+        let endY = e.changedTouches[0].clientY;
         let deltaX = endX - startX;
+        let deltaY = endY - startY;
 
-        if (Math.abs(deltaX) > window.innerWidth * 0.1) {
-            // Threshold for swipe action
+        // Determine if the swipe was primarily vertical and downward
+        if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
+            // Clear downward swipe, minimal horizontal movement
+            $('#bigPicModal').modal('hide');  // Close the modal
+        } else if (Math.abs(deltaX) > window.innerWidth * 0.1) {
+            // Horizontal swipe exceeds threshold
             changeImage(deltaX > 0 ? -1 : 1);
         } else {
-            // Not enough swipe, return to original position
-            this.style.transform = '';
+            // Swipe did not meet any criteria for action
+            this.style.transform = '';  // Reset position
         }
     }
-     // Reset pinch status on touch end
+    isPinching = false;  // Reset pinch status
 }, false);
+
+
 
   $('.modal').on('hidden.bs.modal', function ()
   {
@@ -663,22 +667,25 @@ function makeBigPic(clickedImageUrl)
 
 
 
-function changeImage(step)
-{
-  currentImageIndex += step;
-  if (currentImageIndex >= images.length) 
-  {
-    currentImageIndex = 0;
-  } else if (currentImageIndex < 0) {
-    currentImageIndex = images.length - 1;
-  }
-  const imgElement = document.getElementById('popUpImage');
-  imgElement.style.transform = ''; // Reset transform for new image
-  imgElement.src = images[currentImageIndex].url;
+function changeImage(step) {
+    // Adjust the current index based on step; wrap around if necessary
+    currentImageIndex += step;
+    if (currentImageIndex >= images.length) {
+        currentImageIndex = 0;
+    } else if (currentImageIndex < 0) {
+        currentImageIndex = images.length - 1;
+    }
 
-  document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
-  document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
+    // Update the image source
+    const imgElement = document.getElementById('popUpImage');
+    imgElement.style.transform = ''; // Reset any transformations to start fresh
+    imgElement.src = images[currentImageIndex].url;
+
+    // Update the title and description using innerHTML for HTML rendering
+    document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
+    document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
 }
+
 
   function getDistanceBetweenTouches(touches) 
   {

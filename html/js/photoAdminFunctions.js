@@ -216,7 +216,7 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   console.log(visible);
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete post</button>';
 
-  if (visible == 0)
+  if (visible === 0)
   {
     document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-info" onclick="restoreWork()">Restore post</button>';
   }
@@ -258,7 +258,7 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   $('#updateOrderOfDisplay').val(orderOfDisplay);
 
 
-  if (isColor == 1)
+  if (isColor === 1)
   {
     openColorYes.checked = true;
   }

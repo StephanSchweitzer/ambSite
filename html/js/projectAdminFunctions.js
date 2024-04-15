@@ -335,7 +335,7 @@ function getThenPopulateWorks()
     dataType: "json",
     success: function(data) {
     	populateWorksList(data);
-    	//checkWorkCheckboxes(id);
+    	checkWorkCheckboxes(id);
     	//fetchWorkIdsForProject(id);
       },
     error: function() {
@@ -451,10 +451,9 @@ function fetchWorkIdsForProject(id) {
 
 function checkWorkCheckboxes(currentProjectId) {
     // Retrieve the current project from the allProjects array
-    var currentProject = allProjects.find(project => project.id === currentProjectId);
+    const currentProject = allProjects.find(project => project.id === currentProjectId);
 
     if (!currentProject) {
-        console.error('Current project not found');
         return; // Exit if the current project is not found
     }
 
@@ -464,33 +463,38 @@ function checkWorkCheckboxes(currentProjectId) {
     // First, uncheck all checkboxes
     $('input[type="checkbox"][data-work-id]').prop('checked', false);
 
-    // Check the checkboxes corresponding to the fetched workIds
-    workIds.forEach(function(workId) {
-        $('input[type="checkbox"][data-work-id="' + workId + '"]').prop('checked', true);
-        // Get the list item that contains this checkbox
-        var listItem = $('input[type="checkbox"][data-work-id="' + workId + '"]').closest('li');
-        appendProjectInfo(workId, listItem[0], currentProjectId);  // Pass the current project ID to exclude it
+    // Always clear previous "In [projects]" text before setting new
+    $('.project-info').remove();  // Clear all existing project info labels
+
+    // Process each work
+    $('input[type="checkbox"][data-work-id]').each(function() {
+        const workId = $(this).attr('data-work-id');
+        const listItem = $(this).closest('li');
+
+        // Check the checkbox if work is part of the current project
+        if (workIds.includes(workId)) {
+            $(this).prop('checked', true);
+        }
+
+        // Append project info, excluding the current project
+        appendProjectInfo(workId, listItem[0], currentProjectId);
     });
 }
 
+
 function appendProjectInfo(workId, listItem, excludeProjectId = null) {
-    // Remove any existing 'used in' info to avoid duplication
-    const existingInfo = listItem.querySelector('.project-info');
-    if (existingInfo) {
-        listItem.removeChild(existingInfo);
-    }
     // Optionally exclude one project from the "Also in" list
     const projects = allProjects.filter(p => p.works.includes(workId) && p.id !== excludeProjectId);
     if (projects.length > 0) {
-
         const projectNames = projects.map(p => p.title).join(", ");
         const projectInfo = document.createElement('small');
         projectInfo.classList.add('project-info');  // Add class for easy selection/removal
-        projectInfo.textContent = "In " + projectNames;
+        projectInfo.textContent = "In: " + projectNames;  // Update the text to "Also in"
         projectInfo.style.marginLeft = '10px';
         listItem.appendChild(projectInfo);
     }
 }
+
 
 
 function populateWorksList(works) {

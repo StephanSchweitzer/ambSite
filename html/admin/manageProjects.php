@@ -160,7 +160,7 @@ if ($_SESSION["ambar"] != "connected")
            <div id="worksInProject">
             <ul id="worksList"></ul>
 
-            <button type="button" id="addWork" onclick="addWorksToProject()">Update Works</button>
+<!--            <button type="button" id="addWork" onclick="addWorksToProject()">Update Works</button>-->
           </div>
 
           <br>

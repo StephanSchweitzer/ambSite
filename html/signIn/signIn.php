@@ -14,32 +14,37 @@
 </head>
 <body>
 
-<div class="container">
-  <div class="admin-container my-5">
-    <!-- Status message, if any -->
-    <?php
-      if(isset($_GET['status'])) {
-        $status = htmlspecialchars($_GET["status"]);
-        echo "<div class='alert alert-danger text-center' role='alert'>".$status."</div>";
-      }
-    ?>
+<div class="container vh-100">
+  <div class="row h-100 justify-content-center align-items-center">
+    <div class="col-sm-12 col-md-8 col-lg-6" style="margin-top: -30vh">
+      <div class="admin-container my-5 bg-dark text-white p-4 rounded">
+        <!-- Status message, if any -->
+        <?php
+          if(isset($_GET['status'])) {
+            $status = htmlspecialchars($_GET["status"]);
+            echo "<div class='alert alert-danger text-center' role='alert'>".$status."</div>";
+          }
+        ?>
 
-    <h1 class="admin-header text-center mb-4">Sign In</h1>
-    <div class="signin-form">
-      <form action="verifySignIn.php" method="post">
-        <div class="form-group mb-3">
-          <label for="username" class="form-label" style="color: white">Username</label>
-          <input type="text" class="form-control" id="username" name="username" placeholder="Username">
+        <h1 class="admin-header text-center mb-4">Sign In</h1>
+        <div class="signin-form">
+          <form action="verifySignIn.php" method="post">
+            <div class="form-group mb-3">
+              <label for="username" class="form-label">Username</label>
+              <input type="text" class="form-control" id="username" name="username" placeholder="Username">
+            </div>
+            <div class="form-group mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" name="password" id="password" placeholder="Password">
+            </div>
+            <button type="submit" class="btn btn-outline-light btn-lg">Submit</button>
+          </form>
         </div>
-        <div class="form-group mb-3">
-          <label for="password" class="form-label" style="color: white">Password</label>
-          <input type="password" class="form-control" name="password" id="password" placeholder="Password">
-        </div>
-        <button type="submit" class="btn btn-outline-light btn-lg">Submit</button>
-      </form>
+      </div>
     </div>
   </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
