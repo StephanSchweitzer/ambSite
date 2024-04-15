@@ -127,3 +127,9 @@ select:focus {
   font-size: 1.2rem; /* Larger text */
   /* ... other styles ... */
 }
+
+.maxMinWidth15vw
+{
+    max-width: 15vw; !important;
+    min-width: 15vw; !important;
+}

@@ -15,7 +15,7 @@
 <body>
 
 <div class="container vh-100">
-  <div class="row h-100 justify-content-center align-items-center">
+  <div class="row h-100 justify-content-center align-items-center" >
     <div class="col-sm-12 col-md-8 col-lg-6" style="margin-top: -30vh">
       <div class="admin-container my-5 bg-dark text-white p-4 rounded">
         <!-- Status message, if any -->
@@ -37,6 +37,7 @@
               <label for="password" class="form-label">Password</label>
               <input type="password" class="form-control" name="password" id="password" placeholder="Password">
             </div>
+              <br>
             <button type="submit" class="btn btn-outline-light btn-lg">Submit</button>
           </form>
         </div>

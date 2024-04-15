@@ -39,7 +39,7 @@ function insertData(data)
 		let visible = item.visible;
 
     // Create a Bootstrap card div element with the data
-		let card = $('<div>').addClass('card shadow-grow mb-4');
+		let card = $('<div>').addClass('card shadow-grow mb-4 maxMinWidth15vw');
 		let cardBody = $('<div>').addClass('card-body');
 		$('<h5>').addClass('card-title').text(name).appendTo(cardBody);
 		$('<p>').addClass('card-text').text('ID: ' + id).appendTo(cardBody);

@@ -14,7 +14,7 @@ if ($_SESSION["ambar"] != "connected")
    <meta charset="utf-8">
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- <link rel="stylesheet" href="../ambar.css"> -->
+     <link rel="stylesheet" href="admin.css">  <!-- Ensure this path is correct -->
 
    <script src="../js/shopAdminFunctions.js"></script>
 
@@ -30,7 +30,7 @@ if ($_SESSION["ambar"] != "connected")
      cursor: pointer;
    }
 
-    #worksList 
+    #worksList
     {
       border: 2px solid #333; /* Solid border with a dark color */
       padding: 10px; /* Padding inside the border */
@@ -44,34 +44,30 @@ if ($_SESSION["ambar"] != "connected")
  </head>
  <body>
    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script> -->
-
-   <div class="container" style="background-color:white;">
+   <div class="admin-container" style="background-color:white;">
+   <div class="container">
      <br>
-     <h1 class="display-1 text-primary" style="text-align:center;">Shop admin page</h1>
+     <h1 class="display-1" style="text-align:center; color: white">Shop admin page</h1>
      <br>
      <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
-
-     <br><br>
-   </div>
-
-
-       <div class="container" style="background-color:white;">
-     <br>
+    <br><br><br>
     <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('active')">See all items for sale</button>
      <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('inactive')">See all items not for sale</button>
      <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('invisible')">See all deleted items</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Create Shop Item</button>
      <br><br>
 
-   </div>
 
-   <div class="container" style="background-color:white;">
-     <div class="d-inline-flex flex-wrap p-2" style="" id="existingPostInformation">
+   </div>
+   <br>
+    <div class="container">
+     <div class="d-inline-flex flex-wrap p-1" style="" id="existingPostInformation">
      </div>
    </div>
 
-     <br><br>
-   </div>
+
+   <br><br>
+ </div>
 
    <div class="modal fade" id="productPostModal" tabindex="-1" role="dialog" aria-labelledby="productModalLabel" aria-hidden="true">
      <div class="modal-dialog" role="document">
