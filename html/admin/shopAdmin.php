@@ -60,7 +60,7 @@ if ($_SESSION["ambar"] != "connected")
 
    </div>
    <br>
-    <div class="container">
+    <div class="">
      <div class="d-inline-flex flex-wrap p-1" style="" id="existingPostInformation">
      </div>
    </div>
@@ -68,6 +68,9 @@ if ($_SESSION["ambar"] != "connected")
 
    <br><br>
  </div>
+
+      <div id="myToastContainer" style="position: fixed; top: 100px; right: 100px; z-index: 1050;"></div>
+
 
    <div class="modal fade" id="productPostModal" tabindex="-1" role="dialog" aria-labelledby="productModalLabel" aria-hidden="true">
      <div class="modal-dialog" role="document">

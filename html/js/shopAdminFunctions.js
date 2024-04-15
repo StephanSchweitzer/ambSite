@@ -137,11 +137,15 @@ function createProduct() {
   	success: function(response) {
   		console.log('Data saved successfully!');
   		loadAndInsertProducts(pageNumber);
+		  showToast('Shop item successfully created', 'success');
+
   		$('#productPostModal').modal('hide');
   		document.getElementById('uploadProductButton').disabled = false;
   	},
   	error: function(xhr, status, error) {
   		console.error('Error:', error);
+		  showToast('There was an error', 'error');
+
   		document.getElementById('uploadProductButton').disabled = false;
   	}
   });
@@ -178,6 +182,7 @@ function updateProduct()
   	success: function(response) {
 
   		loadAndInsertProducts(pageNumber);
+        showToast('Shop item successfully updated', 'success');
 
   		console.log('Data updated successfully!');
   		console.log(formData);
@@ -187,11 +192,55 @@ function updateProduct()
   	},
   	error: function(xhr, status, error) {
       // Handle the error response
-  		$('#errorToast').toast('show');
+        showToast('There has been a problem, tell bubbers', 'error');
   		console.error('Error:', error);
       // You can perform error handling here
   	}
   });
+}
+
+function showToast(message, type = 'info') {
+  const toastContainer = document.getElementById('myToastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'myToast'; // Base class
+  toast.textContent = message;
+
+  // Apply styles directly
+  toast.style.color = '#fff';
+  toast.style.backgroundColor = '#25252f';
+  toast.style.border = '1px solid #ddd';
+  toast.style.borderLeft = '15px solid #00b894';
+  toast.style.padding = '12px 20px';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+  toast.style.width = '300px';
+  toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+  toast.style.transform = 'translateX(100%)';
+  toast.style.opacity = '0';
+
+  // Setting background color based on the type of message
+  switch (type) {
+      case 'success':
+          toast.style.borderLeftColor = '#2ecc71'; // Green for success
+          break;
+      case 'error':
+          toast.style.borderLeftColor = '#e74c3c'; // Red for error
+          break;
+      default:
+          toast.style.borderLeftColor = '#3498db'; // Blue for general info
+  }
+
+  // Append the toast to the container
+  toastContainer.appendChild(toast);
+  setTimeout(() => {
+      toast.style.transform = 'translateX(0)';
+      toast.style.opacity = '1';
+  }, 100); // Delay to allow CSS transition
+
+  // Automatically remove the toast
+  setTimeout(() => {
+      toastContainer.removeChild(toast);
+  }, 5000); // Display for 4 seconds
 }
 
 function deleteProduct()
@@ -206,10 +255,11 @@ function deleteProduct()
 			data: formData,
 			success: function(response) {
 				loadAndInsertProducts(pageNumber)
+				showToast('Shop item successfully deleted', 'success');
 				$('#productUpdateModal').modal('hide');
 			},
 			error: function(xhr, status, error) {
-				$('#errorToast').toast('show');
+        		showToast('There was an error', 'error');
 				console.error('Error:', error);
 			}
 		});
@@ -243,10 +293,11 @@ function restoreProduct()
 		data: formData,
 		success: function(response) {
 			loadAndInsertProducts('invisible')
+			showToast('Shop item successfully restored', 'success');
 			$('#productUpdateModal').modal('hide');
 		},
 		error: function(xhr, status, error) {
-			$('#errorToast').toast('show');
+			showToast('Problem dude, no restoration', 'error');
 			console.error('Error:', error);
 		}
 	});
