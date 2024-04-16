@@ -6,10 +6,10 @@ loadAndDisplayProjectTitles()
 
 document.getElementById('photoPostUpload').addEventListener('change', function(event) {
   const file = event.target.files[0];  // Get the first file
-  const maxSize = 10 * 1024 * 1024;     // Maximum file size (e.g., 10 MB)
+  const maxSize = 1.2 * 1024 * 1024;     // Maximum file size (e.g., 10 MB)
 
   if (file.size > maxSize) {
-      alert('Your picture is too large bubber, reduce the quality and try again.');
+      alert('Your picture is too large (the max is 1.2 MB), reduce the quality and try again.');
       event.target.value = '';  // Clear the file input
   } else {
       
