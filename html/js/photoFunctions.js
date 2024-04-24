@@ -507,7 +507,7 @@ function createProjectElement(project) {
 
 function createWorkCardElement(information) {
   let imageURL = "baseImages/" + information.location;
-  let thumbnailURL = "thumbnails/." + information.location;
+  let thumbnailURL = "thumbnails/" + information.location;
   let title = information.name;
   let description = information.firstDescription.replace(/\n/g, '<br>');
 
@@ -521,7 +521,7 @@ function createWorkCardElement(information) {
   // let insertDescription = $('<p>').html(description);
   let insertTitle = '';
   let insertDescription = '';
-  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', thumbnailURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
   let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
   card.click(() => makeBigPic(imageURL));
   images.push(imageInfo);
@@ -580,7 +580,7 @@ function createCarousel(informations)
     };
 
     let thisImage = `<div id="`+information.name+`" class="carousel-item `+active+` " >
-    <img class="d-block carousel-pic" src="`+imageURL+`" onclick="makeBigPic('`+imageURL+`')">
+    <img class="d-block carousel-pic" src="`+thumbnailURL+`" onclick="makeBigPic('`+imageURL+`')">
     </div>`;
     carouselHtml += thisImage;
     active = '';
