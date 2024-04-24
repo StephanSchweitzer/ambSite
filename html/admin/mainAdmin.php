@@ -24,7 +24,7 @@ if ($_SESSION["ambar"] != "connected")
 <div class="container admin-container my-5 col-sm-12 col-md-8 col-lg-6" style="margin-top: 10vh !important;">
     <h1 class="admin-header text-center mb-4">Main Admin</h1>
     <div class="d-grid gap-3">
-        <a href="pictureAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Change Pictures</a>
+        <a href="pictureAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Change Picturs</a>
         <a href="manageProjects.php" class="btn btn-outline-primary btn-lg" role="button">Manage Projects</a>
         <a href="aboutMeAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage About Section</a>
         <a href="shopAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Shop</a>

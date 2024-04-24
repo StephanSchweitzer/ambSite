@@ -507,6 +507,7 @@ function createProjectElement(project) {
 
 function createWorkCardElement(information) {
   let imageURL = "baseImages/" + information.location;
+  let thumbnailURL = "thumbnails/." + information.location;
   let title = information.name;
   let description = information.firstDescription.replace(/\n/g, '<br>');
 
@@ -568,6 +569,7 @@ function createCarousel(informations)
 
   informations.forEach(function(information){
     let imageURL = "baseImages/" + information.location;
+    let thumbnailURL = "thumbnails/" + information.location;
     let title = information.name;
     let description = information.firstDescription.replace(/\n/g, '<br>');
   

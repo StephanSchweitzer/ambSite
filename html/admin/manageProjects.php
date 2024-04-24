@@ -23,7 +23,7 @@ if ($_SESSION["ambar"] != "connected")
 
  <meta charset="utf-8">
  <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
- <title>Project Admin page</title>
+ <title>Project Admins page</title>
 
  <style>
    .card {
