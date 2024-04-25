@@ -160,7 +160,7 @@ function insertData(data)
 
   items.forEach(function(item) {
     let id = item.id;
-    let location = "../baseImages/"+item.location;
+    let location = "../thumbnails/"+item.location;
     let name = item.name;
     let firstDescription = item.firstDescription;
     let secondDescription = item.secondDescription;

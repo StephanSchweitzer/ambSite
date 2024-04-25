@@ -3,6 +3,7 @@
 session_start();
 
 include '../database/pdo.php';
+include 'createThumbnails.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
@@ -216,9 +217,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   if ($photo['error'] === UPLOAD_ERR_OK) {
       $tempFilePath = $photo['tmp_name'];
 
-      // Move the uploaded photo to a desired location
       $destination = '../baseImages/' . $photo['name'];
+      $thumbnailDirectory = '../thumbnails/';
       move_uploaded_file($tempFilePath, $destination);
+      $thumbString = createThumbnail($destination, $thumbnailDirectory, $photo['name']);
     }
 
   $query = "INSERT INTO allWorks (fileLocation, name, desc2,

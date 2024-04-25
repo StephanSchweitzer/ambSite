@@ -520,7 +520,7 @@ function createListItem(work)
     checkbox.style.marginRight = "20px";
 
     const thumbnail = document.createElement('img');
-    thumbnail.src = '../baseImages/'+work.location;
+    thumbnail.src = '../thumbnails/'+work.location;
     thumbnail.alt = work.name;
     thumbnail.style.maxWidth = '50px';
     thumbnail.style.marginRight = "20px";
