@@ -3,7 +3,7 @@
 session_start();
 
 include '../database/pdo.php';
-include 'createThumbnails.php';
+include 'imageManipulationFunctions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
@@ -213,15 +213,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   $carousel = $_POST["carousel"];
   $selectWork = $_POST["selectWork"];
 
-  // Check if a photo was uploaded successfully
-  if ($photo['error'] === UPLOAD_ERR_OK) {
-      $tempFilePath = $photo['tmp_name'];
+if ($photo['error'] === UPLOAD_ERR_OK) {
+    $tempFilePath = $photo['tmp_name'];
 
-      $destination = '../baseImages/' . $photo['name'];
-      $thumbnailDirectory = '../thumbnails/';
-      move_uploaded_file($tempFilePath, $destination);
-      $thumbString = createThumbnail($destination, $thumbnailDirectory, $photo['name']);
-    }
+    // Generate a new destination path with the JPEG extension
+    $fileExtension = pathinfo($photo['name'], PATHINFO_EXTENSION);
+    $baseName = basename($photo['name'], "." . $fileExtension);
+    $newFileName = $baseName . ".jpeg";
+    $destination = '../baseImages/' . $newFileName;
+
+    // Convert the uploaded image to a progressive JPEG
+    convertToProgressiveJPEGAndUpload($tempFilePath, $destination);
+
+    // Update fileLocation to reflect the new JPEG file
+    $fileLocation = $newFileName;
+
+    // Optionally create a thumbnail
+    $thumbnailDirectory = '../thumbnails/';
+    createThumbnail($destination, $thumbnailDirectory, $newFileName);
+}
 
   $query = "INSERT INTO allWorks (fileLocation, name, desc2,
                     desc3, medium, color,

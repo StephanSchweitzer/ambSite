@@ -216,7 +216,7 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   console.log(visible);
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete post</button>';
 
-  if (visible === 0)
+  if (visible == 0)
   {
     document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-info" onclick="restoreWork()">Restore post</button>';
   }
@@ -509,12 +509,15 @@ function deleteWork()
       type: 'DELETE',
       data: formData,
       success: function(response) {
+        showToast('Your work has been successfully deleted!', 'success');
         getAllWorks('everything')
         $('#photoUpdateModal').modal('hide');
       },
       error: function(xhr, status, error) {
         $('#errorToast').toast('show');
         console.error('Error:', error);
+        showToast('There has been a problem', 'error');
+
       }
     });
   }
@@ -534,10 +537,13 @@ function restoreWork()
       success: function(response) {
         getAllWorks('invisible')
         $('#photoUpdateModal').modal('hide');
+        showToast('Your work has been successfully restored!', 'success');
+
       },
       error: function(xhr, status, error) {
         $('#errorToast').toast('show');
         console.error('Error:', error);
+        showToast('There has been a problem', 'error');
       }
     });
   }
