@@ -1,5 +1,5 @@
 <?php
-function createThumbnail($filePath, $targetDirectory, $fileName, $newWidth = 400) {
+function createAndSaveThumbnail($filePath, $targetDirectory, $fileName, $newWidth = 400) {
     // Get the original image's dimensions and type
     list($width, $height, $type) = getimagesize($filePath);
 

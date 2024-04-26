@@ -222,15 +222,12 @@ if ($photo['error'] === UPLOAD_ERR_OK) {
     $newFileName = $baseName . ".jpeg";
     $destination = '../baseImages/' . $newFileName;
 
-    // Convert the uploaded image to a progressive JPEG
     convertToProgressiveJPEGAndUpload($tempFilePath, $destination);
 
-    // Update fileLocation to reflect the new JPEG file
     $fileLocation = $newFileName;
 
-    // Optionally create a thumbnail
     $thumbnailDirectory = '../thumbnails/';
-    createThumbnail($destination, $thumbnailDirectory, $newFileName);
+    createAndSaveThumbnail($destination, $thumbnailDirectory, $newFileName);
 }
 
   $query = "INSERT INTO allWorks (fileLocation, name, desc2,

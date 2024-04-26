@@ -128,6 +128,55 @@ select:focus {
   /* ... other styles ... */
 }
 
+
+#navbar li:last-child {
+  border-bottom: none; /* Removes border from the last item */
+}
+
+#navbar {
+  list-style-type: none; /* Removes bullet points */
+  padding: 0;
+  background: #003366; /* Dark blue background for the navbar */
+  width: 250px; /* Adjust width as needed */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin: 0;
+}
+
+#navbar li {
+  cursor: pointer;
+  padding: 12px 20px;
+  margin: 10px; /* Adjust margin as needed */
+  background-color: #0055A2; /* Dark blue background */
+  color: #fff; /* White text */
+  border: none;
+  border-radius: 4px; /* Rounded corners */
+  text-align: center; /* Centered text */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+  transition: background-color 0.3s, box-shadow 0.3s, transform 0.1s; /* Smooth transitions for the effects */
+}
+
+#navbar li:hover {
+  background-color: #66B2FF; /* Light blue background on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* More pronounced shadow on hover */
+  transform: translateY(-2px); /* Slight raise effect */
+}
+
+#navbar li.dragging {
+  opacity: 0.5;
+  background-color: #0055A2; /* Maintain the original background color when dragging */
+  box-shadow: none; /* No shadow when dragging */
+}
+
+#navbar li:hover:not(.dragging) {
+  background-color: #66B2FF; /* Light blue background on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px); /* Slight raise effect */
+}
+
+
+
+
 .maxMinWidth15vw
 {
     max-width: 15vw; !important;

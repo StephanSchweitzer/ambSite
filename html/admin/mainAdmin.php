@@ -22,12 +22,14 @@ if ($_SESSION["ambar"] != "connected")
 <body>
 
 <div class="container admin-container my-5 col-sm-12 col-md-8 col-lg-6" style="margin-top: 10vh !important;">
-    <h1 class="admin-header text-center mb-4">Main Admin</h1>
+    <h1 class="admin-header text-center mb-4">Administration</h1>
     <div class="d-grid gap-3">
-        <a href="pictureAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Change Pictures</a>
+        <a href="pictureAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Works</a>
         <a href="manageProjects.php" class="btn btn-outline-primary btn-lg" role="button">Manage Projects</a>
         <a href="aboutMeAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage About Section</a>
         <a href="shopAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Shop</a>
+        <a href="navbarAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Navbar</a>
+
     </div>
     <form action="../signIn/logout.php" method="post" class="mt-4">
         <button type="submit" class="btn btn-danger btn-lg">Logout</button>
