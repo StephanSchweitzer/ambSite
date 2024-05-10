@@ -32,43 +32,43 @@ if ($_SESSION["ambar"] != "connected")
    <div style="max-width: 70vw; margin: 0 auto; ">
       <div id="allLinks" class="content-box" style="color: white"></div>
       <div class="content-section">
-<ul id="navbar" class="list-unstyled">
-    <li draggable="true" class="dragNavBar" id="shopLinkRow">
-        <div class="d-flex align-items-center">
-            <span class="me-2" style="flex: 0 0 20vw;">Shop</span>
-            <input type="text" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Field 1">
-            <input type="text" class="form-control form-control-sm" style="flex: 1;" placeholder="Field 2">
-        </div>
-    </li>
-    <li draggable="true" class="dragNavBar" id="selectWorksLinkRow">
-        <div class="d-flex align-items-center">
-            <span class="me-2" style="flex: 0 0 20vw;">Select Works</span>
-            <input type="text" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Field 1">
-            <input type="text" class="form-control form-control-sm" style="flex: 1;" placeholder="Field 2">
-        </div>
-    </li>
-    <li draggable="true" class="dragNavBar" id="allWorksLinkRow">
-        <div class="d-flex align-items-center">
-            <span class="me-2" style="flex: 0 0 20vw;">All Works</span>
-            <input type="text" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Field 1">
-            <input type="text" class="form-control form-control-sm" style="flex: 1;" placeholder="Field 2">
-        </div>
-    </li>
-    <li draggable="true" class="dragNavBar" id="aboutMeLinkRow">
-        <div class="d-flex align-items-center">
-            <span class="me-2" style="flex: 0 0 20vw;">About</span>
-            <input type="text" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Field 1">
-            <input type="text" class="form-control form-control-sm" style="flex: 1;" placeholder="Field 2">
-        </div>
-    </li>
-    <li draggable="true" class="dragNavBar" id="instagramLinkRow">
-        <div class="d-flex align-items-center">
-            <span class="me-2" style="flex: 0 0 20vw;">Instagram</span>
-            <input type="text" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Field 1">
-            <input type="text" class="form-control form-control-sm" style="flex: 1;" placeholder="Field 2">
-        </div>
-    </li>
-</ul>
+    <ul id="navbarLinks" class="list-unstyled">
+        <li draggable="true" class="dragNavBar" id="shopLinkRow">
+            <div class="d-flex align-items-center">
+                <span id="text_shopLinkRow" class="me-2" style="flex: 0 0 20vw;">Shop</span>
+                <input type="text" id="display_shopLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('shopLinkRow')">
+                <input type="text" id="link_shopLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+            </div>
+        </li>
+        <li draggable="true" class="dragNavBar" id="selectWorksLinkRow">
+            <div class="d-flex align-items-center">
+                <span id="text_selectWorksLinkRow" class="me-2" style="flex: 0 0 20vw;">Select Works</span>
+                <input type="text" id="display_selectWorksLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('selectWorksLinkRow')">
+                <input type="text" id="link_selectWorksLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+            </div>
+        </li>
+        <li draggable="true" class="dragNavBar" id="allWorksLinkRow">
+            <div class="d-flex align-items-center">
+                <span id="text_allWorksLinkRow" class="me-2" style="flex: 0 0 20vw;">All Works</span>
+                <input type="text" id="display_allWorksLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('allWorksLinkRow')">
+                <input type="text" id="link_allWorksLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+            </div>
+        </li>
+        <li draggable="true" class="dragNavBar" id="aboutMeLinkRow">
+            <div class="d-flex align-items-center">
+                <span id="text_aboutMeLinkRow" class="me-2" style="flex: 0 0 20vw;">About</span>
+                <input type="text" id="display_aboutMeLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('aboutMeLinkRow')">
+                <input type="text" id="link_aboutMeLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+            </div>
+        </li>
+        <li draggable="true" class="dragNavBar" id="instagramLinkRow">
+            <div class="d-flex align-items-center">
+                <span id="text_instagramLinkRow" class="me-2" style="flex: 0 0 20vw;">Instagram</span>
+                <input type="text" id="display_instagramLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('instagramLinkRow')">
+                <input type="text" id="link_instagramLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+            </div>
+        </li>
+    </ul>
 
 
 
@@ -76,7 +76,9 @@ if ($_SESSION["ambar"] != "connected")
 
 
           <br>
-      <button id="uploadWorkButton" class="btn btn-primary" onclick="updateLinks()">Update </button>
+      <button id="createLinkButton" class="btn btn-primary" onclick="createNewNavLinkRow()">Create Link</button>
+      <button id="saveLinksButton" class="btn btn-primary" onclick="updateLinks()">Save</button>
+
       </div>
    </div>
 </div>
