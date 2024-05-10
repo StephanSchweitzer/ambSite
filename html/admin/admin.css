@@ -162,10 +162,16 @@ select:focus {
   transform: translateY(-2px); /* Slight raise effect */
 }
 
-#navbar li.dragging {
-  opacity: 0.5;
-  background-color: #0055A2; /* Maintain the original background color when dragging */
-  box-shadow: none; /* No shadow when dragging */
+#navbar li.no-hover:hover {
+  background-color: initial; /* Return to default or specify a different color if desired */
+  box-shadow: none; /* Remove the shadow */
+  transform: none; /* Remove the transformation */
+}
+
+#navbar li.dragging, #navbar li.dragging:hover {
+  background-color: #0055A2; /* Dark blue background */
+  box-shadow: none;  /* No shadow during dragging */
+  transform: none;  /* No transformation during dragging */
 }
 
 #navbar li:hover:not(.dragging) {

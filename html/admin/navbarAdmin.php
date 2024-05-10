@@ -33,11 +33,11 @@ if ($_SESSION["ambar"] != "connected")
       <div id="allLinks" class="content-box" style="color: white"></div>
       <div class="content-section">
       <ul id="navbar">
-          <li draggable="true" id="shopLinkRow">Shop</li>
-          <li draggable="true" id="selectWorksLinkRow">Select Works</li>
-          <li draggable="true" id="allWorksLinkRow">All Works</li>
-          <li draggable="true" id="aboutMeLinkRow">About</li>
-          <li draggable="true" id="instagramLinkRow">Instagram</li>
+          <li draggable="true" class="dragNavBar" id="shopLinkRow">Shop</li>
+          <li draggable="true" class="dragNavBar"  id="selectWorksLinkRow">Select Works</li>
+          <li draggable="true" class="dragNavBar"  id="allWorksLinkRow">All Works</li>
+          <li draggable="true" class="dragNavBar"  id="aboutMeLinkRow">About</li>
+          <li draggable="true" class="dragNavBar"  id="instagramLinkRow">Instagram</li>
       </ul>
       <button id="uploadWorkButton" class="btn btn-primary" onclick="updateLinks()">Update </button>
       </div>

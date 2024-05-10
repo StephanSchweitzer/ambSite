@@ -4,13 +4,20 @@ function updateLinks()
 }
 
 const list = document.getElementById('navbar');
-
+const navItems = document.querySelectorAll('.dragNavBar');
 let draggedItem = null;
 
-list.addEventListener('dragstart', function(e) {
+list.addEventListener('dragstart', function (e) {
     draggedItem = e.target;
-    // Add the 'dragging' class to signify an item is being dragged
+    // Add the 'dragging' class to the dragged item
     e.target.classList.add('dragging');
+
+    // Temporarily disable hover effects on all dragNavBar items
+    navItems.forEach(item => {
+        item.classList.add('dragging');
+    });
+    draggedItem.style.opacity = '0.5';
+
 });
 
 list.addEventListener('dragover', function(e) {
@@ -20,44 +27,44 @@ list.addEventListener('dragover', function(e) {
         const bounding = target.getBoundingClientRect();
         const offset = bounding.y + bounding.height / 2; // Get the vertical mid-point
         if (e.clientY - offset > 0) {
-            // If dragging below the midpoint, insert after the target item
             target.after(draggedItem);
         } else {
-            // If dragging above the midpoint, insert before the target item
             target.before(draggedItem);
         }
     }
 });
 
 list.addEventListener('dragend', function(e) {
-    // Remove the 'dragging' class to signify dragging has ended
+    // Remove the 'dragging' class
     e.target.classList.remove('dragging');
-    // Reapply hover styles if needed
-    Array.from(list.children).forEach(item => item.classList.remove('hover'));
+
+    // Re-enable hover effects on all items
+    navItems.forEach(item => {
+        item.classList.remove('dragging');
+    });
+    draggedItem.style.opacity = '';
+
     updateNavbarOrder();
 });
 
 function updateNavbarOrder() {
-    // This function would typically send the new order to the server or save it locally
+    // Log the updated order for demonstration purposes
     console.log("Order updated:", Array.from(list.children).map(item => item.textContent));
-    // Remember to implement your server call or local storage update here
+    // Implement server call or local storage update here if necessary
 }
-
 
 list.addEventListener('dragenter', function(e) {
     e.preventDefault();
-    // Only manage the insert position here, without changing styles
+    // Manage the insert position here, without changing styles
 });
 
 list.addEventListener('dragleave', function(e) {
-    // Remove hover effect when dragging out of an item
-    if (e.target === draggedItem) {
-        e.target.classList.remove('hover');
-    }
+    // Optionally manage hover effect here if needed
 });
 
 list.addEventListener('drop', function(e) {
     // Drop event logic here
 });
+
 
 
