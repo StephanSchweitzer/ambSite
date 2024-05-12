@@ -38,6 +38,7 @@ if ($_SESSION["ambar"] != "connected")
                 <span id="text_shopLinkRow" class="me-2" style="flex: 0 0 20vw;">Shop</span>
                 <input type="text" id="display_shopLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('shopLinkRow')">
                 <input type="text" id="link_shopLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+                <button id="deleteShop" class="btn btn-danger" style="margin-left: 20px;" onclick="deleteLink('shopLinkRow')">Delete</button>
             </div>
         </li>
         <li draggable="true" class="dragNavBar" id="selectWorksLinkRow">
@@ -45,20 +46,25 @@ if ($_SESSION["ambar"] != "connected")
                 <span id="text_selectWorksLinkRow" class="me-2" style="flex: 0 0 20vw;">Select Works</span>
                 <input type="text" id="display_selectWorksLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('selectWorksLinkRow')">
                 <input type="text" id="link_selectWorksLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+                <button id="deleteSelectWorks" class="btn btn-danger" style="margin-left: 20px;" onclick="deleteLink('selectWorksLinkRow')">Delete</button>
+
             </div>
         </li>
-        <li draggable="true" class="dragNavBar" id="allWorksLinkRow">
-            <div class="d-flex align-items-center">
-                <span id="text_allWorksLinkRow" class="me-2" style="flex: 0 0 20vw;">All Works</span>
-                <input type="text" id="display_allWorksLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('allWorksLinkRow')">
-                <input type="text" id="link_allWorksLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
-            </div>
-        </li>
+<!--        <li draggable="true" class="dragNavBar" id="allWorksLinkRow">-->
+<!--            <div class="d-flex align-items-center">-->
+<!--                <span id="text_allWorksLinkRow" class="me-2" style="flex: 0 0 20vw;">All Works</span>-->
+<!--                <input type="text" id="display_allWorksLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('allWorksLinkRow')">-->
+<!--                <input type="text" id="link_allWorksLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">-->
+<!--                <button id="deleteAllWorks" class="btn btn-danger" style="margin-left: 20px;" onclick="deleteLink('allWorksLinkRow')">Delete</button>-->
+<!--            </div>-->
+<!--        </li>-->
         <li draggable="true" class="dragNavBar" id="aboutMeLinkRow">
             <div class="d-flex align-items-center">
                 <span id="text_aboutMeLinkRow" class="me-2" style="flex: 0 0 20vw;">About</span>
                 <input type="text" id="display_aboutMeLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('aboutMeLinkRow')">
                 <input type="text" id="link_aboutMeLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+                <button id="deleteAboutMe" class="btn btn-danger" style="margin-left: 20px;" onclick="deleteLink('aboutMeLinkRow')">Delete</button>
+
             </div>
         </li>
         <li draggable="true" class="dragNavBar" id="instagramLinkRow">
@@ -66,6 +72,8 @@ if ($_SESSION["ambar"] != "connected")
                 <span id="text_instagramLinkRow" class="me-2" style="flex: 0 0 20vw;">Instagram</span>
                 <input type="text" id="display_instagramLinkRow" class="form-control form-control-sm" style="flex: 1; margin-right: 8px;" placeholder="Displayed text" oninput="updateDisplayedText('instagramLinkRow')">
                 <input type="text" id="link_instagramLinkRow" class="form-control form-control-sm" style="flex: 1;" placeholder="Link redirection">
+                <button id="deleteInstagram" class="btn btn-danger" style="margin-left: 20px;" onclick="deleteLink('instagramLinkRow')">Delete</button>
+
             </div>
         </li>
     </ul>

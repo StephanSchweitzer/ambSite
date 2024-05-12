@@ -1,9 +1,12 @@
 var currentPage = 'active';
+const list = document.getElementById('navbarLinks');
+const navItems = document.querySelectorAll('.dragNavBar');
+let draggedItem = null;
+let listOfLinks = []
 
 $(document).ready(function () {
-    // Load and insert the nav links on page load
     loadAndInsertLinks();
-    //initializeDisplayTextListeners();
+    initializeDisplayTextListeners();
 });
 
 function loadAndInsertLinks() {
@@ -24,54 +27,25 @@ function loadAndInsertLinks() {
     });
 }
 
+function deleteLink(uniqueId) {
+    // Remove the corresponding HTML element
+    $(`#${uniqueId}`).remove();
+
+    // Find and remove the link entry in the links array
+    listOfLinks = listOfLinks.filter(link => link.id !== uniqueId);
+}
+
 function insertLinks(links) {
-    //$('#navbarLinks').empty();
-    console.log(links);
-    return;
+    $('#navbarLinks').empty();
+    console.log(links)
     links.forEach(function (link) {
         let id = link.ID;
         let displayedText = link.displayedText;
         let linkRedirection = link.linkRedirection;
+        let isChangeable = link.isChangeable;
+        let isNewTab = link.isNewTab;
 
-        // Create the list item
-        let listItem = $('<li>').addClass('dragNavBar').attr('id', `navLink_${id}`).attr('draggable', true);
-
-        // Create the inner div for alignment
-        let innerDiv = $('<div>').addClass('d-flex align-items-center');
-
-        // Add the displayed text span
-        let spanText = $('<span>').attr('id', `text_navLink_${id}`).addClass('me-2').css('flex', '0 0 20vw').text(displayedText);
-
-        // Add the input fields for editing displayed text and link redirection
-        let inputDisplayedText = $('<input>').attr({
-            type: 'text',
-            id: `display_navLink_${id}`,
-            placeholder: 'Displayed text',
-            value: displayedText
-        }).addClass('form-control form-control-sm').css({ flex: '1', marginRight: '8px' }).on('input', function () {
-            updateDisplayedText(`navLink_${id}`);
-        });
-
-        let inputLinkRedirection = $('<input>').attr({
-            type: 'text',
-            id: `link_navLink_${id}`,
-            placeholder: isChangeable == 0 ? 'Talk to stef to change' : 'Link redirection',
-            value: linkRedirection,
-            disabled: isChangeable == 0 // Disables the input field if isChangeable is 0
-        }).addClass('form-control form-control-sm').css('flex', '1');
-
-
-        // Append elements to the inner div and then to the list item
-        innerDiv.append(spanText, inputDisplayedText, inputLinkRedirection);
-        listItem.append(innerDiv);
-
-        // Add a click event to open the edit modal when the list item is clicked
-        listItem.click(function () {
-            openLinkEditModal(id, displayedText, linkRedirection);
-        });
-
-        // Append the list item to the container
-        $('#navLinksContainer').append(listItem);
+        createNewNavLinkRow(id, displayedText, linkRedirection, isChangeable, isNewTab)
     });
 }
 
@@ -87,54 +61,72 @@ function initializeDisplayTextListeners() {
     });
 }
 
-function createNewNavLinkRow() {
-    // Generate a unique ID for the new row
-    const uniqueId = `navLinkRow_${new Date().getTime()}`;
-
-    // Create the new `<li>` element
-    const newRow = $('<li>').attr({
+function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRedirection = "", isChangeable = 1, isNewTab = 0) {
+    // Create the `<li>` element with an ID and draggable property
+    const listItem = $('<li>').attr({
         draggable: 'true',
         class: 'dragNavBar',
-        id: uniqueId
+        id: `navLink_${id}`
     });
 
-    // Create the row content structure with the input fields
-    const content = $('<div>').addClass('d-flex align-items-center');
+    // Create the inner div for alignment
+    const innerDiv = $('<div>').addClass('d-flex align-items-center');
 
     // Add the displayed text span
-    const spanDisplayedText = $('<span>').attr({
-        id: `text_${uniqueId}`,
+    const spanText = $('<span>').attr({
+        id: `text_navLink_${id}`,
         class: 'me-2'
-    }).css({
-        'flex': '0 0 20vw'
-    }).text('New Link');
+    }).css('flex', '0 0 20vw').text(displayedText);
 
     // Display text input field
-    const inputDisplayText = $('<input>').attr({
+    const inputDisplayedText = $('<input>').attr({
         type: 'text',
-        id: `display_${uniqueId}`,
-        placeholder: 'Displayed text'
+        id: `display_navLink_${id}`,
+        placeholder: 'Displayed text',
+        value: displayedText
     }).addClass('form-control form-control-sm').css({
-        'flex': '1',
-        'margin-right': '8px'
+        flex: '1',
+        marginRight: '8px'
     }).on('input', function() {
-        updateDisplayedText(uniqueId);
+        updateDisplayedText(`navLink_${id}`);
     });
 
-    // Link redirection input field
+    // Link redirection input field with conditional behavior based on `isChangeable`
     const inputLinkRedirection = $('<input>').attr({
         type: 'text',
-        id: `link_${uniqueId}`,
-        placeholder: 'Link redirection'
+        id: `link_navLink_${id}`,
+        placeholder: isChangeable == 0 ? 'Only Stef can change' : 'Link redirection',
+        value: isChangeable == 0 ? '' : linkRedirection,
+        disabled: isChangeable == 0
     }).addClass('form-control form-control-sm').css('flex', '1');
 
-    // Append elements to the content div and then to the new row
-    content.append(spanDisplayedText).append(inputDisplayText).append(inputLinkRedirection);
-    newRow.append(content);
+    // Create the delete button with event handler
+    const deleteButton = $('<button>').attr({
+        id: `deleteButton_${id}`,
+        class: 'btn btn-danger',
+        style: 'margin-left: 20px;',
+        disabled: isChangeable == 0
+    }).text('Delete').on('click', function() {
+        // Remove the entire `<li>` from the DOM
+        listItem.remove();
+        // Here you can also implement your logic to remove the item from the array of links
+        removeLinkFromArray(id);
+    });
 
-    // Append the new row to the navbar list
-    $('#navbarLinks').append(newRow);
+    // Append elements to the inner div and then to the list item
+    innerDiv.append(spanText, inputDisplayedText, inputLinkRedirection, deleteButton);
+    listItem.append(innerDiv);
+
+    // Append the new row to the navbar list container
+    $('#navbarLinks').append(listItem);
 }
+
+// Example function to remove the link from your array
+function removeLinkFromArray(id) {
+    // Assuming `listOfLinks` is an array holding your links
+    listOfLinks = listOfLinks.filter(link => link.ID !== id);
+}
+
 
 // Function to update the span text based on input field changes
 function updateDisplayedText(uniqueId) {
@@ -190,26 +182,6 @@ function updateLink() {
     });
 }
 
-function deleteLink() {
-    var deleteData = {
-        ID: $('#editLinkID').val()
-    };
-
-    $.ajax({
-        url: '../actions/navLinksAPI.php',
-        type: 'DELETE',
-        data: deleteData,
-        success: function (response) {
-            showToast('Link deleted successfully', 'success');
-            loadAndInsertLinks();
-            $('#linkEditModal').modal('hide');
-        },
-        error: function () {
-            showToast('Error deleting link', 'error');
-        }
-    });
-}
-
 function showToast(message, type = 'info') {
     const toastContainer = document.getElementById('toastContainer');
     const toast = document.createElement('div');
@@ -258,9 +230,7 @@ function updateLinks()
     return
 }
 
-const list = document.getElementById('navbarLinks');
-const navItems = document.querySelectorAll('.dragNavBar');
-let draggedItem = null;
+
 
 list.addEventListener('dragstart', function (e) {
     draggedItem = e.target;
@@ -304,7 +274,7 @@ list.addEventListener('dragend', function(e) {
 
 function updateNavbarOrder() {
     // Log the updated order for demonstration purposes
-    console.log("Order updated:", Array.from(list.children).map(item => item.textContent));
+    console.log("Order updated:", Array.from(list.children).map(item => item.id));
     // Implement server call or local storage update here if necessary
 }
 

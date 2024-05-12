@@ -19,7 +19,7 @@ try {
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
             // Fetch all entries, ordered by the displayedOrder field
-            $query = "SELECT ID, displayedText, linkRedirection, displayedOrder, isChangeable FROM navLinks ORDER BY displayedOrder ASC";
+            $query = "SELECT ID, displayedText, linkRedirection, displayedOrder, isChangeable, onclick, isNewTab FROM navLinks ORDER BY displayedOrder ASC";
             $stmt = $conn->prepare($query);
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
