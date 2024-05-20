@@ -3,6 +3,7 @@ const list = document.getElementById('navbarLinks');
 const navItems = document.querySelectorAll('.dragNavBar');
 let draggedItem = null;
 let listOfLinks = []
+let listOfLinksToDelete = []
 
 $(document).ready(function () {
     loadAndInsertLinks();
@@ -28,11 +29,12 @@ function loadAndInsertLinks() {
 }
 
 function deleteLink(uniqueId) {
-    // Remove the corresponding HTML element
-    $(`#${uniqueId}`).remove();
+    let html_id = '#navLink_' + uniqueId;
+    $(html_id).remove();
+    listOfLinksToDelete.push(uniqueId);
+    removeLinkFromArray(uniqueId);
 
-    // Find and remove the link entry in the links array
-    listOfLinks = listOfLinks.filter(link => link.id !== uniqueId);
+    console.log(listOfLinks, listOfLinksToDelete);
 }
 
 function insertLinks(links) {
@@ -51,19 +53,15 @@ function insertLinks(links) {
 
 // Function to initialize the event listener for all display text input fields
 function initializeDisplayTextListeners() {
-    // Add an event listener to all display text input fields
     $('input[id^="display_"]').on('input', function () {
-        // Extract the unique identifier from the input field's ID
         const uniqueId = $(this).attr('id').split('_')[1];
-
-        // Call your `updateDisplayedText` function using the extracted ID
         updateDisplayedText(uniqueId);
     });
 }
 
 function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRedirection = "", isChangeable = 1, isNewTab = 0) {
-    // Create the `<li>` element with an ID and draggable property
-    const listItem = $('<li>').attr({
+    const listItem = $('<li>').attr(
+        {
         draggable: 'true',
         class: 'dragNavBar navLink',
         id: `navLink_${id}`
@@ -106,8 +104,7 @@ function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRe
         style: 'margin-left: 20px;',
         disabled: isChangeable == 0
     }).text('Delete').on('click', function() {
-        listItem.remove();
-        removeLinkFromArray(id);
+        deleteLink(id)
     });
 
     innerDiv.append(spanText, inputDisplayedText, inputLinkRedirection, deleteButton);
@@ -136,9 +133,7 @@ function collectLinksData() {
     return links;
 }
 
-// Example function to remove the link from your array
 function removeLinkFromArray(id) {
-    // Assuming `listOfLinks` is an array holding your links
     listOfLinks = listOfLinks.filter(link => link.ID !== id);
 }
 
@@ -153,13 +148,19 @@ function updateDisplayedText(uniqueId) {
 
 
 function saveLinks() {
-    let linksToSave = collectLinksData();
-    console.log(linksToSave);
+    let linksToUpdateOrSave = collectLinksData();
+
+    const payload =
+    {
+        createOrUpdate: linksToUpdateOrSave,
+        delete: listOfLinksToDelete
+    };
+
     $.ajax({
         url: '../actions/navLinksAPI.php',
         type: 'POST',
         contentType: 'application/json',  // Ensure content type is set to JSON
-        data: JSON.stringify(linksToSave),  // Stringify the JSON data
+        data: JSON.stringify(payload),  // Stringify the JSON data
         success: function (response) {
             console.log(response);
             showToast('Links successfully updated', 'success');
@@ -170,6 +171,8 @@ function saveLinks() {
         }
     });
 }
+
+
 
 function showToast(message, type = 'info') {
   const toastContainer = document.getElementById('myToastContainer');

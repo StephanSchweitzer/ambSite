@@ -10,7 +10,8 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json');
 
-function sendError($message, $code = 500) {
+function sendError($message, $code = 500)
+{
     http_response_code($code);
     echo json_encode(['status' => 'error', 'message' => $message]);
     die;
@@ -42,7 +43,6 @@ function treatAndInsertLinks($links)
         }
 
         $isChangeable = $result['isChangeable'];
-        //echo $isChangeable;
 
         if ($isChangeable == 0)
         {
@@ -54,7 +54,6 @@ function treatAndInsertLinks($links)
             continue;
         }
 
-        // Keeping this condition to maintain clarity
         if ($isChangeable != 0)
         {
             $updateQuery = $conn->prepare("UPDATE navLinks SET displayedText = :displayedText, linkRedirection = :linkRedirection, displayedOrder = :displayedOrder WHERE id = :id");
@@ -65,6 +64,33 @@ function treatAndInsertLinks($links)
             $updateQuery->execute();
             continue;
         }
+    }
+}
+
+function deleteLinks($ids)
+    {
+    global $conn;
+    foreach ($ids as $id) {
+
+        // Check if the link already exists in the database
+        $query = $conn->prepare("SELECT * FROM navLinks WHERE id = :id");
+        $query->bindParam(':id', $id, PDO::PARAM_INT);
+        $query->execute();
+        $result = $query->fetch(PDO::FETCH_ASSOC);
+
+        if (!$result)
+        {
+            continue;
+        }
+
+        if ($result['isChangeable'] == 0)
+        {
+            continue;
+        }
+
+        $query = $conn->prepare("DELETE FROM navLinks WHERE id = :id");
+        $query->bindParam(':id', $id, PDO::PARAM_INT);
+        $query->execute();
     }
 }
 
@@ -89,13 +115,16 @@ try {
 
             $json_str = file_get_contents('php://input');
             $links = json_decode($json_str, true);
+            $updateLinks = $links['createOrUpdate'];
+            $deleteIds = $links['delete'];
 
             if (!is_array($links))
             {
                 sendError('Empty array received', 400);
             }
 
-            treatAndInsertLinks($links);
+            treatAndInsertLinks($updateLinks);
+            deleteLinks($deleteIds);
 
             echo json_encode(['status' => 'success', 'message' => 'Links successfully updated']);
             break;
@@ -127,29 +156,6 @@ try {
             break;
 
         case 'DELETE':
-            // Ensure user is authenticated before modifying data
-            if ($_SESSION['ambar'] !== true) {
-                sendError('Unauthorized', 401);
-            }
-
-            // Retrieve raw data and parse into the `_DELETE` array
-            parse_str(file_get_contents('php://input'), $_DELETE);
-
-            $id = $_DELETE['ID'] ?? null;
-
-            if (!$id) {
-                sendError('Invalid input', 400);
-            }
-
-            // Delete the entry by ID
-            $query = "DELETE FROM navLinks WHERE ID = ?";
-            $stmt = $conn->prepare($query);
-            $stmt->execute([(int)$id]);
-
-            echo json_encode(['status' => 'success', 'message' => 'Entry deleted successfully']);
-            break;
-
-        default:
             sendError('Method Not Allowed', 405);
             break;
     }
