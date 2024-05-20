@@ -4,14 +4,68 @@ global $conn;
 session_start();
 include '../database/pdo.php';
 
-// Set a response type of JSON
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 header('Content-Type: application/json');
 
-// Function to handle errors in a consistent manner
 function sendError($message, $code = 500) {
     http_response_code($code);
     echo json_encode(['status' => 'error', 'message' => $message]);
     die;
+}
+
+function treatAndInsertLinks($links)
+{
+    global $conn;
+    foreach ($links as $link) {
+        $id = $link['id'];
+        $displayedText = $link['displayedText'];
+        $linkRedirection = $link['linkRedirection'];
+        $order = $link['order'];
+
+        // Check if the link already exists in the database
+        $query = $conn->prepare("SELECT * FROM navLinks WHERE id = :id");
+        $query->bindParam(':id', $id, PDO::PARAM_INT);
+        $query->execute();
+        $result = $query->fetch(PDO::FETCH_ASSOC);
+
+        if (!$result)
+        {
+            $insertQuery = $conn->prepare("INSERT INTO navLinks (displayedText, linkRedirection, displayedOrder, isChangeable, onclick, isNewTab) VALUES (:displayedText, :linkRedirection, :displayedOrder, 1, '', 1)");
+            $insertQuery->bindParam(':displayedText', $displayedText, PDO::PARAM_STR);
+            $insertQuery->bindParam(':linkRedirection', $linkRedirection, PDO::PARAM_STR);
+            $insertQuery->bindParam(':displayedOrder', $order, PDO::PARAM_INT);
+            $insertQuery->execute();
+            continue;
+        }
+
+        $isChangeable = $result['isChangeable'];
+        //echo $isChangeable;
+
+        if ($isChangeable == 0)
+        {
+            $updateQuery = $conn->prepare("UPDATE navLinks SET displayedText = :displayedText, displayedOrder = :displayedOrder WHERE id = :id");
+            $updateQuery->bindParam(':displayedText', $displayedText, PDO::PARAM_STR);
+            $updateQuery->bindParam(':displayedOrder', $order, PDO::PARAM_INT);
+            $updateQuery->bindParam(':id', $id, PDO::PARAM_INT);
+            $updateQuery->execute();
+            continue;
+        }
+
+        // Keeping this condition to maintain clarity
+        if ($isChangeable != 0)
+        {
+            $updateQuery = $conn->prepare("UPDATE navLinks SET displayedText = :displayedText, linkRedirection = :linkRedirection, displayedOrder = :displayedOrder WHERE id = :id");
+            $updateQuery->bindParam(':displayedText', $displayedText, PDO::PARAM_STR);
+            $updateQuery->bindParam(':linkRedirection', $linkRedirection, PDO::PARAM_STR);
+            $updateQuery->bindParam(':displayedOrder', $order, PDO::PARAM_INT);
+            $updateQuery->bindParam(':id', $id, PDO::PARAM_INT);
+            $updateQuery->execute();
+            continue;
+        }
+    }
 }
 
 // Check the request method and handle accordingly
@@ -28,26 +82,22 @@ try {
             break;
 
         case 'POST':
-            // Ensure user is authenticated before modifying data
-            if ($_SESSION['ambar'] !== true) {
+            if ($_SESSION["ambar"] != "connected")
+            {
                 sendError('Unauthorized', 401);
             }
 
-            // Retrieve POST data
-            $displayedText = $_POST['displayedText'] ?? '';
-            $linkRedirection = $_POST['linkRedirection'] ?? '';
-            $displayedOrder = $_POST['displayedOrder'] ?? 0;
+            $json_str = file_get_contents('php://input');
+            $links = json_decode($json_str, true);
 
-            // Validate and insert new entry
-            if (empty($displayedText) || empty($linkRedirection)) {
-                sendError('Missing required fields', 400);
+            if (!is_array($links))
+            {
+                sendError('Empty array received', 400);
             }
 
-            $query = "INSERT INTO navLinks (displayedText, linkRedirection, displayedOrder) VALUES (?, ?, ?)";
-            $stmt = $conn->prepare($query);
-            $stmt->execute([$displayedText, $linkRedirection, (int)$displayedOrder]);
+            treatAndInsertLinks($links);
 
-            echo json_encode(['status' => 'success', 'message' => 'Entry created successfully']);
+            echo json_encode(['status' => 'success', 'message' => 'Links successfully updated']);
             break;
 
         case 'PATCH':

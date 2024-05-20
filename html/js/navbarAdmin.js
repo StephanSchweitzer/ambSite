@@ -37,7 +37,7 @@ function deleteLink(uniqueId) {
 
 function insertLinks(links) {
     $('#navbarLinks').empty();
-    console.log(links)
+    listOfLinks = links;
     links.forEach(function (link) {
         let id = link.ID;
         let displayedText = link.displayedText;
@@ -65,7 +65,7 @@ function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRe
     // Create the `<li>` element with an ID and draggable property
     const listItem = $('<li>').attr({
         draggable: 'true',
-        class: 'dragNavBar',
+        class: 'dragNavBar navLink',
         id: `navLink_${id}`
     });
 
@@ -84,21 +84,20 @@ function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRe
         id: `display_navLink_${id}`,
         placeholder: 'Displayed text',
         value: displayedText
-    }).addClass('form-control form-control-sm').css({
+    }).addClass('form-control form-control-sm displayed-text').css({
         flex: '1',
         marginRight: '8px'
     }).on('input', function() {
         updateDisplayedText(`navLink_${id}`);
     });
 
-    // Link redirection input field with conditional behavior based on `isChangeable`
     const inputLinkRedirection = $('<input>').attr({
         type: 'text',
         id: `link_navLink_${id}`,
         placeholder: isChangeable == 0 ? 'Only Stef can change' : 'Link redirection',
         value: isChangeable == 0 ? '' : linkRedirection,
         disabled: isChangeable == 0
-    }).addClass('form-control form-control-sm').css('flex', '1');
+    }).addClass('form-control form-control-sm link-redirection').css('flex', '1');
 
     // Create the delete button with event handler
     const deleteButton = $('<button>').attr({
@@ -107,18 +106,34 @@ function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRe
         style: 'margin-left: 20px;',
         disabled: isChangeable == 0
     }).text('Delete').on('click', function() {
-        // Remove the entire `<li>` from the DOM
         listItem.remove();
-        // Here you can also implement your logic to remove the item from the array of links
         removeLinkFromArray(id);
     });
 
-    // Append elements to the inner div and then to the list item
     innerDiv.append(spanText, inputDisplayedText, inputLinkRedirection, deleteButton);
     listItem.append(innerDiv);
 
-    // Append the new row to the navbar list container
     $('#navbarLinks').append(listItem);
+}
+
+function collectLinksData() {
+    let links = [];
+    $('.navLink').each(function(index) {
+        // Strip the "navLink_" prefix from the ID
+        const id = this.id.replace('navLink_', '');
+        const displayedText = $(this).find('.displayed-text').val();
+        const linkRedirection = $(this).find('.link-redirection').val();
+        const isChangeable = $(this).find('.link-redirection').val();
+        // Construct the link object with an order index
+        links.push({
+            id: id,
+            displayedText: displayedText,
+            linkRedirection: linkRedirection,
+            order: index + 1 // 1-based order index
+        });
+    });
+
+    return links;
 }
 
 // Example function to remove the link from your array
@@ -138,20 +153,17 @@ function updateDisplayedText(uniqueId) {
 
 
 function saveLinks() {
-    var postData = {
-        displayedText: $('#newDisplayedText').val(),
-        linkRedirection: $('#newLinkRedirection').val(),
-        displayedOrder: $('#newDisplayedOrder').val()
-    };
-
+    let linksToSave = collectLinksData();
+    console.log(linksToSave);
     $.ajax({
         url: '../actions/navLinksAPI.php',
         type: 'POST',
-        data: postData,
+        contentType: 'application/json',  // Ensure content type is set to JSON
+        data: JSON.stringify(linksToSave),  // Stringify the JSON data
         success: function (response) {
-            showToast('Link created successfully', 'success');
+            console.log(response);
+            showToast('Links successfully updated', 'success');
             loadAndInsertLinks();
-            $('#linkCreateModal').modal('hide');
         },
         error: function () {
             showToast('Error creating link', 'error');
@@ -159,65 +171,49 @@ function saveLinks() {
     });
 }
 
-function updateLink() {
-    var updateData = {
-        ID: $('#editLinkID').val(),
-        displayedText: $('#editDisplayedText').val(),
-        linkRedirection: $('#editLinkRedirection').val(),
-        displayedOrder: $('#editDisplayedOrder').val()
-    };
-
-    $.ajax({
-        url: '../actions/navLinksAPI.php',
-        type: 'PATCH',
-        data: updateData,
-        success: function (response) {
-            showToast('Link updated successfully', 'success');
-            loadAndInsertLinks();
-            $('#linkEditModal').modal('hide');
-        },
-        error: function () {
-            showToast('Error updating link', 'error');
-        }
-    });
-}
-
 function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
+  const toastContainer = document.getElementById('myToastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'myToast'; // Base class
+  toast.textContent = message;
 
-    toast.style.padding = '12px 20px';
-    toast.style.borderRadius = '8px';
-    toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-    toast.style.width = '300px';
-    toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    toast.style.transform = 'translateX(100%)';
-    toast.style.opacity = '0';
+  // Apply styles directly
+  toast.style.color = '#fff';
+  toast.style.backgroundColor = '#25252f';
+  toast.style.border = '1px solid #ddd';
+  toast.style.borderLeft = '15px solid #00b894';
+  toast.style.padding = '12px 20px';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+  toast.style.width = '300px';
+  toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+  toast.style.transform = 'translateX(100%)';
+  toast.style.opacity = '0';
 
-    switch (type) {
-        case 'success':
-            toast.style.borderLeftColor = '#2ecc71';
-            break;
-        case 'error':
-            toast.style.borderLeftColor = '#e74c3c';
-            break;
-        default:
-            toast.style.borderLeftColor = '#3498db';
-    }
+  // Setting background color based on the type of message
+  switch (type) {
+      case 'success':
+          toast.style.borderLeftColor = '#2ecc71'; // Green for success
+          break;
+      case 'error':
+          toast.style.borderLeftColor = '#e74c3c'; // Red for error
+          break;
+      default:
+          toast.style.borderLeftColor = '#3498db'; // Blue for general info
+  }
 
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-        toast.style.transform = 'translateX(0)';
-        toast.style.opacity = '1';
-    }, 100);
+  // Append the toast to the container
+  toastContainer.appendChild(toast);
+  setTimeout(() => {
+      toast.style.transform = 'translateX(0)';
+      toast.style.opacity = '1';
+  }, 100); // Delay to allow CSS transition
 
-    setTimeout(() => {
-        toastContainer.removeChild(toast);
-    }, 5000);
+  // Automatically remove the toast
+  setTimeout(() => {
+      toastContainer.removeChild(toast);
+  }, 5000); // Display for 4 seconds
 }
-
 
 
 
