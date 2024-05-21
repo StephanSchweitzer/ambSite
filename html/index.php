@@ -28,7 +28,7 @@ header('Content-Type: text/html; charset=UTF-8');
 </div>
 <div class="headerNoMove" id="modifyZIndex">
     <div id="blockForHeader" class="blockForHeader">
-        <a href="index.php"><img src="imgMid/colorAmbarNew.png" id="ambName" fetchpriority="high" class="ambarNamePic"
+        <a href="/"><img src="imgMid/colorAmbarNew.png" id="ambName" fetchpriority="high" class="ambarNamePic"
                                  alt="Ambar Velasco Logo"></img></a>
     </div>
 </div>
@@ -37,26 +37,26 @@ header('Content-Type: text/html; charset=UTF-8');
     <div id="navLinksBox" class="navLinksBox">
 
         <!-- <a href="https://www.etsy.com/fr/shop/ARTBYAMBAR" target="_blank" class="mainLinkGenres" onclick="selectWorksAreShown = false;">Shop</a> -->
-        <a href="#" class="mainLinkGenres" onclick="selectWorksAreShown = false; loadShop()">Shop</a>
-        <br>
-        <br>
-
-        <a href="#" class="mainLinkGenres"
-           onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectProjectCategories'); selectWorksAreShown = true;">Select
-            Works</a>
-
-        <div id="selectProjectCategories" class="hiddenLinkStuff">
-        </div>
-
-        <div id="breaksForTitles">
-            <br>
-        </div>
-
-        <a href="#" class="mainLinkGenres" onclick="openInfo(); selectWorksAreShown = false">About</a>
-        <br>
-        <br>
-
-        <a class="mainLinkGenres" href="https://www.instagram.com/ambar_velasc0/" target="_blank">Instagram</a>
+<!--        <a href="#" class="mainLinkGenres" onclick="selectWorksAreShown = false; loadShop()">Shop</a>-->
+<!--        <br>-->
+<!--        <br>-->
+<!---->
+<!--        <a href="#" class="mainLinkGenres"-->
+<!--           onclick="getProjectsAndWorks(); toggleSublinks(event, 'selectProjectCategories'); selectWorksAreShown = true;">Select-->
+<!--            Works</a>-->
+<!---->
+<!--        <div id="selectProjectCategories" class="hiddenLinkStuff">-->
+<!--        </div>-->
+<!---->
+<!--        <div id="breaksForTitles">-->
+<!--            <br>-->
+<!--        </div>-->
+<!---->
+<!--        <a href="#" class="mainLinkGenres" onclick="openInfo(); selectWorksAreShown = false">About</a>-->
+<!--        <br>-->
+<!--        <br>-->
+<!---->
+<!--        <a class="mainLinkGenres" href="https://www.instagram.com/ambar_velasc0/" target="_blank">Instagram</a>-->
 
     </div>
     <div id="imagesAndContent" class="imagesAndContent">
