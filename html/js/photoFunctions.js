@@ -219,7 +219,6 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
       
     }
 
-    loadAndDisplayProjectTitles();
 
 
 
@@ -265,30 +264,7 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
 
 });
 
-function loadAndDisplayProjectTitles() {
-  $.ajax({
-    url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
-    type: 'GET',
-    dataType: 'json',
-    success: function(projects) {
-      let container = $('#selectProjectCategories');
-        container.empty(); // Clear existing content
-        container.append('<br>')
-        projects.forEach(function(project) {
-            let title = project.title; // Assuming each project has a 'title' property
-            let link = $('<a>')
-            .attr('href', '#projectSection'+project.title.trim())
-            .text(title);
-            link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));        
-            container.append(link, '<br><br>'); // Append link and a line break for spacing
-          });
-        //container.append('<br>')
-      },
-      error: function() {
-        console.log('Error loading project titles.');
-      }
-    });
-}
+
 
 function createAndShowSideBarLinks()
 {
@@ -387,17 +363,19 @@ function getProjectsAndWorks(partOfThePage)
   selectWorksAreShown = true;
 }
 
-function jumpToSection(partOfThePage)
-{
-    if (partOfThePage != null)
-  {
-    //sleep(300).then(() => { 
-    console.log(partOfThePage)
-    var element = document.getElementById(''+partOfThePage);
-    console.log(element);
-    element.scrollIntoView();
-    // });
-  }
+function jumpToSection(partOfThePage) {
+    if (partOfThePage != null) {
+        console.log('Part of the page:', partOfThePage);
+
+        var element = document.getElementById(partOfThePage);
+        console.log('Element:', element);
+
+        if (element) {
+            element.scrollIntoView();
+        } else {
+            console.error(`Element with ID '${partOfThePage}' not found.`);
+        }
+    }
 }
 
 function fetchWorkIdsForProject(id) {
