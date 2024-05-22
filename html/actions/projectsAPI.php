@@ -5,6 +5,20 @@ session_start();
 
 include '../database/pdo.php';
 
+function makeNewCurrentProject($id)
+{
+    global $conn;
+
+    $theQuery = "UPDATE projects SET isCurrentProject = 0";
+    $updateQuery = $conn->prepare($theQuery);
+    $updateQuery->execute();
+
+    $theQuery = "UPDATE projects SET isCurrentProject = 1 WHERE id = ?";
+    $updateQuery = $conn->prepare($theQuery);
+    $updateQuery->execute([$id]);
+}
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
   $activity = "";
@@ -23,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   }
 
 
-  $query = "SELECT id, title, description, orderOfDisplay, active, deleted
+  $query = "SELECT id, title, description, orderOfDisplay, active, deleted, isCurrentProject
             FROM    projects $activityCondition
             ORDER BY orderOfDisplay DESC";
 
@@ -41,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
       'description' => $result[$i][2],
       'orderOfDisplay' => $result[$i][3],
       'active' => $result[$i][4],
-      'deleted' => $result[$i][5]
+      'deleted' => $result[$i][5],
+      'isCurrentProject' => $result[$i][6]
     );
 
     array_push($data, $singleEntry);
@@ -65,11 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   $description = $_POST["description"];
   $active = $_POST["active"];
   $orderOfDisplay = $_POST["orderOfDisplay"];
+  $isCurrentProject = $_POST["isCurrentProject"];
 
   $query = "INSERT INTO projects (title, description, active, orderOfDisplay)
-          VALUES (?, ?, ?, ?)";
+            VALUES (?, ?, ?, ?)";
 
   $theArray = array($title, $description, $active, $orderOfDisplay);
+
 
   //echo json_encode($theArray);
   // die;
@@ -80,7 +97,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
   try {
     $uploadQuery = $conn->prepare($query);
     $uploadQuery->execute($theArray);
+
+    if ($isCurrentProject == 1)
+    {
+      $lastId = $conn->lastInsertId();
+      makeNewCurrentProject($lastId);
+    }
+
     echo json_encode(array('status' => 'success', 'data' => $theArray));
+
   } catch (PDOException $e) {
     // Handle the error appropriately
     http_response_code(500);
@@ -108,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $description = $_PATCH['description'];
   $orderOfDisplay = $_PATCH['orderOfDisplay'];
   $active = $_PATCH['active'];
+  $isCurrentProject = $_PATCH['isCurrentProject'];
 
   $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = ? WHERE id = ?";
 
@@ -118,10 +144,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 
   $updateQuery = $conn->prepare($theQuery);
 
-  if ($updateQuery->execute($theArray)) {
-      echo "Data updated successfully!";
-  } else {
-      echo "Error: ";
+  try
+  {
+    $updateQuery->execute($theArray);
+
+    if ($isCurrentProject == 1)
+    {
+      makeNewCurrentProject($id);
+    }
+
+    echo json_encode(array('status' => 'success', 'data' => $theArray));
+
+  } catch (PDOException $e)
+  {
+    http_response_code(500);
+    echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
   }
 
   die;
