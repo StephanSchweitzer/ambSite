@@ -134,10 +134,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $orderOfDisplay = $_PATCH['orderOfDisplay'];
   $active = $_PATCH['active'];
   $isCurrentProject = $_PATCH['isCurrentProject'];
+  $restore = $_PATCH['restore'];
 
-  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = ? WHERE id = ?";
+  if ($restore == "restore")
+  {
+    $query = "UPDATE projects SET deleted = 0 WHERE id = ?";
+    $restoreQuery = $conn->prepare($query);
+    $restoreQuery->execute([$id]);
+  }
 
-  $theArray = array($title, $description, $active, $orderOfDisplay, $id);
+  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = ?, isCurrentProject = ? WHERE id = ?";
+  $theArray = array($title, $description, $active, $orderOfDisplay, $isCurrentProject, $id);
   
   // echo json_encode($theArray);
   // die;
@@ -182,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 
   $id = $_DELETE['id'];
 
-  $theQuery = "UPDATE projects SET deleted = 1 WHERE id = ?";
+  $theQuery = "UPDATE projects SET deleted = 1, active = 0 WHERE id = ?";
   //echo $theQuery;
 
   $theArray = array($id);

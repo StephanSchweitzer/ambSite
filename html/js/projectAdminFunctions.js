@@ -250,11 +250,17 @@ function deleteWork() {
 function restoreWork() {
 
     let isActive = $('input[name=editIsActivePost]:checked').val(); // Retrieve the selected radio button value
-
     let activeInt = 1;
-
-    if (isActive != 'true') {
+    if (isActive != 'true')
+    {
         activeInt = 0;
+    }
+
+    let isCurrentProject = $('input[name=editIsCurrentProjectPost]:checked').val();
+    let isCurrentProjectInt = 1;
+    if (isCurrentProject != 'true')
+    {
+        isCurrentProjectInt = 0;
     }
 
     var formData = {
@@ -262,7 +268,9 @@ function restoreWork() {
         title: $('#editProjectTitle').val(),
         description: $('#editProjectDescription').val(),
         orderOfDisplay: $('#editOrderOfDisplay').val(),
-        active: activeInt
+        active: activeInt,
+        isCurrentProject: isCurrentProjectInt,
+        restore : 'restore'
     };
 
     $.ajax({
