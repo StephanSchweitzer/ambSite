@@ -631,11 +631,28 @@ function insertWorks(informations) {
 
 function makeBigPic(clickedImageUrl)
 {
+  const spinner = document.getElementById('spinner');
+  spinner.style.display = 'block';
+  
   let currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
   let currentImage = images[currentImageIndex];
-  document.getElementById('popUpImage').src = currentImage.url;
-  document.getElementById('imageTitle').textContent = currentImage.title;
-  document.getElementById('imageDescription').innerHTML = currentImage.description;
+  const imgElement = document.getElementById('popUpImage');
+
+
+  imgElement.src = '';
+
+  // Set the new image source
+  imgElement.src = currentImage.url;
+
+  // Wait for the image to load
+  imgElement.onload = function() {
+      // Hide the loading spinner
+      spinner.style.display = 'none';
+
+      // Update the text once the image has loaded
+      document.getElementById('imageTitle').textContent = currentImage.title;
+      document.getElementById('imageDescription').innerHTML = currentImage.description;
+  };
 
   // const imageContainer = document.querySelector('.imageInfo');
   // if (imageContainer) {
@@ -648,7 +665,6 @@ function makeBigPic(clickedImageUrl)
 
 
 function changeImage(step) {
-    // Adjust the current index based on step; wrap around if necessary
     currentImageIndex += step;
     if (currentImageIndex >= images.length) {
         currentImageIndex = 0;
@@ -656,14 +672,31 @@ function changeImage(step) {
         currentImageIndex = images.length - 1;
     }
 
-    // Update the image source
     const imgElement = document.getElementById('popUpImage');
-    imgElement.style.transform = ''; // Reset any transformations to start fresh
-    imgElement.src = images[currentImageIndex].url;
+    const spinner = document.getElementById('spinner');
+    document.getElementById('imageTitle').innerHTML = '';
+    document.getElementById('imageDescription').innerHTML = '';
 
-    // Update the title and description using innerHTML for HTML rendering
-    document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
-    document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
+    // Show the loading spinner
+    spinner.style.display = 'block';
+
+    // Clear previous image and text
+    imgElement.style.transform = '';
+    imgElement.src = '';  // Clear the source to trigger loading state
+
+    // Set the new image source
+    const newImageSrc = images[currentImageIndex].url;
+    imgElement.src = newImageSrc;
+
+    // Wait for the image to load
+    imgElement.onload = function() {
+        // Hide the loading spinner
+        spinner.style.display = 'none';
+
+        // Update the text once the image has loaded
+        document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
+        document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
+    };
 }
 
 

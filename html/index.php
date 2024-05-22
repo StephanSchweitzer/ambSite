@@ -64,12 +64,17 @@ header('Content-Type: text/html; charset=UTF-8');
     </div>
 
 
+
+
     <div class="modal fade bd-example-modal-sm" id="bigPicModal" tabindex="-1" role="dialog"
          aria-labelledby="myLargeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="centerLargePhoto">
                     <img id="popUpImage" class="popUpImage" alt="largeImage">
+                        <div id="spinner" class="spinner-border text-primary position-absolute" role="status" style="display: none;">
+                            <span class="sr-only">Loading...</span>
+                        </div>
                 </div>
                 <div id="imageInfo" class="imageInfo">
                     <h2 id="imageTitle">fs</h2>
