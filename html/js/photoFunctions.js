@@ -633,7 +633,7 @@ function makeBigPic(clickedImageUrl)
 {
   const spinner = document.getElementById('spinner');
   spinner.style.display = 'block';
-  
+
   let currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
   let currentImage = images[currentImageIndex];
   const imgElement = document.getElementById('popUpImage');
@@ -646,12 +646,16 @@ function makeBigPic(clickedImageUrl)
 
   // Wait for the image to load
   imgElement.onload = function() {
-      // Hide the loading spinner
-      spinner.style.display = 'none';
 
-      // Update the text once the image has loaded
+      spinner.style.display = 'none';
       document.getElementById('imageTitle').textContent = currentImage.title;
       document.getElementById('imageDescription').innerHTML = currentImage.description;
+
+        // const prevImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+        // const nextImageIndex = (currentImageIndex + 1) % images.length;
+        //
+        // preloadImage(images[prevImageIndex].url);
+        // preloadImage(images[nextImageIndex].url);
   };
 
   // const imageContainer = document.querySelector('.imageInfo');
@@ -662,7 +666,10 @@ function makeBigPic(clickedImageUrl)
 
 }
 
-
+function preloadImage(url) {
+    const img = new Image();
+    img.src = url;
+}
 
 function changeImage(step) {
     currentImageIndex += step;
@@ -696,6 +703,12 @@ function changeImage(step) {
         // Update the text once the image has loaded
         document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
         document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
+
+        // const prevImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+        // const nextImageIndex = (currentImageIndex + 1) % images.length;
+        //
+        // preloadImage(images[prevImageIndex].url);
+        // preloadImage(images[nextImageIndex].url);
     };
 }
 

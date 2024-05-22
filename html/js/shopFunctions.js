@@ -1,5 +1,21 @@
+function showSpinner() {
+    const spinnerHtml = `
+        <div id="loadingSpinner" class="d-flex justify-content-center align-items-center" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: rgba(255, 255, 255, 0.8);">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    `;
+    $('#imagesAndContent').css('position', 'relative').append(spinnerHtml);
+}
+
+function hideSpinner() {
+    $('#loadingSpinner').remove();
+}
+
 function loadShop()
 {
+	showSpinner()
 	yearData = { activity: 'active' }
 	$.ajax({
 		url: "../actions/shopAPI.php",
@@ -7,6 +23,7 @@ function loadShop()
 		data: yearData,
 		dataType: "json",
 		success: function(data) {
+			//spinner.style.display = 'block';
 			$('#imagesAndContent').empty();
 			$('#imagesAndContent').css('padding-top', '50px');
 			//$('#imagesAndContent').css('padding-top', '7vh');
@@ -22,7 +39,8 @@ function loadShop()
             // Create the shopItem and append to the imagesAndContent container
 				$('#imagesAndContent').append(createShopItem(item));
 			});
-			
+			hideSpinner()
+
 			history.pushState({page: 'shop'}, 'Shop', '/shop');
   			document.title = 'Shop - Ambar Velasco';
 		},

@@ -77,8 +77,8 @@ header('Content-Type: text/html; charset=UTF-8');
                         </div>
                 </div>
                 <div id="imageInfo" class="imageInfo">
-                    <h2 id="imageTitle">fs</h2>
-                    <p id="imageDescription">test</p>
+                    <h2 id="imageTitle"></h2>
+                    <p id="imageDescription"></p>
                 </div>
             </div>
         </div>
