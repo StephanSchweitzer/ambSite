@@ -106,17 +106,23 @@ $( window ).on( "load", function() {
 $( document ).ready(function() {
 
   document.getElementById('popUpImage').addEventListener('click', function(event) {
+    if (isPinching)
+    {
+      return;
+    }
     let imgWidth = this.clientWidth;
     let xCoordinate = event.offsetX; // Get the x coordinate of the click
 
-    if (xCoordinate < imgWidth / 2) {
+    if (xCoordinate < imgWidth / 2)
+    {
         // Click on the left side
         changeImage(-1); // Go to the previous image
-      } else {
+    } else
+    {
         // Click on the right side
         changeImage(1); // Go to the next image
-      }
-    });
+    }
+  });
 
   document.addEventListener('keydown', function(event) {
     if (event.keyCode === 37) { // Left arrow key
@@ -140,7 +146,7 @@ document.getElementById('popUpImage').addEventListener('touchstart', function(e)
 }, false);
 
 document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
-    if (e.touches.length === 2) {
+  if (e.touches.length === 2) {
         // Continue to handle pinch gesture
         isPinching = true;
     } else if (e.touches.length === 1 && !isPinching) {
@@ -170,7 +176,7 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
         if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
             // Clear downward swipe, minimal horizontal movement
             $('#bigPicModal').modal('hide');  // Close the modal
-        } else if (Math.abs(deltaX) > window.innerWidth * 0.1) {
+        } else if (Math.abs(deltaX) > window.innerWidth * 0.1 && !isPinching) {
             // Horizontal swipe exceeds threshold
             changeImage(deltaX > 0 ? -1 : 1);
         } else {
@@ -178,7 +184,6 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
             this.style.transform = '';  // Reset position
         }
     }
-    isPinching = false;  // Reset pinch status
 }, false);
 
 
@@ -863,6 +868,9 @@ function createCurrentProjectElement(project)
 
 function createCurrentProjectWorkCardElement(information) {
   let imageURL = "baseImages/" + information.location;
+  const img = new Image();
+  img.src = imageURL;
+  console.log(img.width);
   let title = information.name;
   let description = information.firstDescription.replace(/\n/g, '<br>');
   let long_description = '';
@@ -878,11 +886,22 @@ function createCurrentProjectWorkCardElement(information) {
   let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
   let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
   let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
-
   let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
   let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
-  let insertDescription = $('<div>').html(long_description).addClass('description_text').hide()
-  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(buttonContainer).append(insertDescription).append(imageContainer);
+  let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
+        position: 'relative',
+        maxWidth: '100%',
+        margin: '10px',
+        height: '65vh'})
+      .hide()
+
+  let contentHolder = $('<div>').attr({'id': 'projectSection'+information.id.trim()}).css({
+        position: 'relative',
+
+        overflow: 'hidden'})
+      .append(imageContainer, insertDescription);
+
+  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(buttonContainer).append(contentHolder);
   imageContainer.click(() => makeBigPic(imageURL));
   images.push(imageInfo);
 
@@ -897,6 +916,27 @@ function createCurrentProjectWorkCardElement(information) {
     });
 
   return card;
+}
+
+function getImageDimensions(imageUrl, callback) {
+    const startTime = Date.now();  // Record the start time
+    const img = new Image();
+    img.src = imageUrl;
+    console.log(img.width);
+
+    img.onload = function() {
+        const width = img.width;
+        callback(width);
+        return width;
+    };
+
+    img.onerror = function() {
+        console.error('Error loading image:', imageUrl);
+        callback(null);
+        return
+    };
+
+
 }
 
 function makeCurrentProjectCards(projects) {

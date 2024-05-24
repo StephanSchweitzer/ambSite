@@ -322,7 +322,6 @@ a:hover{color:inherit}
   max-height: 70vh;
   max-width: 70vh;
   margin: auto;
-  padding: auto;
 }
 
 
@@ -332,7 +331,6 @@ a:hover{color:inherit}
   max-height: 70vh;
   max-width: 70vh;
   margin: auto;
-  padding: auto;
 }
 
 .carousel-pic
@@ -342,7 +340,6 @@ a:hover{color:inherit}
   max-width: 100%;
   /* width: auto; */
   margin: auto;
-  padding: auto;
 }
 
 .imagesAndContentMobile p
@@ -503,7 +500,7 @@ a:hover{color:inherit}
   display: none;
 }
 
-.button-4:-webkit-details-marker {
+.button-4::-webkit-details-marker {
   display: none;
 }
 
@@ -708,11 +705,6 @@ body
 
 .description_text
 {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -720,6 +712,10 @@ body
   z-index: 1;
   padding: 10px;
   box-sizing: border-box;
+}
+
+.hidden-maintain-space {
+    visibility: hidden;
 }
 
 
