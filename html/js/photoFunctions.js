@@ -207,11 +207,14 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
     var path = window.location.pathname;
 
     if (path === '/shop') {
-        loadShop(); // Function to load the shop
+        loadShop();
     } else if (path === '/select-works') {
-        getProjectsAndWorks(); // Function to load select works
+        getProjectsAndWorks();
     } else if (path === '/about') {
-        openInfo(); // Function to load about
+        openInfo();
+    }
+    else if (path === '/current-project') {
+        openCurrentProject();
     }
     else 
     {
@@ -814,3 +817,99 @@ function changeImage(step) {
        history.pushState({ page: 'about' }, 'About - Ambar Velasco', '/about');
     document.title = 'About - Ambar Velasco'; // Optionally, update the document title
   }
+
+  function openCurrentProject()
+{
+  $('#imagesAndContent').css('padding-top', '50px');
+
+  $.ajax({
+    url: "../actions/projectsAPI.php",
+    type: "GET",
+    data: {'activity' : 'currentProject'},
+    dataType: "json",
+    success: function(data) {
+      makeCurrentProjectCards(data);
+
+
+    },
+    error: function() {
+      console.log("An error occurred.");
+    },
+  });
+
+  selectWorksAreShown = false;
+}
+
+function createCurrentProjectElement(project)
+{
+  let worksOfProjectDiv = $('<div>').addClass('projectWorks ');
+  let titleAndDescriptionDiv = $('<div>')
+  let title = project.title;
+  let description = project.description.replace(/\n/g, '<br>');
+  let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
+  let insertDescription = $('<p>').html(description).css({
+    'color': '#71797E', // Dark grey color
+    'margin-bottom': '40px' // Margin bottom
+  });
+  //decomment below if you want to redisplay the title and description of projects
+  titleAndDescriptionDiv.append(insertTitle, insertDescription);
+  let projectDiv = $('<div>').addClass('project').attr({
+    'alt': title,
+    'id': 'projectSection'+title.trim()
+  }).css({'border': '0px', 'text-align': 'center'});
+  projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
+  return projectDiv;
+}
+
+function createCurrentProjectWorkCardElement(information) {
+  let imageURL = "baseImages/" + information.location;
+  let thumbnailURL = "thumbnails/" + information.location;
+  let title = information.name;
+  let description = information.firstDescription.replace(/\n/g, '<br>');
+
+  let imageInfo = {
+    url: imageURL,
+    title: title,
+    description: description
+  };
+  //decomment below for name and description to show below the painting
+  // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
+  // let insertDescription = $('<p>').html(description);
+  let insertTitle = '';
+  let insertDescription = '';
+  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', thumbnailURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
+  card.click(() => makeBigPic(imageURL));
+  images.push(imageInfo);
+  return card;
+}
+
+function makeCurrentProjectCards(projects) {
+  $('#imagesAndContent').empty();
+  images.length = 0;
+
+  let projectPromises = projects.map(project => {
+    return fetchWorkIdsForProject(project.id).then(workIds => {
+      return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
+                return { project, allWorksForProject }; // Return project info with its works
+              });
+    });
+  });
+
+  Promise.all(projectPromises).then(results => {
+    results.forEach(({ project, allWorksForProject }) => {
+      let mainProj = createCurrentProjectElement(project);
+      allWorksForProject.forEach(information => {
+        let card = createCurrentProjectWorkCardElement(information);
+        mainProj.find('.projectWorks').first().append(card);
+      });
+
+      $('#imagesAndContent').append(mainProj);
+      console.log(projects, project.title)
+    });
+    history.pushState({page: 'current-project'}, 'Current Project', '/current-project');
+  document.title = 'Current Project - Ambar Velasco';
+  }).catch(error => {
+    console.error('Error:', error);
+  });
+}

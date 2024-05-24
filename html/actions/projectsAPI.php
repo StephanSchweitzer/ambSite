@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   
   $activityCondition = "WHERE active = 1 ";
 
-    if($activity == 'inactive')
+  if($activity == 'inactive')
   {
     $activityCondition = "WHERE deleted = 0 and active = 0 ";
   }
@@ -34,6 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
   if($activity == 'deleted')
   {
     $activityCondition = "WHERE deleted = 1 ";
+  }
+
+  if($activity == 'currentProject')
+  {
+    $activityCondition = "WHERE isCurrentProject = 1 ";
   }
 
 

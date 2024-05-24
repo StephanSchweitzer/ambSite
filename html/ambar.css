@@ -690,7 +690,7 @@ body
 .popUpImage
 {
   max-height: 82vh;
-  min-height: 82vh;
+  /*min-height: 82vh;*/
   /* min-width: 90vw; */
   max-width: 90vw;
 }
