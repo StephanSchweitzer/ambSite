@@ -172,6 +172,8 @@ function insertData(data)
     let carousel = item.carousel;
     let visible = item.visible;
     let isSelectWork = item.isSelectWork;
+    let longDescription = item.long_description;
+
 
     // Create a Bootstrap card div element with the data
     let card = $('<div>').addClass('card shadow-grow mb-4');
@@ -179,7 +181,8 @@ function insertData(data)
     let cardBody = $('<div>').addClass('card-body');
     cardBody.append($('<h5>').addClass('card-title').text(item.name));
     cardBody.append(createCardText('ID', item.id));
-    cardBody.append(createCardText('Description', item.firstDescription));
+    cardBody.append(createCardText('Materials Description', item.firstDescription));
+    cardBody.append(createCardText('Long Description', item.long_description));
     cardBody.append(createCardText('Medium', item.medium));
     cardBody.append(createCardText('Is Color', item.isColor));
     cardBody.append(createCardText('Availability', item.availability));
@@ -203,7 +206,7 @@ function insertData(data)
 
     // Open modal with inputs filled when the photo is clicked
     card.click(function() {
-      openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork);
+      openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork, longDescription);
     });
 
     // Append the card to the existingPhotoInformation element
@@ -211,7 +214,7 @@ function insertData(data)
   });
 }
 
-function openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork) {
+function openPhotoInfo(id, location, name, firstDescription, secondDescription, medium, isColor, availability, creationYear, orderOfDisplay, carousel, visible, isSelectWork, longDescription) {
 
   console.log(visible);
   document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete post</button>';
@@ -236,6 +239,8 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   $('#photoName').val(name);
   $('#photoFirstDescription').val(firstDescription);
   $('#photoSecondDescription').val(secondDescription);
+  $('#photoLongDescription').val(longDescription);
+
   //$('#photoMedium').val(medium);
 
 
@@ -345,6 +350,8 @@ function postPhoto() {
   postData.append('name', $('#photoPostName').val());
   postData.append('firstDescription', $('#photoPostFirstDescription').val());
   postData.append('secondDescription', $('#photoPostSecondDescription').val());
+  postData.append('long_description', $('#photoPostLongDescription').val());
+
   postData.append('medium', $('#photoPostMedium').val());
   //postData.append('isColor', $('#photoPostIsColor').val());
   //postData.append('availability', $('#photoPostAvailability').val());
@@ -424,6 +431,7 @@ function updateWork()
     name: $('#photoName').val(),
     firstDescription: $('#photoFirstDescription').val(),
     secondDescription: $('#photoSecondDescription').val(),
+    long_description : $('#photoLongDescription').val(),
     medium: $('#photoMedium').val(),
     isColor: colorInt,
     availability: availableInt,

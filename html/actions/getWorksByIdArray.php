@@ -1,5 +1,6 @@
 <?php
-  
+
+global $conn;
 include '../database/pdo.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
@@ -14,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                     desc2, desc3, medium,
                     color, isAvailable, year,
                     orderOfDisplay, carousel,
-                    isSelectWork
+                    isSelectWork, long_description
             FROM    allWorks
             WHERE workId = ?";
 
@@ -22,7 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
   foreach ($worksIds as $workId) {
         $query = "SELECT workId, fileLocation, name, desc2, desc3, medium,
-                  color, isAvailable, year, orderOfDisplay, carousel, isSelectWork
+                  color, isAvailable, year, orderOfDisplay, carousel, isSelectWork,
+                  long_description
                   FROM allWorks
                   WHERE workId = ?";
         
@@ -45,7 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
                 'creationYear' => $row['year'],
                 'orderOfDisplay' => $row['orderOfDisplay'],
                 'carousel' => $row['carousel'],
-                'isSelectWork' => $row['isSelectWork']
+                'isSelectWork' => $row['isSelectWork'],
+                'long_description' => $row['long_description']
             );
             array_push($data, $singleEntry);
         }
