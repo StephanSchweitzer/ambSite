@@ -695,6 +695,34 @@ body
   max-width: 90vw;
 }
 
+.buttonContainer
+{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    /*background: rgba(255, 255, 255, 0.8),*/
+    padding: 20px;
+    border-radius: 5px;
+    z-index: 2
+}
+
+.description_text
+{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 1;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+
 .popUpImageMobile
 {
   max-height: 90vh;

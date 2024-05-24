@@ -863,24 +863,39 @@ function createCurrentProjectElement(project)
 
 function createCurrentProjectWorkCardElement(information) {
   let imageURL = "baseImages/" + information.location;
-  let thumbnailURL = "thumbnails/" + information.location;
   let title = information.name;
   let description = information.firstDescription.replace(/\n/g, '<br>');
-
+  let long_description = '';
+  if (information.long_description !== null) {
+    long_description = information.long_description.replace(/\n/g, '<br>');
+  }
   let imageInfo = {
     url: imageURL,
     title: title,
     description: description
   };
   //decomment below for name and description to show below the painting
-  // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-  // let insertDescription = $('<p>').html(description);
-  let insertTitle = '';
-  let insertDescription = '';
-  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', thumbnailURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
-  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
-  card.click(() => makeBigPic(imageURL));
+  let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
+  let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
+  let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
+
+  let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
+  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+  let insertDescription = $('<div>').html(long_description).addClass('description_text').hide()
+  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(buttonContainer).append(insertDescription).append(imageContainer);
+  imageContainer.click(() => makeBigPic(imageURL));
   images.push(imageInfo);
+
+  imageButton.click((event) => {
+        imageContainer.toggle();
+        insertDescription.toggle();
+    });
+
+    textButton.click((event) => {
+        imageContainer.toggle();
+        insertDescription.toggle();
+    });
+
   return card;
 }
 
