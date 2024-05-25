@@ -1,6 +1,8 @@
-<?php 
-
+<?php
+error_reporting(E_ALL);
+global $conn;
 session_start();
+
 
 include '../database/pdo.php';
 
@@ -9,7 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
 	$projectId = $_GET["projectId"];
 
-	$query = "SELECT workId FROM worksInProjects WHERE projectId = ?";
+	$query = "
+        SELECT w.workId, a.orderOfDisplay
+        FROM worksInProjects w
+        INNER JOIN allWorks a ON w.workId = a.workId
+        WHERE w.projectId = ?
+        ORDER BY a.orderOfDisplay;";
+
 	$theArray = array($projectId);
 
 	try {

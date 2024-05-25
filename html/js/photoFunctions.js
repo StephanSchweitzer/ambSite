@@ -1,212 +1,207 @@
 var selectWorksAreShown = false;
 let currentImageIndex = 0; // Global variable to track the current image index
 let images = []; // Global array to store image URLs
-let startX, startY, initialTouchDistance, currentX;
+let startX, startY;
 let isPinching = false;
 var imageIsRows = 'img-containerForRows';
 var projectIsRows = 'projectWorksForRows';
 
-$( window ).on( "load", function() {
+$(window).on("load", function () {
 
-  //this fixes the width of all thumbnails
+    //this fixes the width of all thumbnails
 
-  // if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-  // {
-  //   $('#popUpImage').removeClass('popUpImage')
-  //   $('#popUpImage').addClass('popUpImageMobile')
-  //   $('#imagesAndContent').removeClass('imagesAndContent')
-  //   $('#imagesAndContent').addClass('imagesAndContentMobile')
-  //   $('#blockForHeader').removeClass('blockForHeader')
-  //   $('#blockForHeader').addClass('blockForHeaderMobile')
-  //   $('#whiteForTheTopMaybe').addClass('headerNoMove3')
-  //   $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-  //   $('#whiteForTheTop').addClass('headerNoMove3')
-  //   $('#navLinksBox').removeClass('navLinksBox')
-  //   $('#navLinksBox').addClass('navLinksBoxMobile')
-  //   $('#selectProjectCategories').addClass('hiddenLinkStuff')
-  //   $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
-  // }
+    // if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
+    // {
+    //   $('#popUpImage').removeClass('popUpImage')
+    //   $('#popUpImage').addClass('popUpImageMobile')
+    //   $('#imagesAndContent').removeClass('imagesAndContent')
+    //   $('#imagesAndContent').addClass('imagesAndContentMobile')
+    //   $('#blockForHeader').removeClass('blockForHeader')
+    //   $('#blockForHeader').addClass('blockForHeaderMobile')
+    //   $('#whiteForTheTopMaybe').addClass('headerNoMove3')
+    //   $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
+    //   $('#whiteForTheTop').addClass('headerNoMove3')
+    //   $('#navLinksBox').removeClass('navLinksBox')
+    //   $('#navLinksBox').addClass('navLinksBoxMobile')
+    //   $('#selectProjectCategories').addClass('hiddenLinkStuff')
+    //   $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
+    // }
 
-  $(document).ready(function() {
-    $('#bigPicModal').on('click', function(event) {
-        // Check if the clicked element is not the title, description, or image
-        if (!$(event.target).closest('#popUpImage').length) {
-            // If the clicked area is not the title, description, or image, close the modal
-            $('#bigPicModal').modal('hide');
-        }
+    $(document).ready(function () {
+        $('#bigPicModal').on('click', function (event) {
+            // Check if the clicked element is not the title, description, or image
+            if (!$(event.target).closest('#popUpImage').length) {
+                // If the clicked area is not the title, description, or image, close the modal
+                $('#bigPicModal').modal('hide');
+            }
+        });
     });
-});
 
-  $('.size12020').each(function(index, element) {
-    let theWidth = this.width;
-    $(this).closest('.holdForNow').css("min-width",(theWidth-1)+"px");
-    $(this).closest('.holdPhotoandBlack').css("min-width",(theWidth-1)+"px");
-    //this corrects the source of the larger images
-    //$(this).removeClass('invisible')
-    let idOfForm = "#20"+$(this).attr("id")+"IMG";
-    console.log(idOfForm);
-    let imgPath = $(idOfForm).attr("sourceForJS");
-    console.log(imgPath);
-    $(idOfForm).attr("src",imgPath);
-  });
 
-  $('.size12020New').each(function(index, element) {
-    let theWidth = this.width;
-    $(this).closest('.holdForNowNew').css("min-width",(theWidth-1)+"px");
-    $(this).closest('.holdPhotoandBlackNew').css("min-width",(theWidth-1)+"px");
-    //this corrects the source of the larger images
-    //$(this).removeClass('invisible')
-    let idOfForm = "#20"+$(this).attr("id")+"IMG";
-    console.log(idOfForm);
-    let imgPath = $(idOfForm).attr("sourceForJS");
-    console.log(imgPath);
-    $(idOfForm).attr("src",imgPath);
-  });
-
-  $('.size12021').each(function(index, element) {
-    let theWidth = this.width;
-    $(this).closest('.holdForNow').css("min-width",(theWidth-1)+"px");
-    $(this).closest('.holdPhotoandBlack').css("min-width",(theWidth-1)+"px");
-    //this corrects the source of the larger images
-    //$(this).removeClass('invisible')
-    let idOfForm = "#21"+$(this).attr("id")+"IMG";
-    console.log(idOfForm);
-    let imgPath = $(idOfForm).attr("sourceForJS");
-    console.log(imgPath);
-    $(idOfForm).attr("src",imgPath);
-  });
-
-  $('.size12022').each(function(index, element) {
-    let theWidth = this.width;
-    $(this).closest('.holdForNow').css("min-width",(theWidth-1)+"px");
-    $(this).closest('.holdPhotoandBlack').css("min-width",(theWidth-1)+"px");
-    //this corrects the source of the larger images
-    //$(this).removeClass('invisible')
-    let idOfForm = "#22"+$(this).attr("id")+"IMG";
-    console.log(idOfForm);
-    let imgPath = $(idOfForm).attr("sourceForJS");
-    console.log(imgPath);
-    $(idOfForm).attr("src",imgPath);
-  });
-
-  $('.invisible').each(function(index, element) {
-    $(this).removeClass('invisible')
-  });
-
-  setTimeout(function() {
-    $('.invisibleText').each(function(index, element) {
-      $(this).removeClass('invisibleText')
+    $('.size12020').each(function (index, element) {
+        let theWidth = this.width;
+        $(this).closest('.holdForNow').css("min-width", (theWidth - 1) + "px");
+        $(this).closest('.holdPhotoandBlack').css("min-width", (theWidth - 1) + "px");
+        //this corrects the source of the larger images
+        //$(this).removeClass('invisible')
+        let idOfForm = "#20" + $(this).attr("id") + "IMG";
+        console.log(idOfForm);
+        let imgPath = $(idOfForm).attr("sourceForJS");
+        console.log(imgPath);
+        $(idOfForm).attr("src", imgPath);
     });
-  }, 500);
 
-  createAndShowSideBarLinks();
+    $('.size12020New').each(function (index, element) {
+        let theWidth = this.width;
+        $(this).closest('.holdForNowNew').css("min-width", (theWidth - 1) + "px");
+        $(this).closest('.holdPhotoandBlackNew').css("min-width", (theWidth - 1) + "px");
+        //this corrects the source of the larger images
+        //$(this).removeClass('invisible')
+        let idOfForm = "#20" + $(this).attr("id") + "IMG";
+        console.log(idOfForm);
+        let imgPath = $(idOfForm).attr("sourceForJS");
+        console.log(imgPath);
+        $(idOfForm).attr("src", imgPath);
+    });
+
+    $('.size12021').each(function (index, element) {
+        let theWidth = this.width;
+        $(this).closest('.holdForNow').css("min-width", (theWidth - 1) + "px");
+        $(this).closest('.holdPhotoandBlack').css("min-width", (theWidth - 1) + "px");
+        //this corrects the source of the larger images
+        //$(this).removeClass('invisible')
+        let idOfForm = "#21" + $(this).attr("id") + "IMG";
+        console.log(idOfForm);
+        let imgPath = $(idOfForm).attr("sourceForJS");
+        console.log(imgPath);
+        $(idOfForm).attr("src", imgPath);
+    });
+
+    $('.size12022').each(function (index, element) {
+        let theWidth = this.width;
+        $(this).closest('.holdForNow').css("min-width", (theWidth - 1) + "px");
+        $(this).closest('.holdPhotoandBlack').css("min-width", (theWidth - 1) + "px");
+        //this corrects the source of the larger images
+        //$(this).removeClass('invisible')
+        let idOfForm = "#22" + $(this).attr("id") + "IMG";
+        console.log(idOfForm);
+        let imgPath = $(idOfForm).attr("sourceForJS");
+        console.log(imgPath);
+        $(idOfForm).attr("src", imgPath);
+    });
+
+    $('.invisible').each(function (index, element) {
+        $(this).removeClass('invisible')
+    });
+
+    setTimeout(function () {
+        $('.invisibleText').each(function (index, element) {
+            $(this).removeClass('invisibleText')
+        });
+    }, 500);
+
+    createAndShowSideBarLinks();
 
 })
 
-$( document ).ready(function() {
+$(document).ready(function () {
 
-  document.getElementById('popUpImage').addEventListener('click', function(event) {
-    if (isPinching)
-    {
-      return;
-    }
-    let imgWidth = this.clientWidth;
-    let xCoordinate = event.offsetX; // Get the x coordinate of the click
-
-    if (xCoordinate < imgWidth / 2)
-    {
-        // Click on the left side
-        changeImage(-1); // Go to the previous image
-    } else
-    {
-        // Click on the right side
-        changeImage(1); // Go to the next image
-    }
-  });
-
-  document.addEventListener('keydown', function(event) {
-    if (event.keyCode === 37) { // Left arrow key
-        changeImage(-1); // Go to the previous image
-    } else if (event.keyCode === 39) { // Right arrow key
-        changeImage(1); // Go to the next image
-    }
-});
-
-
-document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
-    isPinching = false;
-    if (e.touches.length === 1) {
-        this.style.transition = 'none';  // Disable transitions for immediate feedback
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-        // Prepare for a pinch gesture
-        isPinching = true;
-    }
-}, false);
-
-document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
-  if (e.touches.length === 2) {
-        // Continue to handle pinch gesture
-        isPinching = true;
-    } else if (e.touches.length === 1 && !isPinching) {
-        // Handle single finger swipe
-        let currentX = e.touches[0].clientX;
-        let currentY = e.touches[0].clientY;
-        let deltaX = Math.round((currentX - startX) * 0.3);  // Reduced movement for more control
-        let deltaY = currentY - startY;
-
-        // Provide feedback by translating image based on finger movement
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            e.preventDefault();  // Prevent scrolling when moving horizontally
-            this.style.transform = `translateX(${deltaX}px)`;
+    document.getElementById('popUpImage').addEventListener('click', function (event) {
+        if (isPinching) {
+            return;
         }
-    }
-}, false);
+        let imgWidth = this.clientWidth;
+        let xCoordinate = event.offsetX; // Get the x coordinate of the click
 
-document.getElementById('popUpImage').addEventListener('touchend', function(e) {
-    this.style.transition = 'transform 0.3s ease';  // Re-enable transitions
-    if (!isPinching && e.changedTouches.length === 1) {
-        let endX = e.changedTouches[0].clientX;
-        let endY = e.changedTouches[0].clientY;
-        let deltaX = endX - startX;
-        let deltaY = endY - startY;
-
-        // Determine if the swipe was primarily vertical and downward
-        if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
-            // Clear downward swipe, minimal horizontal movement
-            $('#bigPicModal').modal('hide');  // Close the modal
-        } else if (Math.abs(deltaX) > window.innerWidth * 0.1 && !isPinching) {
-            // Horizontal swipe exceeds threshold
-            changeImage(deltaX > 0 ? -1 : 1);
+        if (xCoordinate < imgWidth / 2) {
+            // Click on the left side
+            changeImage(-1); // Go to the previous image
         } else {
-            // Swipe did not meet any criteria for action
-            this.style.transform = '';  // Reset position
+            // Click on the right side
+            changeImage(1); // Go to the next image
         }
-    }
-}, false);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.keyCode === 37) { // Left arrow key
+            changeImage(-1); // Go to the previous image
+        } else if (event.keyCode === 39) { // Right arrow key
+            changeImage(1); // Go to the next image
+        }
+    });
 
 
+    document.getElementById('popUpImage').addEventListener('touchstart', function (e) {
+        isPinching = false;
+        if (e.touches.length === 1) {
+            this.style.transition = 'none';  // Disable transitions for immediate feedback
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+            // Prepare for a pinch gesture
+            isPinching = true;
+        }
+    }, false);
 
-  $('.modal').on('hidden.bs.modal', function ()
-  {
-    $('body').removeClass('no-scroll').css('top', '');
-    $(window).scrollTop(scrollPosition);
-    $('#modifyZIndex').removeClass('headerNoMove2')
-    $('#modifyZIndex').addClass('headerNoMove')
-    $('#whiteForTheTop').removeClass('headerNoMove3')
-    $('#whiteForTheTop').addClass('whiteComeAndGo')
-  })
+    document.getElementById('popUpImage').addEventListener('touchmove', function (e) {
+        if (e.touches.length === 2) {
+            // Continue to handle pinch gesture
+            isPinching = true;
+        } else if (e.touches.length === 1 && !isPinching) {
+            // Handle single finger swipe
+            let currentX = e.touches[0].clientX;
+            let currentY = e.touches[0].clientY;
+            let deltaX = Math.round((currentX - startX) * 0.3);  // Reduced movement for more control
+            let deltaY = currentY - startY;
 
-  $('.modal').on('show.bs.modal', function ()
-  {
-    scrollPosition = $(window).scrollTop();
-    $('body').addClass('no-scroll').css('top', -scrollPosition);
-    $('#modifyZIndex').removeClass('headerNoMove')
-    $('#modifyZIndex').addClass('headerNoMove2')
-    $('#whiteForTheTop').removeClass('whiteComeAndGo')
-    $('#whiteForTheTop').addClass('headerNoMove3')
-  })
+            // Provide feedback by translating image based on finger movement
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                e.preventDefault();  // Prevent scrolling when moving horizontally
+                this.style.transform = `translateX(${deltaX}px)`;
+            }
+        }
+    }, false);
+
+    document.getElementById('popUpImage').addEventListener('touchend', function (e) {
+        this.style.transition = 'transform 0.3s ease';  // Re-enable transitions
+        if (!isPinching && e.changedTouches.length === 1) {
+            let endX = e.changedTouches[0].clientX;
+            let endY = e.changedTouches[0].clientY;
+            let deltaX = endX - startX;
+            let deltaY = endY - startY;
+
+            // Determine if the swipe was primarily vertical and downward
+            if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
+                // Clear downward swipe, minimal horizontal movement
+                $('#bigPicModal').modal('hide');  // Close the modal
+            } else if (Math.abs(deltaX) > window.innerWidth * 0.1 && !isPinching) {
+                // Horizontal swipe exceeds threshold
+                changeImage(deltaX > 0 ? -1 : 1);
+            } else {
+                // Swipe did not meet any criteria for action
+                this.style.transform = '';  // Reset position
+            }
+        }
+    }, false);
+
+
+    $('.modal').on('hidden.bs.modal', function () {
+        $('body').removeClass('no-scroll').css('top', '');
+        $(window).scrollTop(scrollPosition);
+        $('#modifyZIndex').removeClass('headerNoMove2')
+        $('#modifyZIndex').addClass('headerNoMove')
+        $('#whiteForTheTop').removeClass('headerNoMove3')
+        $('#whiteForTheTop').addClass('whiteComeAndGo')
+    })
+
+    $('.modal').on('show.bs.modal', function () {
+        scrollPosition = $(window).scrollTop();
+        $('body').addClass('no-scroll').css('top', -scrollPosition);
+        $('#modifyZIndex').removeClass('headerNoMove')
+        $('#modifyZIndex').addClass('headerNoMove2')
+        $('#whiteForTheTop').removeClass('whiteComeAndGo')
+        $('#whiteForTheTop').addClass('headerNoMove3')
+    })
 
 
     var path = window.location.pathname;
@@ -217,158 +212,143 @@ document.getElementById('popUpImage').addEventListener('touchend', function(e) {
         getProjectsAndWorks();
     } else if (path === '/about') {
         openInfo();
-    }
-    else if (path === '/current-project') {
+    } else if (path === '/current-project') {
         openCurrentProject();
-    }
-    else 
-    {
-      getCarousel();
-      
+    } else {
+        getCarousel();
+
     }
 
 
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        $('#popUpImage').removeClass('popUpImage')
+        $('#popUpImage').addClass('popUpImageMobile')
+        $('#imagesAndContent').removeClass('imagesAndContent')
+        $('#imagesAndContent').addClass('imagesAndContentMobile')
+        $('#blockForHeader').removeClass('blockForHeader')
+        $('#blockForHeader').addClass('blockForHeaderMobile')
+        $('#whiteForTheTopMaybe').addClass('headerNoMove3')
+        $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
+        $('#whiteForTheTop').addClass('headerNoMove3')
+        $('#navLinksBox').removeClass('navLinksBox')
+        $('#navLinksBox').addClass('navLinksBoxMobile')
+        $('#homePageCarousel').removeClass('homePageCarousel')
+        $('#homePageCarousel').addClass('homePageCarouselMobile')
+        $('#selectProjectCategories').removeClass('hiddenLinkStuff')
+        $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
+        $('#ambName').removeClass('ambarNamePic')
+        $('#ambName').addClass('ambarNamePicMobile')
+        imageIsRows = ''
+        projectIsRows = ''
 
 
-  if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-  {
-    $('#popUpImage').removeClass('popUpImage')
-    $('#popUpImage').addClass('popUpImageMobile')
-    $('#imagesAndContent').removeClass('imagesAndContent')
-    $('#imagesAndContent').addClass('imagesAndContentMobile')
-    $('#blockForHeader').removeClass('blockForHeader')
-    $('#blockForHeader').addClass('blockForHeaderMobile')
-    $('#whiteForTheTopMaybe').addClass('headerNoMove3')
-    $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-    $('#whiteForTheTop').addClass('headerNoMove3')
-    $('#navLinksBox').removeClass('navLinksBox')
-    $('#navLinksBox').addClass('navLinksBoxMobile')
-    $('#homePageCarousel').removeClass('homePageCarousel')
-    $('#homePageCarousel').addClass('homePageCarouselMobile')
-    $('#selectProjectCategories').removeClass('hiddenLinkStuff')
-    $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
-    $('#ambName').removeClass('ambarNamePic')
-    $('#ambName').addClass('ambarNamePicMobile')
-    imageIsRows = ''
-    projectIsRows = ''
+        const allLinks = document.querySelectorAll('a');
 
+        allLinks.forEach(link => {
+            link.style.padding = '.05em';
+            link.style.margin = '-.05em';
+        });
 
-    const allLinks = document.querySelectorAll('a');
+        const genreLinks = document.querySelectorAll('a.mainLinkGenres');
 
-    allLinks.forEach(link => {
-      link.style.padding = '.05em';
-      link.style.margin = '-.05em';
-    });
+        genreLinks.forEach(link => {
+            link.style.padding = '.7em';
+            link.style.margin = '-.7em';
+        });
 
-    const genreLinks = document.querySelectorAll('a.mainLinkGenres');
-
-    genreLinks.forEach(link => {
-      link.style.padding = '.7em';
-      link.style.margin = '-.7em';
-    });
-
-  }
+    }
 
 
 });
 
 
-
-function createAndShowSideBarLinks()
-{
-  return;
-  // $.ajax({
-  //   url: 'actions/sidebarAPI.php',
-  //   method: 'GET',
-  //   dataType: 'json',
-  //   success: function(response) {
-  //     orderSideBar(response);
-  //   },
-  //   error: function(xhr, status, error) {
-  //     console.log('Error:', error);
-  //   }
-  // });
+function createAndShowSideBarLinks() {
+    return;
+    // $.ajax({
+    //   url: 'actions/sidebarAPI.php',
+    //   method: 'GET',
+    //   dataType: 'json',
+    //   success: function(response) {
+    //     orderSideBar(response);
+    //   },
+    //   error: function(xhr, status, error) {
+    //     console.log('Error:', error);
+    //   }
+    // });
 }
 
-function orderSideBar(sideBarInformation)
-{
+function orderSideBar(sideBarInformation) {
 
 }
 
-function accessPictureForm(divName)
-{
-  let newDiveName = '#'+divName;
-  $(newDiveName).modal('show');
-  let pic1 = document.getElementById('leafTwist');
+function accessPictureForm(divName) {
+    let newDiveName = '#' + divName;
+    $(newDiveName).modal('show');
+    let pic1 = document.getElementById('leafTwist');
 }
 
-function test()
-{
-  $("#photoModal").modal('show');
+function test() {
+    $("#photoModal").modal('show');
 }
 
-function toggleSublinks(event, sublinksId)
-{
-  event.preventDefault();
-  var sublinks = $("#" + sublinksId);
-  //$(".hiddenLinkStuff").not(sublinks).slideUp();
-  sublinks.slideToggle();
-  $("#breaksForTitles").slideToggle();
+function toggleSublinks(event, sublinksId) {
+    event.preventDefault();
+    var sublinks = $("#" + sublinksId);
+    //$(".hiddenLinkStuff").not(sublinks).slideUp();
+    sublinks.slideToggle();
+    $("#breaksForTitles").slideToggle();
 }
 
-function getWorksInformation(genre) 
-{
-  //pageNumber = genre;
-  genre = {
-    theYear: genre
-  }
-
-  $.ajax({
-    url: 'actions/picturesAPI.php',
-    method: 'GET',
-    data: genre,
-    dataType: 'json',
-    success: function(response) {
-      console.log(response);
-      insertWorks(response);
-    },
-    error: function(xhr, status, error) {
-      console.log('Error:', error);
+function getWorksInformation(genre) {
+    //pageNumber = genre;
+    genre = {
+        theYear: genre
     }
-  });
+
+    $.ajax({
+        url: 'actions/picturesAPI.php',
+        method: 'GET',
+        data: genre,
+        dataType: 'json',
+        success: function (response) {
+            console.log(response);
+            insertWorks(response);
+        },
+        error: function (xhr, status, error) {
+            console.log('Error:', error);
+        }
+    });
 
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function getProjectsAndWorks(partOfThePage)
-{
-  $('#imagesAndContent').css('padding-top', '50px');
+function getProjectsAndWorks(partOfThePage) {
+    $('#imagesAndContent').css('padding-top', '50px');
 
-  if (selectWorksAreShown)
-  {
-    return;
-  }
+    if (selectWorksAreShown) {
+        return;
+    }
 
-  $.ajax({
-    url: "../actions/projectsAPI.php",
-    type: "GET",
-    data: {'activity' : 'active'},
-    dataType: "json",
-    success: function(data) {
-      makeProjectCards(data, partOfThePage);
+    $.ajax({
+        url: "../actions/projectsAPI.php",
+        type: "GET",
+        data: {'activity': 'active'},
+        dataType: "json",
+        success: function (data) {
+            makeProjectCards(data, partOfThePage);
 
-    },
-    error: function() {
-      console.log("An error occurred.");
-    },
-  });
+        },
+        error: function () {
+            console.log("An error occurred.");
+        },
+    });
 
-  //jumpToSection(partOfThePage);
+    //jumpToSection(partOfThePage);
 
-  selectWorksAreShown = true;
+    selectWorksAreShown = true;
 }
 
 function jumpToSection(partOfThePage) {
@@ -388,192 +368,187 @@ function jumpToSection(partOfThePage) {
 
 function fetchWorkIdsForProject(id) {
 
-  return $.ajax({
-    url: '../actions/worksOfProjectsAPI.php',
-    type: 'GET',
-    data: { 'projectId': id },
-    dataType: 'json'
-  });
+    return $.ajax({
+        url: '../actions/worksOfProjectsAPI.php',
+        type: 'GET',
+        data: {'projectId': id},
+        dataType: 'json'
+    });
 }
 
 function getWorkFromId(id) {
 
-  return $.ajax({
-    url: '../actions/worksOfProjectsAPI.php',
-    type: 'GET',
-    data: { 'projectId': id },
-    dataType: 'json'
-  });
+    return $.ajax({
+        url: '../actions/worksOfProjectsAPI.php',
+        type: 'GET',
+        data: {'projectId': id},
+        dataType: 'json'
+    });
 }
 
 function makeProjectCards(projects, partOfThePage) {
-  $('#imagesAndContent').empty();
-  images.length = 0;
+    $('#imagesAndContent').empty();
+    images.length = 0;
 
-  let projectPromises = projects.map(project => {
-    return fetchWorkIdsForProject(project.id).then(workIds => {
-      return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
-                return { project, allWorksForProject }; // Return project info with its works
-              });
+    let projectPromises = projects.map(project => {
+        return fetchWorkIdsForProject(project.id).then(workIds => {
+            return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
+                return {project, allWorksForProject}; // Return project info with its works
+            });
+        });
     });
-  });
 
-  Promise.all(projectPromises).then(results => {
-    results.forEach(({ project, allWorksForProject }) => {
-      let mainProj = createProjectElement(project);
-      allWorksForProject.forEach(information => {
-        let card = createWorkCardElement(information);
-        mainProj.find('.projectWorks').first().append(card);
-      });
-      if (projects[projects.length - 1].title != project.title)
-      {
-        mainProj.append('<div class="work-separator" id="seperator'+project.title+'"> 𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢</div>');
-      }
-      $('#imagesAndContent').append(mainProj);
-      console.log(projects, project.title)
+    Promise.all(projectPromises).then(results => {
+        results.forEach(({project, allWorksForProject}) => {
+            let mainProj = createProjectElement(project);
+            allWorksForProject.forEach(information => {
+                let card = createWorkCardElement(information);
+                mainProj.find('.projectWorks').first().append(card);
+            });
+            if (projects[projects.length - 1].title != project.title) {
+                mainProj.append('<div class="work-separator" id="seperator' + project.title + '"> 𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢</div>');
+            }
+            $('#imagesAndContent').append(mainProj);
+            console.log(projects, project.title)
+        });
+        jumpToSection(partOfThePage);
+        //below is where the code to initialize the little window for the YouTube video
+        //openFlowerVideo();
+        history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
+        document.title = 'Select Works - Ambar Velasco';
+    }).catch(error => {
+        console.error('Error:', error);
     });
-    jumpToSection(partOfThePage);
-      //below is where the code to initialize the little window for the youtube video
-      //openFlowerVideo();
-              history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
-  document.title = 'Select Works - Ambar Velasco';
-  }).catch(error => {
-    console.error('Error:', error);
-  });
 }
 
 
-  function openFlowerVideo()
-  {
-    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-    {
-      let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
-      let videoLink = 
-      `
+function openFlowerVideo() {
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
+        let videoLink =
+            `
       <br><br>
       <iframe width="100%" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       `;
 
-      flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
+        flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
 
-    }
-    else
-    {
-      let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
-      let videoLink = 
-      `
+    } else {
+        let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
+        let videoLink =
+            `
       <br>
       <iframe width="750" height="375" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       `;
-      flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
+        flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
 
     }
-  }
+}
 
 
 function createProjectElement(project) {
-  let worksOfProjectDiv = $('<div>').addClass('projectWorks ' + projectIsRows);
-  let titleAndDescriptionDiv = $('<div>')
-  let title = project.title;
-  let description = project.description.replace(/\n/g, '<br>');
-  let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
-  let insertDescription = $('<p>').html(description).css({
-    'color': '#71797E', // Dark grey color
-    'margin-bottom': '40px' // Margin bottom
-  });
-  //decomment below if you want to redisplay the title and description of projects
-  //titleAndDescriptionDiv.append(insertTitle, insertDescription);
-  let projectDiv = $('<div>').addClass('project').attr({
-    'alt': title,
-    'id': 'projectSection'+title.trim()
-  }).css({'border': '0px', 'text-align': 'center'});
-  projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
-  return projectDiv;
+    let worksOfProjectDiv = $('<div>').addClass('projectWorks ' + projectIsRows);
+    let titleAndDescriptionDiv = $('<div>')
+    let title = project.title;
+    let description = project.description.replace(/\n/g, '<br>');
+    let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
+    let insertDescription = $('<p>').html(description).css({
+        'color': '#71797E', // Dark grey color
+        'margin-bottom': '40px' // Margin bottom
+    });
+    //decomment below if you want to redisplay the title and description of projects
+    //titleAndDescriptionDiv.append(insertTitle, insertDescription);
+    let projectDiv = $('<div>').addClass('project').attr({
+        'alt': title,
+        'id': 'projectSection' + title.trim()
+    }).css({'border': '0px', 'text-align': 'center'});
+    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
+    return projectDiv;
 }
 
 function createWorkCardElement(information) {
-  let imageURL = "baseImages/" + information.location;
-  let thumbnailURL = "thumbnails/" + information.location;
-  let title = information.name;
-  let description = information.firstDescription.replace(/\n/g, '<br>');
-
-  let imageInfo = {
-    url: imageURL,
-    title: title,
-    description: description
-  };
-  //decomment below for name and description to show below the painting
-  // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-  // let insertDescription = $('<p>').html(description);
-  let insertTitle = '';
-  let insertDescription = '';
-  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', thumbnailURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
-  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(imageContainer, insertTitle, insertDescription);
-  card.click(() => makeBigPic(imageURL));
-  images.push(imageInfo);
-  return card;
-}
-
-
-function getWorksInfoFromIdsArray(projectIds) 
-{
-  return $.ajax({
-    url: '../actions/getWorksByIdArray.php',
-    method: 'GET',
-    data: {'projectIds' : projectIds},
-    dataType: 'json',
-
-  });
-}
-
-function getCarousel()
-{
-  genre = {
-    theYear: 'carousel'
-  }
-
-  $.ajax({
-    url: 'actions/picturesAPI.php',
-    method: 'GET',
-    data: genre,
-    dataType: 'json',
-    success: function(response) {
-      createCarousel(response);
-    },
-    error: function(xhr, status, error) {
-      console.log('Error:', error);
-    }
-  });
-}
-
-function createCarousel(informations)
-{
-  images.length = 0;
-  carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
-  <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
-  active = 'active';
-
-  informations.forEach(function(information){
     let imageURL = "baseImages/" + information.location;
     let thumbnailURL = "thumbnails/" + information.location;
     let title = information.name;
     let description = information.firstDescription.replace(/\n/g, '<br>');
-  
+
     let imageInfo = {
-      url: imageURL,
-      title: title,
-      description: description
+        url: imageURL,
+        title: title,
+        description: description
     };
-
-    let thisImage = `<div id="`+information.name+`" class="carousel-item `+active+` " >
-    <img class="d-block carousel-pic" src="`+thumbnailURL+`" onclick="makeBigPic('`+imageURL+`')">
-    </div>`;
-    carouselHtml += thisImage;
-    active = '';
+    //decomment below for name and description to show below the painting
+    // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
+    // let insertDescription = $('<p>').html(description);
+    let insertTitle = '';
+    let insertDescription = '';
+    let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', thumbnailURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+    let card = $('<div>').addClass('card').attr('alt', title).css({
+        'border': '0px',
+        'text-align': 'center'
+    }).append(imageContainer, insertTitle, insertDescription);
+    card.click(() => makeBigPic(imageURL));
     images.push(imageInfo);
-  });
+    return card;
+}
 
-  carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
+
+function getWorksInfoFromIdsArray(projectIds) {
+    return $.ajax({
+        url: '../actions/getWorksByIdArray.php',
+        method: 'GET',
+        data: {'projectIds': projectIds},
+        dataType: 'json',
+
+    });
+}
+
+function getCarousel() {
+    genre = {
+        theYear: 'carousel'
+    }
+
+    $.ajax({
+        url: 'actions/picturesAPI.php',
+        method: 'GET',
+        data: genre,
+        dataType: 'json',
+        success: function (response) {
+            createCarousel(response);
+        },
+        error: function (xhr, status, error) {
+            console.log('Error:', error);
+        }
+    });
+}
+
+function createCarousel(informations) {
+    images.length = 0;
+    carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
+  <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
+    active = 'active';
+
+    informations.forEach(function (information) {
+        let imageURL = "baseImages/" + information.location;
+        let thumbnailURL = "thumbnails/" + information.location;
+        let title = information.name;
+        let description = information.firstDescription.replace(/\n/g, '<br>');
+
+        let imageInfo = {
+            url: imageURL,
+            title: title,
+            description: description
+        };
+
+        let thisImage = `<div id="` + information.name + `" class="carousel-item ` + active + ` " >
+    <img class="d-block carousel-pic" src="` + thumbnailURL + `" onclick="makeBigPic('` + imageURL + `')">
+    </div>`;
+        carouselHtml += thisImage;
+        active = '';
+        images.push(imageInfo);
+    });
+
+    carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
   <span class="sr-only">Previous</span>
   </a>
   <a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">
@@ -581,53 +556,52 @@ function createCarousel(informations)
   </a>
   </div>`
 
-  document.getElementById('imagesAndContent').innerHTML = carouselHtml;
+    document.getElementById('imagesAndContent').innerHTML = carouselHtml;
 
-  //$('#homePageCarousel').carousel();
+    //$('#homePageCarousel').carousel();
 
-  $('#homePageCarousel').carousel({
-    interval: 3000
-  })
+    $('#homePageCarousel').carousel({
+        interval: 3000
+    })
 
-  if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-  {
-    $('#homePageCarousel').removeClass('homePageCarousel')
-    $('#homePageCarousel').addClass('homePageCarouselMobile')
-  }
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        $('#homePageCarousel').removeClass('homePageCarousel')
+        $('#homePageCarousel').addClass('homePageCarouselMobile')
+    }
 
 }
 
 function insertWorks(informations) {
-  $('#imagesAndContent').empty();
+    $('#imagesAndContent').empty();
 
-  informations.forEach(function(information, index) { // 'array' removed
-    let imageURL = "baseImages/" + information.location;
-    let title = information.name;
-    let description = information.firstDescription;
+    informations.forEach(function (information, index) { // 'array' removed
+        let imageURL = "baseImages/" + information.location;
+        let title = information.name;
+        let description = information.firstDescription;
 
-    let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
+        let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
 
-    let imageContainer = $('<div>').addClass('img-container');
-    let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
-    image.appendTo(imageContainer);
+        let imageContainer = $('<div>').addClass('img-container');
+        let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
+        image.appendTo(imageContainer);
 
-    let insertTitle = $('<p>').text(title);
-    let formattedDescription = description.replace(/\n/g, '<br>');
-    let insertDescription = $('<p>').html(formattedDescription);
-    
-    card.append(imageContainer, insertTitle, insertDescription);
+        let insertTitle = $('<p>').text(title);
+        let formattedDescription = description.replace(/\n/g, '<br>');
+        let insertDescription = $('<p>').html(formattedDescription);
 
-    // Check if this is not the last element in the array
-    if (index < informations.length - 1) {
-      card.append('<hr class="work-separator" />'); // Append the separator
-    }
+        card.append(imageContainer, insertTitle, insertDescription);
 
-    card.click(function() {
-      makeBigPic(imageURL);
+        // Check if this is not the last element in the array
+        if (index < informations.length - 1) {
+            card.append('<hr class="work-separator" />'); // Append the separator
+        }
+
+        card.click(function () {
+            makeBigPic(imageURL);
+        });
+
+        $('#imagesAndContent').append(card);
     });
-
-    $('#imagesAndContent').append(card);
-  });
 }
 
 // function makeBigPic(imageURL) 
@@ -637,40 +611,39 @@ function insertWorks(informations) {
 //     document.getElementById('lightbox').style.display = 'block';
 // }
 
-function makeBigPic(clickedImageUrl)
-{
-  const spinner = document.getElementById('spinner');
-  spinner.style.display = 'block';
+function makeBigPic(clickedImageUrl) {
+    const spinner = document.getElementById('spinner');
+    spinner.style.display = 'block';
 
-  let currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
-  let currentImage = images[currentImageIndex];
-  const imgElement = document.getElementById('popUpImage');
+    let currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
+    let currentImage = images[currentImageIndex];
+    const imgElement = document.getElementById('popUpImage');
 
 
-  imgElement.src = '';
+    imgElement.src = '';
 
-  // Set the new image source
-  imgElement.src = currentImage.url;
+    // Set the new image source
+    imgElement.src = currentImage.url;
 
-  // Wait for the image to load
-  imgElement.onload = function() {
+    // Wait for the image to load
+    imgElement.onload = function () {
 
-      spinner.style.display = 'none';
-      document.getElementById('imageTitle').textContent = currentImage.title;
-      document.getElementById('imageDescription').innerHTML = currentImage.description;
+        spinner.style.display = 'none';
+        document.getElementById('imageTitle').textContent = currentImage.title;
+        document.getElementById('imageDescription').innerHTML = currentImage.description;
 
         // const prevImageIndex = (currentImageIndex - 1 + images.length) % images.length;
         // const nextImageIndex = (currentImageIndex + 1) % images.length;
         //
         // preloadImage(images[prevImageIndex].url);
         // preloadImage(images[nextImageIndex].url);
-  };
+    };
 
-  // const imageContainer = document.querySelector('.imageInfo');
-  // if (imageContainer) {
-  //     imageContainer.style.width = `${document.getElementById('popUpImage').clientWidth}px`;
-  // }
-  $('#bigPicModal').modal('show');
+    // const imageContainer = document.querySelector('.imageInfo');
+    // if (imageContainer) {
+    //     imageContainer.style.width = `${document.getElementById('popUpImage').clientWidth}px`;
+    // }
+    $('#bigPicModal').modal('show');
 
 }
 
@@ -704,7 +677,7 @@ function changeImage(step) {
     imgElement.src = newImageSrc;
 
     // Wait for the image to load
-    imgElement.onload = function() {
+    imgElement.onload = function () {
         // Hide the loading spinner
         spinner.style.display = 'none';
 
@@ -721,63 +694,57 @@ function changeImage(step) {
 }
 
 
-  function getDistanceBetweenTouches(touches) 
-  {
+function getDistanceBetweenTouches(touches) {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
 
-
-
-
-  function openModalWithImage(imageIndex) {
+function openModalWithImage(imageIndex) {
 
     currentImageIndex = imageIndex;
     document.getElementById('popUpImage').src = images[imageIndex];
     $('#bigPicModal').modal('show');
-  }
-
-  function fetchCurrentAboutMe() {
-  return $.ajax({
-    url: '../actions/aboutMeAPI.php', // Replace with the correct path to your PHP script
-    type: 'GET',
-    dataType: 'json',
-  });
 }
 
-  async function openInfo()
-  {
-    $('#imagesAndContent').css('padding-top', '50px');
-   const aboutMe = await fetchCurrentAboutMe();
-   let description = aboutMe.description.replace(/\n/g, "<br>");;
-    
-    let infoflex = 'infoflex';
-    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-    {
-      infoflex = 'infoflexMobile';
+function fetchCurrentAboutMe() {
+    return $.ajax({
+        url: '../actions/aboutMeAPI.php', // Replace with the correct path to your PHP script
+        type: 'GET',
+        dataType: 'json',
+    });
+}
 
-      document.getElementById('imagesAndContent').innerHTML = `
-      <div class="`+infoflex+`">
+async function openInfo() {
+    $('#imagesAndContent').css('padding-top', '50px');
+    const aboutMe = await fetchCurrentAboutMe();
+    let description = aboutMe.description.replace(/\n/g, "<br>");
+    ;
+
+    let infoflex = 'infoflex';
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        infoflex = 'infoflexMobile';
+
+        document.getElementById('imagesAndContent').innerHTML = `
+      <div class="` + infoflex + `">
 
       <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
 
       <div class="iconsRow" style="width:100%">
            </div>
       <p style="">
-      `+description+`
+      ` + description + `
       </p>
       <br>
       </div>
       `;
 
-    }
-    else if (window.matchMedia('(max-width: 1450px)').matches) {
-      infoflex = 'infoflexMobile';
+    } else if (window.matchMedia('(max-width: 1450px)').matches) {
+        infoflex = 'infoflexMobile';
 
-      document.getElementById('imagesAndContent').innerHTML = `
-      <div class="`+infoflex+`">
+        document.getElementById('imagesAndContent').innerHTML = `
+      <div class="` + infoflex + `">
 
       <div class="size2">
       <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
@@ -787,20 +754,18 @@ function changeImage(step) {
       <div class="iconsRow" style="width:100%">
            </div>
       <p style="">
-      `+description+`
+      ` + description + `
       </p>
       <br>
       </div>
       `;
-    }
-    else
-    {
-      document.getElementById('imagesAndContent').innerHTML = `
-      <div class="`+infoflex+`">
+    } else {
+        document.getElementById('imagesAndContent').innerHTML = `
+      <div class="` + infoflex + `">
       <div class="size1" id="aboutMeInfo">
       <br>
       <p>
-      `+description+`
+      ` + description + `
       </p>
       </div>
 
@@ -819,152 +784,205 @@ function changeImage(step) {
       </div>
       `;
     }
-       history.pushState({ page: 'about' }, 'About - Ambar Velasco', '/about');
+    history.pushState({page: 'about'}, 'About - Ambar Velasco', '/about');
     document.title = 'About - Ambar Velasco'; // Optionally, update the document title
-  }
-
-  function openCurrentProject()
-{
-  $('#imagesAndContent').css('padding-top', '50px');
-
-  $.ajax({
-    url: "../actions/projectsAPI.php",
-    type: "GET",
-    data: {'activity' : 'currentProject'},
-    dataType: "json",
-    success: function(data) {
-      makeCurrentProjectCards(data);
-
-
-    },
-    error: function() {
-      console.log("An error occurred.");
-    },
-  });
-
-  selectWorksAreShown = false;
 }
 
-function createCurrentProjectElement(project)
-{
-  let worksOfProjectDiv = $('<div>').addClass('projectWorks ');
-  let titleAndDescriptionDiv = $('<div>')
-  let title = project.title;
-  let description = project.description.replace(/\n/g, '<br>');
-  let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
-  let insertDescription = $('<p>').html(description).css({
-    'color': '#71797E', // Dark grey color
-    'margin-bottom': '40px' // Margin bottom
-  });
-  //decomment below if you want to redisplay the title and description of projects
-  titleAndDescriptionDiv.append(insertTitle, insertDescription);
-  let projectDiv = $('<div>').addClass('project').attr({
-    'alt': title,
-    'id': 'projectSection'+title.trim()
-  }).css({'border': '0px', 'text-align': 'center'});
-  projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
-  return projectDiv;
-}
+function openCurrentProject() {
+    $('#imagesAndContent').css('padding-top', '50px');
 
-function createCurrentProjectWorkCardElement(information) {
-  let imageURL = "baseImages/" + information.location;
-  const img = new Image();
-  img.src = imageURL;
-  console.log(img.width);
-  let title = information.name;
-  let description = information.firstDescription.replace(/\n/g, '<br>');
-  let long_description = '';
-  if (information.long_description !== null) {
-    long_description = information.long_description.replace(/\n/g, '<br>');
-  }
-  let imageInfo = {
-    url: imageURL,
-    title: title,
-    description: description
-  };
-  //decomment below for name and description to show below the painting
-  let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-  let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
-  let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
-  let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
-  let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
-  let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
-        position: 'relative',
-        maxWidth: '100%',
-        margin: '10px',
-        height: '65vh'})
-      .hide()
+    $.ajax({
+        url: "../actions/projectsAPI.php",
+        type: "GET",
+        data: {'activity': 'currentProject'},
+        dataType: "json",
+        success: function (data) {
+            makeCurrentProjectCards(data);
 
-  let contentHolder = $('<div>').attr({'id': 'projectSection'+information.id.trim()}).css({
-        position: 'relative',
 
-        overflow: 'hidden'})
-      .append(imageContainer, insertDescription);
-
-  let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'}).append(buttonContainer).append(contentHolder);
-  imageContainer.click(() => makeBigPic(imageURL));
-  images.push(imageInfo);
-
-  imageButton.click((event) => {
-        imageContainer.toggle();
-        insertDescription.toggle();
+        },
+        error: function () {
+            console.log("An error occurred.");
+        },
     });
 
-    textButton.click((event) => {
-        imageContainer.toggle();
-        insertDescription.toggle();
-    });
-
-  return card;
+    selectWorksAreShown = false;
 }
 
-function getImageDimensions(imageUrl, callback) {
-    const startTime = Date.now();  // Record the start time
-    const img = new Image();
-    img.src = imageUrl;
-    console.log(img.width);
+function createCurrentProjectElement(project) {
+    let worksOfProjectDiv = $('<div>').addClass('projectWorks ');
+    let titleAndDescriptionDiv = $('<div>')
+    let title = project.title;
+    let description = project.description.replace(/\n/g, '<br>');
+    let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
+    let insertDescription = $('<p>').html(description).css({
+        'color': '#71797E', // Dark grey color
+        'margin-bottom': '40px' // Margin bottom
+    });
+    //decomment below if you want to redisplay the title and description of projects
+    titleAndDescriptionDiv.append(insertTitle, insertDescription);
+    let projectDiv = $('<div>').addClass('project').attr({
+        'alt': title,
+        'id': 'projectSection' + title.trim()
+    }).css({'border': '0px', 'text-align': 'center'});
+    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
+    return projectDiv;
+}
 
-    img.onload = function() {
-        const width = img.width;
-        callback(width);
-        return width;
+async function createCurrentProjectWorkCardElement(information) {
+    let imageURL = "baseImages/" + information.location;
+    let title = information.name;
+    let description = information.firstDescription.replace(/\n/g, '<br>');
+    let long_description = '';
+    if (information.long_description !== null) {
+        long_description = information.long_description.replace(/\n/g, '<br>');
+    }
+    let imageInfo = {
+        url: imageURL,
+        title: title,
+        description: description
     };
+    const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
+    try {
+        let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
+        let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
+        let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
+        let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
+        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+        let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
+            position: 'relative',
+            maxWidth: '100%',
+            margin: 'auto',
+            //minHeight: imageHeight,
+            //width: imageWidth,
+            //height: imageHeight
+        })
+            .hide()
 
-    img.onerror = function() {
-        console.error('Error loading image:', imageUrl);
-        callback(null);
-        return
-    };
+        let contentHolder = $('<div>').attr({'id': 'projectSection' + information.id.trim()}).css({
+            position: 'relative',
 
+            overflow: 'hidden'
+        })
+            .append(imageContainer, insertDescription);
 
+        let card = $('<div>').addClass('card').attr('alt', title).css({
+            'border': '0px',
+            'text-align': 'center'
+        }).append(buttonContainer).append(contentHolder);
+        imageContainer.click(() => makeBigPic(imageURL));
+        images.push(imageInfo);
+
+        imageButton.click((event) => {
+            imageContainer.toggle();
+            insertDescription.toggle();
+        });
+
+        textButton.click((event) => {
+            imageContainer.toggle();
+            insertDescription.toggle();
+        });
+
+        return card;
+    } catch (error) {
+        console.error(error);
+    }
 }
 
-function makeCurrentProjectCards(projects) {
-  $('#imagesAndContent').empty();
-  images.length = 0;
+function loadCorrectWidthAndHeightPerImage(imageURL) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = imageURL;
 
-  let projectPromises = projects.map(project => {
-    return fetchWorkIdsForProject(project.id).then(workIds => {
-      return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
-                return { project, allWorksForProject }; // Return project info with its works
-              });
+        img.onload = function () {
+            let screenWidth = $(window).width();
+            let screenHeight = $(window).height();
+            let newWidth = img.width;
+            let newHeight = img.height;
+            let maxWidth = (screenWidth * .655) - 29;
+            let minWidth = screenWidth * .50;
+            let maxHeight = screenHeight * .65;
+
+            if (newWidth < minWidth) {
+                const ratio = minWidth / newWidth;
+                newWidth = minWidth;
+                newHeight = newHeight * ratio;
+                resolve({width: newWidth, height: newHeight});
+            }
+
+            if (newWidth > maxWidth) {
+                const ratio = maxWidth / newWidth;
+                newWidth = maxWidth;
+                newHeight = newHeight * ratio;
+            }
+
+            if (newHeight > maxHeight) {
+                const ratio = maxHeight / newHeight;
+                newHeight = maxHeight;
+                newWidth = newWidth * ratio;
+            }
+
+
+            resolve({width: newWidth, height: newHeight});
+        };
+
+        img.onerror = function () {
+            reject('Error loading image: ' + imageURL);
+        };
     });
-  });
+}
 
-  Promise.all(projectPromises).then(results => {
-    results.forEach(({ project, allWorksForProject }) => {
-      let mainProj = createCurrentProjectElement(project);
-      allWorksForProject.forEach(information => {
-        let card = createCurrentProjectWorkCardElement(information);
-        mainProj.find('.projectWorks').first().append(card);
-      });
 
-      $('#imagesAndContent').append(mainProj);
-      console.log(projects, project.title)
+async function makeCurrentProjectCards(projects) {
+    $('#imagesAndContent').empty();
+    images.length = 0;
+
+    let projectPromises = projects.map(async project => {
+        let workIds = await fetchWorkIdsForProject(project.id);
+        let allWorksForProject = await getWorksInfoFromIdsArray(workIds);
+        return { project, allWorksForProject }; // Return project info with its works
     });
-    history.pushState({page: 'current-project'}, 'Current Project', '/current-project');
-  document.title = 'Current Project - Ambar Velasco';
-  }).catch(error => {
-    console.error('Error:', error);
-  });
+
+    try {
+        let results = await Promise.all(projectPromises);
+
+        for (const { project, allWorksForProject } of results) {
+            let mainProj = createCurrentProjectElement(project);
+
+            for (const information of allWorksForProject) {
+                let card = await createCurrentProjectWorkCardElement(information);
+                if (card) {
+                    mainProj.find('.projectWorks').first().append(card);
+                }
+            }
+
+            $('#imagesAndContent').append(mainProj);
+            console.log(projects, project.title);
+        }
+
+        history.pushState({ page: 'current-project' }, 'Current Project', '/current-project');
+        document.title = 'Current Project - Ambar Velasco';
+        adjustDescriptionHeights()
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function adjustDescriptionHeights() {
+    $('.img-container').each(function () {
+        // Find the next .description_text element
+        let descriptionText = $(this).next('.description_text');
+
+        if (descriptionText.length) {
+            // Get the height of the img-container
+            let containerHeight = $(this).height();
+
+            if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
+                containerHeight += 20
+            }
+
+            // Adjust the height of the description_text element
+            descriptionText.css("height", containerHeight + "px");
+        }
+    });
 }

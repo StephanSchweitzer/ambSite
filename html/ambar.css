@@ -710,7 +710,6 @@ body
   align-items: center;
   background: rgba(255, 255, 255, 0.9);
   z-index: 1;
-  padding: 10px;
   box-sizing: border-box;
 }
 
