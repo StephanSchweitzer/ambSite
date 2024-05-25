@@ -1,9 +1,8 @@
 <?php
 session_start();
-if ($_SESSION["ambar"] != "connected")
-{
-  header("Location: ../signIn/signIn.php?status=needCredentials");
-  die;
+if ($_SESSION["ambar"] != "connected") {
+    header("Location: ../signIn/signIn.php?status=needCredentials");
+    die;
 }
 
 ?>
@@ -20,28 +19,52 @@ if ($_SESSION["ambar"] != "connected")
 <body>
 
 <div class="admin-container" style="align-content: center;">
-   <div class="container">
-     <br>
-     <h1 class="display-1" style="text-align:center; color: white;">About Me Admin Page</h1>
-     <br>
-     <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
+    <div class="container">
+        <br>
+        <h1 class="display-1" style="text-align:center; color: white;">About Me Admin Page</h1>
+        <br>
+        <a href="mainAdmin.php">
+            <button type="submit" class="btn btn-info">Main Admin Page</button>
+        </a>
 
-   </div>
+    </div>
+
+    <div style="margin-top: 30px; display: flex; justify-content: center; align-items: center">
+        <form>
+            <label for="aboutMePhoto" class="required" style="color: white">About Me Photo</label>
+            <div class="input-group" style="padding: 5px">
+                <div class="custom-file">
+
+                    <input class="form-control" type="file" accept="image/*" name="aboutMePhoto"
+                           id="aboutMePhoto" style="margin: 10px">
+
+                </div>
+            </div>
+            <button id="uploadAboutMePicture" type="button" class="btn btn-primary" onclick="postNewAboutMePhoto()" style="margin: 20px; float: right;">Upload Work</button>
+
+        </form>
+
+        <div id="currentAboutMePicture">
+
+        </div>
+    </div>
+
     <br>
-   <div style="max-width: 70vw; margin: 0 auto; ">
-      <div id="currentAboutMe" class="content-box" style="color: white"></div>
-      <div class="content-section">
-          <br><br>
-          <textarea id="aboutMeText" class="form-control"></textarea>
-          <br><br>
-          <button id="uploadWorkButton" class="btn btn-primary" onclick="postNewAboutMe()">Upload New Text</button>
-      </div>
-   </div>
+    <div style="max-width: 60vw; margin: 0 auto;">
+        <div id="currentAboutMe" class="content-box" style="color: white"></div>
+        <div class="content-section">
+
+            <br><br>
+            <textarea id="aboutMeText" class="form-control" style=""></textarea>
+            <br><br>
+            <button id="uploadWorkButton" class="btn btn-primary" onclick="postNewAboutMe()">Upload New Text</button>
+        </div>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
- <script src="../js/aboutMe.js"></script>
+<script src="../js/aboutMe.js"></script>
 
 </body>
 </html>

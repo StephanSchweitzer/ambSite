@@ -1,4 +1,5 @@
 <?php
+global $conn;
 session_start();
 
 include '../database/pdo.php';
@@ -14,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
     }
 
     // Retrieve the description from the POST data
-    $description = isset($_POST['description']) ? $_POST['description'] : '';
+    $description = $_POST['description'] ?? '';
 
     //echo json_encode($description);
 
@@ -52,5 +53,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
     echo json_encode($mostRecentEntry);
 
 }
-
-?>
