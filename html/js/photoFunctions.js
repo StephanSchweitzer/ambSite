@@ -848,11 +848,13 @@ async function createCurrentProjectWorkCardElement(information) {
         let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
         let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
-        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').addClass("currentProjectImage").attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
         let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
             position: 'relative',
-            maxWidth: '100%',
+            maxWidth: '80%',
             margin: 'auto',
+            cursor: 'default'
+
             //minHeight: imageHeight,
             //width: imageWidth,
             //height: imageHeight
@@ -873,14 +875,16 @@ async function createCurrentProjectWorkCardElement(information) {
         imageContainer.click(() => makeBigPic(imageURL));
         images.push(imageInfo);
 
-        imageButton.click((event) => {
-            imageContainer.toggle();
-            insertDescription.toggle();
-        });
-
-        textButton.click((event) => {
-            imageContainer.toggle();
-            insertDescription.toggle();
+        buttonContainer.click((event) => {
+            if (insertDescription.is(":hidden")) {
+                imageContainer.fadeToggle().promise().done(() => {
+                    insertDescription.fadeToggle();
+                });
+            } else {
+                insertDescription.fadeToggle().promise().done(() => {
+                    imageContainer.fadeToggle();
+                });
+            }
         });
 
         return card;
@@ -962,13 +966,13 @@ async function makeCurrentProjectCards(projects) {
 
         history.pushState({ page: 'current-project' }, 'Current Project', '/current-project');
         document.title = 'Current Project - Ambar Velasco';
-        adjustDescriptionHeights()
+        adjustDescriptionHeightsAndWidths()
     } catch (error) {
         console.error('Error:', error);
     }
 }
 
-function adjustDescriptionHeights() {
+function adjustDescriptionHeightsAndWidths() {
     $('.img-container').each(function () {
         // Find the next .description_text element
         let descriptionText = $(this).next('.description_text');
@@ -976,6 +980,7 @@ function adjustDescriptionHeights() {
         if (descriptionText.length) {
             // Get the height of the img-container
             let containerHeight = $(this).height();
+            let containerWidth = $(this).width();
 
             if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
                 containerHeight += 20
@@ -983,6 +988,7 @@ function adjustDescriptionHeights() {
 
             // Adjust the height of the description_text element
             descriptionText.css("height", containerHeight + "px");
+            descriptionText.css("width", containerWidth + "px");
         }
     });
 }
