@@ -848,7 +848,7 @@ async function createCurrentProjectWorkCardElement(information) {
     const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
     try {
         let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-        let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
+        let imageButton = $('<span>').text('Image').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
         let textButton = $('<span>').text('Description').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
         if (isMobile){
@@ -887,7 +887,8 @@ async function createCurrentProjectWorkCardElement(information) {
 
         let card = $('<div>').addClass('card').attr('alt', title).css({
             'border': '0px',
-            'text-align': 'center'
+            'text-align': 'center',
+            'margin-bottom': '60px',
         }).append(buttonContainer).append(contentHolder);
         imageContainer.click(() => makeBigPic(imageURL));
         images.push(imageInfo);
