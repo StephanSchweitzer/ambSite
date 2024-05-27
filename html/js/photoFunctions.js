@@ -820,7 +820,7 @@ function createCurrentProjectElement(project) {
     let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
     let insertDescription = $('<p>').html(description).css({
         'color': '#71797E', // Dark grey color
-        'margin-bottom': '40px' // Margin bottom
+        'margin-bottom': '60px' // Margin bottom
     });
     //decomment below if you want to redisplay the title and description of projects
     titleAndDescriptionDiv.append(insertTitle, insertDescription);
@@ -851,6 +851,9 @@ async function createCurrentProjectWorkCardElement(information) {
         let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
         let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
+        if (isMobile){
+            buttonContainer.paddingBottom = '15px';
+        }
         let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').addClass("currentProjectImage").attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
         console.log(isMobile)
         let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
@@ -1038,6 +1041,8 @@ function adjustDescriptionHeightsAndWidths() {
                 if (!isMobile)
                 {
                     descriptionText.css('padding-top', '20px');
+                }else{
+                    //descriptionText.css('padding-top', '5px');
                 }
             }
         //}
