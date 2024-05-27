@@ -702,6 +702,9 @@ body
     /*border-radius: 5px;*/
     z-index: 2;
     width: 100%;
+    font-family: "Lato", sans-serif;
+    font-weight: 300;
+    font-style: normal;
 }
 
 .projectImgTxtContainer

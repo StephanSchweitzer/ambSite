@@ -849,7 +849,7 @@ async function createCurrentProjectWorkCardElement(information) {
     try {
         let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
         let imageButton = $('<span>').text('Image').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
-        let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
+        let textButton = $('<span>').text('Description').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
         if (isMobile){
             buttonContainer.paddingBottom = '15px';
