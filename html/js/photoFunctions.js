@@ -5,6 +5,8 @@ let startX, startY;
 let isPinching = false;
 var imageIsRows = 'img-containerForRows';
 var projectIsRows = 'projectWorksForRows';
+var isMobile = false;
+var zIndexCounter = 22;
 
 $(window).on("load", function () {
 
@@ -240,6 +242,7 @@ $(document).ready(function () {
         $('#ambName').addClass('ambarNamePicMobile')
         imageIsRows = ''
         projectIsRows = ''
+        isMobile = true;
 
 
         const allLinks = document.querySelectorAll('a');
@@ -849,22 +852,33 @@ async function createCurrentProjectWorkCardElement(information) {
         let textButton = $('<span>').text('Description').css({color: '#4169E1', cursor: 'pointer', margin: '0 10px'});
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
         let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').addClass("currentProjectImage").attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+        console.log(isMobile)
         let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
+
             position: 'relative',
             maxWidth: '80%',
             margin: 'auto',
-            cursor: 'default'
-
+            cursor: 'default',
+            overflowY: 'auto',
+            zIndex: zIndexCounter,
+            //paddingTop: '150px',
+            paddingLeft: '20px',
+            paddingRight: '20px',
             //minHeight: imageHeight,
             //width: imageWidth,
             //height: imageHeight
         })
             .hide()
 
-        let contentHolder = $('<div>').attr({'id': 'projectSection' + information.id.trim()}).css({
-            position: 'relative',
+        zIndexCounter++;
 
-            overflow: 'hidden'
+        let contentHolder = $('<div>').attr({'id': 'projectSection' + information.id.trim()})
+            .addClass('projectImgTxtContainer')
+            .css({
+            display: 'flex',
+            flexDirection: 'column',
+            //height: '100%',
+            overflow: 'hidden',
         })
             .append(imageContainer, insertDescription);
 
@@ -976,6 +990,7 @@ function adjustDescriptionHeightsAndWidths() {
     $('.img-container').each(function () {
         // Find the next .description_text element
         let descriptionText = $(this).next('.description_text');
+        let descriptionContent = descriptionText[0];
 
         if (descriptionText.length) {
             // Get the height of the img-container
@@ -986,9 +1001,45 @@ function adjustDescriptionHeightsAndWidths() {
                 containerHeight += 20
             }
 
+            descriptionText.show();
+            let contentHeight = descriptionContent.scrollHeight
+            descriptionText.hide();
+
             // Adjust the height of the description_text element
-            descriptionText.css("height", containerHeight + "px");
+            descriptionText.css("max-height", containerHeight + "px");
+            descriptionText.css("min-height", containerHeight + "px");
+
             descriptionText.css("width", containerWidth + "px");
-        }
+
+            //const contentHeight = measureFullTextHeight(descriptionText[0]);
+
+            // if (contentHeight > containerHeight)
+            // {
+                // Calculate the necessary padding to ensure the text starts from the top
+
+                let paddingValue = contentHeight - containerHeight;
+                if (paddingValue > containerHeight)
+                {
+                    let theDifference = paddingValue - containerHeight;
+                    console.log(theDifference);
+                }
+
+                // paddingValue = paddingValue > containerHeight ? containerHeight : paddingValue;
+                console.log(containerHeight,contentHeight, paddingValue)
+
+                // const closestProjectSection = this.closest('.projectImgTxtContainer');
+                // closestProjectSection.style.maxHeight = containerHeight + "px";
+                // console.log(descriptionText[0].firstChild)
+                // const lineBreaks = '\n\n\n\n\n'; // Adjust the number of line breaks as needed
+                // //const originalText = descriptionContent.firstChild.nodeValue;
+                // //console.log(originalText)
+                //descriptionContent.firstChild.nodeValue = lineBreaks + originalText;
+                // Apply the padding to the top of the container
+                if (!isMobile)
+                {
+                    descriptionText.css('padding-top', '20px');
+                }
+            }
+        //}
     });
 }

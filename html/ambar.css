@@ -703,11 +703,16 @@ body
     z-index: 2
 }
 
+.projectImgTxtContainer
+{
+
+}
+
 .description_text
 {
+  text-align: left;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: left;
   background: rgba(255, 255, 255, 0.9);
   z-index: 1;
   box-sizing: border-box;
