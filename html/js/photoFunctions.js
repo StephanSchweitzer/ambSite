@@ -1,5 +1,5 @@
 var selectWorksAreShown = false;
-let currentImageIndex = 0; // Global variable to track the current image index
+var currentImageIndex = 0; // Global variable to track the current image index
 let images = []; // Global array to store image URLs
 let startX, startY;
 let isPinching = false;
@@ -618,8 +618,10 @@ function makeBigPic(clickedImageUrl) {
     const spinner = document.getElementById('spinner');
     spinner.style.display = 'block';
 
-    let currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
+    currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
+    console.log(currentImageIndex)
     let currentImage = images[currentImageIndex];
+    console.log(currentImage)
     const imgElement = document.getElementById('popUpImage');
 
 
@@ -656,8 +658,11 @@ function preloadImage(url) {
 }
 
 function changeImage(step) {
+    console.log(currentImageIndex, step)
     currentImageIndex += step;
+
     if (currentImageIndex >= images.length) {
+        console.log("bigger")
         currentImageIndex = 0;
     } else if (currentImageIndex < 0) {
         currentImageIndex = images.length - 1;
