@@ -322,7 +322,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
     $id = $_DELETE['id'];
 
-    $theQuery = "UPDATE allWorks SET visible = 0 WHERE workID = ?";
+    $theQuery = "UPDATE allWorks 
+                SET visible = 0, 
+                    carousel = 0, 
+                    isSelectWork = 0, 
+                    isAvailable = 0 
+                WHERE workID = ?";
+
     //echo $theQuery;
 
     $theArray = array($id);
