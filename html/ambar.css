@@ -145,7 +145,7 @@
 
   max-width: 100%; /* Make the image fill the container width */
   height: auto; /* Allow the height to adjust based on the image aspect ratio */
-  max-height: 65vh;
+  max-height: 95vh;
   margin: auto;
 }
 

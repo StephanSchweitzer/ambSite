@@ -3,8 +3,8 @@ var currentImageIndex = 0; // Global variable to track the current image index
 let images = []; // Global array to store image URLs
 let startX, startY;
 let isPinching = false;
-var imageIsRows = 'img-containerForRows';
-var projectIsRows = 'projectWorksForRows';
+var imageIsRows = ''; //img-containerForRows
+var projectIsRows = ''; //projectWorksForRows use this as the variable to put them back in rows
 var isMobile = false;
 var zIndexCounter = 22;
 
@@ -409,7 +409,7 @@ function makeProjectCards(projects, partOfThePage) {
                 mainProj.find('.projectWorks').first().append(card);
             });
             if (projects[projects.length - 1].title != project.title) {
-                mainProj.append('<div class="work-separator" id="seperator' + project.title + '"> 𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢</div>');
+                mainProj.append('<div class="work-separator" id="seperator' + project.title + '"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
             }
             $('#imagesAndContent').append(mainProj);
             console.log(projects, project.title)
@@ -471,7 +471,7 @@ function createProjectElement(project) {
 
 function createWorkCardElement(information) {
     let imageURL = "baseImages/" + information.location;
-    let thumbnailURL = "thumbnails/" + information.location;
+    let thumbnailURL = "baseImages/" + information.location; //thumbnails the real one is
     let title = information.name;
     let description = information.firstDescription.replace(/\n/g, '<br>');
 
