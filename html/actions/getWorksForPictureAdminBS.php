@@ -17,7 +17,8 @@ include '../database/pdo.php';
 
 
   $query = "SELECT id, title, description, orderOfDisplay, active, deleted
-            FROM    projects WHERE title = ?
+            FROM projects 
+            WHERE title = ? AND deleted != 0
             ORDER BY orderOfDisplay DESC";
 
   $theArray = array($project);

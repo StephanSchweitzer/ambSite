@@ -474,11 +474,13 @@ function createWorkCardElement(information) {
     let thumbnailURL = "baseImages/" + information.location; //thumbnails the real one is
     let title = information.name;
     let description = information.firstDescription.replace(/\n/g, '<br>');
+    let long_description = information.long_description;
 
     let imageInfo = {
         url: imageURL,
         title: title,
-        description: description
+        description: description,
+        long_description: long_description
     };
     //decomment below for name and description to show below the painting
     // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
@@ -619,38 +621,33 @@ function makeBigPic(clickedImageUrl) {
     spinner.style.display = 'block';
 
     currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
-    console.log(currentImageIndex)
     let currentImage = images[currentImageIndex];
-    console.log(currentImage)
     const imgElement = document.getElementById('popUpImage');
-
 
     imgElement.src = '';
 
-    // Set the new image source
+    // Show modal first before loading new content
+    $('#bigPicModal').modal('show');
+
+    // Force scroll to top immediately
+    $('#bigPicModal .modal-body').scrollTop(0);
+
+    // Then set the new image source
     imgElement.src = currentImage.url;
 
-    // Wait for the image to load
+    // Handle image loading
     imgElement.onload = function () {
-
         spinner.style.display = 'none';
         document.getElementById('imageTitle').textContent = currentImage.title;
         document.getElementById('imageDescription').innerHTML = currentImage.description;
 
-        // const prevImageIndex = (currentImageIndex - 1 + images.length) % images.length;
-        // const nextImageIndex = (currentImageIndex + 1) % images.length;
-        //
-        // preloadImage(images[prevImageIndex].url);
-        // preloadImage(images[nextImageIndex].url);
+        if (isMobile) {
+            //document.getElementById('imageDescription').innerHTML += "<br> <br>" + currentImage.long_description;
+        }
+
     };
-
-    // const imageContainer = document.querySelector('.imageInfo');
-    // if (imageContainer) {
-    //     imageContainer.style.width = `${document.getElementById('popUpImage').clientWidth}px`;
-    // }
-    $('#bigPicModal').modal('show');
-
 }
+
 
 function preloadImage(url) {
     const img = new Image();
