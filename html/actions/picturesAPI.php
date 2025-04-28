@@ -9,15 +9,83 @@ include 'imageManipulationFunctions.php';
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $theYear = "";
     $theYear = $_GET['theYear'];
+
+    // New statistics endpoint
+    if ($theYear == 'stats') {
+        try {
+            // Get total works count
+            $totalQuery = $conn->prepare("SELECT COUNT(*) FROM allWorks WHERE visible = 1");
+            $totalQuery->execute();
+            $totalCount = $totalQuery->fetchColumn();
+
+            // Get select works count
+            $selectWorksQuery = $conn->prepare("SELECT COUNT(*) FROM allWorks WHERE visible = 1 AND isSelectWork = 1");
+            $selectWorksQuery->execute();
+            $selectWorksCount = $selectWorksQuery->fetchColumn();
+
+            // Get carousel works count
+            $carouselQuery = $conn->prepare("SELECT COUNT(*) FROM allWorks WHERE visible = 1 AND carousel = 1");
+            $carouselQuery->execute();
+            $carouselCount = $carouselQuery->fetchColumn();
+
+            // Return stats
+            $stats = array(
+                'total' => (int)$totalCount,
+                'selectWorks' => (int)$selectWorksCount,
+                'carousel' => (int)$carouselCount
+            );
+
+            header('Content-Type: application/json');
+            echo json_encode(array('stats' => $stats));
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode(array('error' => $e->getMessage()));
+        }
+        die;
+    }
+
+    if ($theYear == 'everything') {
+        $query = "SELECT workId, fileLocation, name,
+                      desc2, desc3, medium,
+                      color, isAvailable, year,
+                      orderOfDisplay, carousel,
+                      isSelectWork, visible, long_description
+               FROM allWorks
+               ORDER BY orderOfDisplay DESC";
+
+        $pictureQuery = $conn->prepare($query);
+        $pictureQuery->execute();
+        $result = $pictureQuery->fetchAll();
+
+        $data = array();
+
+        for ($i = 0; $i < count($result); $i++) {
+            $singleEntry = array(
+                'id' => $result[$i][0],
+                'location' => $result[$i][1],
+                'name' => $result[$i][2],
+                'firstDescription' => $result[$i][3],
+                'secondDescription' => $result[$i][4],
+                'medium' => $result[$i][5],
+                'isColor' => $result[$i][6],
+                'availability' => $result[$i][7],
+                'creationYear' => $result[$i][8],
+                'orderOfDisplay' => $result[$i][9],
+                'carousel' => $result[$i][10],
+                'isSelectWork' => $result[$i][11],
+                'visible' => $result[$i][12],
+                'long_description' => $result[$i][13]
+            );
+
+            array_push($data, $singleEntry);
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        die;
+    }
+
     $yearCondition = "WHERE visible = 1 and isSelectWork = 0";
-
-    // if($theYear == 0)
-    // {
-    //   $yearCondition = "WHERE visible = 1";
-    // }
-
-    // echo "$theYear";
-    // die;
 
     if ($theYear == 'invisible') {
         $yearCondition = "WHERE visible = 0";
@@ -119,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                       orderOfDisplay, isSelectWork, visible,
                       long_description
               FROM    allWorks
-              WHERE carousel = 1
+              WHERE carousel = 1 AND visible = 1
               ORDER BY orderOfDisplay DESC";
     }
 
@@ -223,14 +291,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $isAvailable, $year, $orderOfDisplay,
         $carousel, $selectWork, $long_description);
 
-    // echo json_encode($theArray);
-    // die;
-
     $uploadQuery = $conn->prepare($query);
     $uploadQuery->execute($theArray);
 
     echo json_encode("success");
-    //$uploadQuery->close();
     die;
 }
 
@@ -246,19 +310,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
     parse_str($rawData, $_PATCH);
 
     $id = $_PATCH['id'];
-    $name = $_PATCH['name'];
-    $firstDescription = $_PATCH['firstDescription'];
-    $secondDescription = $_PATCH['secondDescription'];
-    $medium = $_PATCH['medium'];
-    $isColor = $_PATCH['isColor'];
-    $availability = $_PATCH['availability'];
-    $creationYear = $_PATCH['creationYear'];
-    $orderOfDisplay = $_PATCH['orderOfDisplay'];
-    $carousel = $_PATCH['carousel'];
-    $selectWork = $_PATCH['selectWork'];
-    $long_description = $_PATCH["long_description"];
 
-    $restoreTest = $_PATCH['restore'];
+    // Support for batch update operations - only update what's provided
+    if (isset($_PATCH['selectWork'])) {
+        $query = "UPDATE allWorks SET isSelectWork = ? WHERE workID = ?";
+        $params = array($_PATCH['selectWork'], $id);
+
+        $updateQuery = $conn->prepare($query);
+        if ($updateQuery->execute($params)) {
+            echo json_encode(array("success" => true, "message" => $_PATCH));
+        } else {
+            echo json_encode(array("success" => false, "message" => "Failed to update Select Work status"));
+        }
+        die;
+    }
+
+    if (isset($_PATCH['carousel'])) {
+        $query = "UPDATE allWorks SET carousel = ? WHERE workID = ?";
+        $params = array($_PATCH['carousel'], $id);
+
+        $updateQuery = $conn->prepare($query);
+        if ($updateQuery->execute($params)) {
+            echo json_encode(array("success" => true, "message" => "Carousel status updated successfully"));
+        } else {
+            echo json_encode(array("success" => false, "message" => "Failed to update Carousel status"));
+        }
+        die;
+    }
+
+    $restoreTest = isset($_PATCH['restore']) ? $_PATCH['restore'] : '';
 
     if ($restoreTest == "restore") {
         $theQuery = "UPDATE allWorks SET visible = 1 WHERE workID = ?";
@@ -273,12 +353,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         die;
     }
 
+    // Full update with all fields
+    $name = $_PATCH['name'];
+    $firstDescription = $_PATCH['firstDescription'];
+    $secondDescription = $_PATCH['secondDescription'];
+    $medium = $_PATCH['medium'];
+    $isColor = $_PATCH['isColor'];
+    $availability = $_PATCH['availability'];
+    $creationYear = $_PATCH['creationYear'];
+    $orderOfDisplay = $_PATCH['orderOfDisplay'];
+    $carousel = $_PATCH['carousel'];
+    $selectWork = $_PATCH['selectWork'];
+    $long_description = $_PATCH["long_description"];
+
     $theQuery = "UPDATE allWorks SET name = ?, desc2 = ?, desc3 = ?, medium = ?, color = ?, isAvailable = ?, year = ?, orderOfDisplay = ?, carousel = ?, isSelectWork = ?, long_description = ? WHERE workID = ?";
 
     $theArray = array($name, $firstDescription, $secondDescription, $medium, $isColor, $availability, $creationYear, $orderOfDisplay, $carousel, $selectWork, $long_description, $id,);
-
-    // echo json_encode($theArray);
-    // die;
 
     $updateQuery = $conn->prepare($theQuery);
 
@@ -299,9 +389,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         } else {
             echo "Error: ";
         }
-
     }
-
 
     die;
 }
@@ -316,10 +404,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_DELETE);
 
-    //echo($rawData);
-    // var_dump($_PATCH);
-    // die;
-
     $id = $_DELETE['id'];
 
     $theQuery = "UPDATE allWorks 
@@ -329,11 +413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
                     isAvailable = 0 
                 WHERE workID = ?";
 
-    //echo $theQuery;
-
     $theArray = array($id);
-    //var_dump($theArray);
-    //die;
 
     // Prepare the SQL statement
     $updateQuery = $conn->prepare($theQuery);

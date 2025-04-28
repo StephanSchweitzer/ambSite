@@ -120,13 +120,13 @@ select:focus {
   /* ... other styles ... */
 }
 
-/* If your select has a specific id */
-#projectsDropdown {
-  width: 300px; /* or 100% for full width */
-  padding: 1rem; /* Larger padding for a larger dropdown */
-  font-size: 1.2rem; /* Larger text */
-  /* ... other styles ... */
-}
+/*!* If your select has a specific id *!*/
+/*#projectsDropdown {*/
+/*  width: 300px; !* or 100% for full width *!*/
+/*  padding: 1rem; !* Larger padding for a larger dropdown *!*/
+/*  font-size: 1.2rem; !* Larger text *!*/
+/*  !* ... other styles ... *!*/
+/*}*/
 
 
 #navbarLinks li:last-child {
