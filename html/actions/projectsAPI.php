@@ -41,6 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
     $activityCondition = "WHERE isCurrentProject = 1 ";
   }
 
+  if($activity == 'all')
+  {
+    $activityCondition = ""; // No condition to get all projects
+  }
+
 
   $query = "SELECT id, title, description, orderOfDisplay, active, deleted, isCurrentProject
             FROM    projects $activityCondition

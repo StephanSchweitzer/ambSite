@@ -9,37 +9,31 @@ include '../database/pdo.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
-	$projectId = $_GET["projectId"];
+    if (!isset($_GET["projectId"])) {
+        http_response_code(400);
+        echo json_encode(array('status' => 'error', 'message' => 'Project ID is required'));
+        die;
+    }
 
-	$query = "
-        SELECT w.workId, a.orderOfDisplay
-        FROM worksInProjects w
-        INNER JOIN allWorks a ON w.workId = a.workId
-        WHERE w.projectId = ?
-        ORDER BY a.orderOfDisplay;";
+    $projectId = $_GET["projectId"];
 
-	$theArray = array($projectId);
+    // Simplified query - just get the workIds directly
+    $query = "SELECT workId FROM worksInProjects WHERE projectId = ?";
+    $theArray = array($projectId);
 
-	try {
-		$getWorkIdsQuery = $conn->prepare($query);
-		$getWorkIdsQuery->execute($theArray);
-	} catch (PDOException $e) {
-		http_response_code(500);
-		echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
-	}
+    try {
+        $getWorkIdsQuery = $conn->prepare($query);
+        $getWorkIdsQuery->execute($theArray);
+        $result = $getWorkIdsQuery->fetchAll(PDO::FETCH_COLUMN, 0); // Fetch just the first column
 
-	$result = $getWorkIdsQuery->fetchAll();
+        // Return the array of work IDs directly
+        echo json_encode($result);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
+    }
 
-	$data = array();
-
-  for ($i=0; $i < count($result); $i++) {
-
-    array_push($data, $result[$i][0]);
-  }
-
-	echo json_encode($data);
-
-	die;
+    die;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST')

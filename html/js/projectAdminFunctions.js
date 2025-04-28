@@ -9,6 +9,9 @@ var allWorks = [];
 var filteredWorks = [];
 
 $(document).ready(function () {
+    updateAllProjectCounts();
+
+
     getProjects(pageNumber);
 
     // Initialize search functionality
@@ -68,17 +71,25 @@ function getProjects(activity) {
                 works: []  // Initialize an empty array to hold work IDs
             }));
 
-            // Count projects by status
-            updateProjectCounts();
+            // First insert the data
+            insertData(data);
 
-            // Fetch works and associate with projects
+            // Then fetch works and update counts
+            const fetchPromises = [];
             allProjects.forEach(project => {
-                fetchWorkIdsForProject(project.id).then(workIds => {
+                const promise = fetchWorkIdsForProject(project.id).then(workIds => {
                     project.works = workIds;  // Store work IDs in the project object
+                    // Update the work count badge immediately
+                    updateWorksCountBadge(project.id, workIds.length);
                 });
+                fetchPromises.push(promise);
             });
 
-            insertData(data);
+            // After all fetches complete, refresh counts
+            Promise.all(fetchPromises).then(() => {
+                console.log("All work counts updated");
+            });
+
             // Clear any existing search filter
             $('#projectSearch').val('');
         },
@@ -273,16 +284,17 @@ function openProjectInfo(id, title, description, active, orderOfDisplay, deleted
     }
 
     // Load works for this project
-    fetchWorkIdsForProject(id).then(workIds => {
-        // Store in the projects array
-        const projectIndex = allProjects.findIndex(p => p.id === id);
-        if (projectIndex !== -1) {
-            allProjects[projectIndex].works = workIds;
-        }
-
-        // Load all works and check the ones associated with this project
-        getThenPopulateWorks();
-    });
+    function fetchWorkIdsForProject(id) {
+        return $.ajax({
+            url: '../actions/worksOfProjectsAPI.php',
+            type: 'GET',
+            data: {'projectId': id},
+            dataType: 'json'
+        }).then(response => {
+            console.log(`Project ${id} has ${response.length} works`); // Add logging
+            return response; // This should be an array of work IDs
+        });
+    }
 
     // Show the modal
     $('#projectUpdateModal').modal('show');
@@ -366,6 +378,7 @@ function createProject() {
             `);
         }
     });
+    updateAllProjectCounts();
 }
 
 function updateWork() {
@@ -429,6 +442,7 @@ function updateWork() {
             `);
         }
     });
+    updateAllProjectCounts();
 }
 
 function confirmDelete() {
@@ -489,6 +503,7 @@ function deleteWork() {
             `);
         }
     });
+    updateAllProjectCounts();
 }
 
 function restoreWork() {
@@ -535,6 +550,7 @@ function restoreWork() {
             `);
         }
     });
+    updateAllProjectCounts();
 }
 
 function getThenPopulateWorks() {
@@ -656,8 +672,17 @@ function postWorksProjectsDB(projectId, workIds, $button) {
     });
 }
 
+// Ensure the updateWorksCountBadge function is correctly updating the badge
 function updateWorksCountBadge(projectId, count) {
+    // Update the blue badge with the count
     $(`.project-card[data-id="${projectId}"] .works-count`).text(count);
+
+    // If the count is 0, we might want to style it differently (optional)
+    if (count === 0) {
+        $(`.project-card[data-id="${projectId}"] .works-count`).addClass('empty-works');
+    } else {
+        $(`.project-card[data-id="${projectId}"] .works-count`).removeClass('empty-works');
+    }
 }
 
 function fetchWorkIdsForProject(id) {
@@ -894,4 +919,27 @@ function validateForm(formId) {
     }
 
     return isValid;
+}
+
+function updateAllProjectCounts() {
+    $.ajax({
+        url: "../actions/projectsAPI.php",
+        type: "GET",
+        data: {activity: 'all'},  // New parameter to get all projects
+        dataType: "json",
+        success: function (data) {
+            // Update counts based on all projects
+            projectCounts.active = data.filter(p => p.active == 1 && p.deleted == 0).length;
+            projectCounts.inactive = data.filter(p => p.active == 0 && p.deleted == 0).length;
+            projectCounts.deleted = data.filter(p => p.deleted == 1).length;
+
+            // Update the UI
+            $('#activeCount').text(projectCounts.active);
+            $('#inactiveCount').text(projectCounts.inactive);
+            $('#deletedCount').text(projectCounts.deleted);
+        },
+        error: function (xhr, status, error) {
+            console.log("Error fetching project counts: " + error);
+        }
+    });
 }
