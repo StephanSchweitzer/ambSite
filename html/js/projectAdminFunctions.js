@@ -10,8 +10,6 @@ var filteredWorks = [];
 
 $(document).ready(function () {
     updateAllProjectCounts();
-
-
     getProjects(pageNumber);
 
     // Initialize search functionality
@@ -81,6 +79,8 @@ function getProjects(activity) {
                     project.works = workIds;  // Store work IDs in the project object
                     // Update the work count badge immediately
                     updateWorksCountBadge(project.id, workIds.length);
+                }).catch(error => {
+                    console.error(`Error fetching works for project ${project.id}:`, error);
                 });
                 fetchPromises.push(promise);
             });
@@ -88,6 +88,8 @@ function getProjects(activity) {
             // After all fetches complete, refresh counts
             Promise.all(fetchPromises).then(() => {
                 console.log("All work counts updated");
+            }).catch(error => {
+                console.error("Error updating work counts:", error);
             });
 
             // Clear any existing search filter
@@ -145,8 +147,6 @@ function insertData(data) {
         let active = item.active;
         let deleted = item.deleted;
         let isCurrentProject = item.isCurrentProject;
-
-        // Description is not needed in the card view
 
         // Determine status badge
         let statusBadge = '';
@@ -236,6 +236,9 @@ function filterProjects(searchTerm) {
 }
 
 function openProjectInfo(id, title, description, active, orderOfDisplay, deleted, isCurrentProject) {
+    // Prevent multiple calls by checking if modal is already visible
+    if ($('#projectUpdateModal').hasClass('show')) return;
+
     // Show loading state in works list
     $('#worksList').html(`
         <div class="text-center py-4">
@@ -283,24 +286,73 @@ function openProjectInfo(id, title, description, active, orderOfDisplay, deleted
         $('#editCurrentNoPost').prop('checked', true);
     }
 
-    // Load works for this project
-    function fetchWorkIdsForProject(id) {
-        return $.ajax({
-            url: '../actions/worksOfProjectsAPI.php',
-            type: 'GET',
-            data: {'projectId': id},
-            dataType: 'json'
-        }).then(response => {
-            console.log(`Project ${id} has ${response.length} works`); // Add logging
-            return response; // This should be an array of work IDs
-        });
-    }
-
-    // Show the modal
+    // Show the modal first to prevent delay
     $('#projectUpdateModal').modal('show');
 
     // Default to the details tab
     $('#projectTabs a[href="#details"]').tab('show');
+
+    // Load works with timeout to prevent immediate AJAX calls that could cause issues
+    setTimeout(function() {
+        loadWorksForProject(id);
+    }, 100);
+}
+
+function loadWorksForProject(projectId) {
+    // First, get all available works
+    $.ajax({
+        url: '../actions/picturesAPI.php',
+        type: 'GET',
+        data: {'theYear': 'projectsAPI'},
+        dataType: 'json',
+        success: function(workData) {
+            // Check if modal is still open before proceeding
+            if (!$('#projectUpdateModal').hasClass('show')) return;
+
+            allWorks = workData;
+            filteredWorks = [...workData];
+
+            // Then get the works associated with this project
+            $.ajax({
+                url: '../actions/worksOfProjectsAPI.php',
+                type: 'GET',
+                data: {'projectId': projectId},
+                dataType: 'json',
+                success: function(associatedWorkIds) {
+                    // Check if modal is still open before proceeding
+                    if (!$('#projectUpdateModal').hasClass('show')) return;
+
+                    // Store the associated work IDs in the project object
+                    const projectIndex = allProjects.findIndex(p => p.id === projectId);
+                    if (projectIndex !== -1) {
+                        allProjects[projectIndex].works = associatedWorkIds;
+                    }
+
+                    // Display the works with appropriate checkboxes
+                    populateWorksList(filteredWorks);
+
+                    // Check the works that are associated with this project
+                    checkWorkCheckboxes(projectId);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching associated works:', error);
+                    $('#worksList').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> Failed to load associated works: ${error}
+                        </div>
+                    `);
+                }
+            });
+        },
+        error: function(xhr, status, error) {
+            console.error('Error fetching works:', error);
+            $('#worksList').html(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> Failed to load works: ${error}
+                </div>
+            `);
+        }
+    });
 }
 
 function openPostForm() {
@@ -428,7 +480,7 @@ function updateWork() {
         success: function (response) {
             showToast('Project successfully updated!', 'success');
             getProjects(pageNumber);
-            addWorksToProject();
+            // Don't automatically call addWorksToProject() here - this was causing the loop problem
             $('#projectUpdateModal').modal('hide');
         },
         error: function (xhr, status, error) {
@@ -554,34 +606,27 @@ function restoreWork() {
 }
 
 function getThenPopulateWorks() {
-    const projectId = $('#projectId').val();
+    $('#worksList').html(`
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Testing connection...
+        </div>
+    `);
 
-    $.ajax({
-        url: "../actions/picturesAPI.php",
-        type: "GET",
-        data: {'theYear': 'projectsAPI'},
-        dataType: "json",
-        success: function (data) {
-            // Store all works globally for filtering
-            allWorks = data;
-            filteredWorks = [...allWorks];
-
-            populateWorksList(data);
-            checkWorkCheckboxes(projectId);
-        },
-        error: function (xhr, status, error) {
-            console.log("An error occurred when loading works: " + error);
-            showToast('Failed to load works. Please try again.', 'error');
-
-            $('#worksList').html(`
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> Failed to load works.
-                    <button class="btn btn-outline-danger mt-3" onclick="getThenPopulateWorks()">
-                        <i class="fas fa-sync"></i> Try Again
-                    </button>
-                </div>
-            `);
-        },
+    // Simple test request
+    $.get("../actions/picturesAPI.php?theYear=projectsAPI", function(data) {
+        $('#worksList').html(`
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> Connection successful!
+                <pre>${JSON.stringify(data).substring(0, 100)}...</pre>
+            </div>
+        `);
+    }).fail(function(xhr, status, error) {
+        $('#worksList').html(`
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> Failed: ${error}
+                <pre>${xhr.responseText.substring(0, 200)}...</pre>
+            </div>
+        `);
     });
 }
 
@@ -610,6 +655,12 @@ function addWorksToProject() {
     const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
     const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id')).sort();
     const projectId = document.getElementById('projectId').value;
+
+    if (!projectId) {
+        console.error('No project ID found');
+        showToast('Error: No project selected', 'error');
+        return;
+    }
 
     // Fetch existing work IDs for this project from allProjects array
     const currentProject = allProjects.find(project => project.id === projectId);
