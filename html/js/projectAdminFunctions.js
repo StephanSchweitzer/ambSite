@@ -1,12 +1,61 @@
 var pageNumber = 'active';
 var allProjects = [];
+var projectCounts = {
+    active: 0,
+    inactive: 0,
+    deleted: 0
+};
+var allWorks = [];
+var filteredWorks = [];
+
 $(document).ready(function () {
-    getProjects(pageNumber)
+    getProjects(pageNumber);
+
+    // Initialize search functionality
+    $('#projectSearch').on('input', function() {
+        filterProjects($(this).val().toLowerCase());
+    });
+
+    $('#workSearch').on('input', function() {
+        filterWorks($(this).val().toLowerCase());
+    });
+
+    // Select all works checkbox
+    $('#selectAllWorks').on('change', function() {
+        const isChecked = $(this).prop('checked');
+        $('#worksList input[type="checkbox"]').prop('checked', isChecked);
+    });
+
+    // Set active button state
+    $('.btn-group button').on('click', function() {
+        $('.btn-group button').removeClass('active');
+        $(this).addClass('active');
+    });
 });
 
 function getProjects(activity) {
+    // Show loading state
+    $('#existingPostInformation').html(`
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3">Loading projects...</p>
+        </div>
+    `);
+
     pageNumber = activity;
     yearData = {activity: activity};
+
+    // Set active button
+    $('.btn-group button').removeClass('active');
+    if (activity === 'active') {
+        $('#activeBtn').addClass('active');
+    } else if (activity === 'inactive') {
+        $('#inactiveBtn').addClass('active');
+    } else if (activity === 'deleted') {
+        $('#deletedBtn').addClass('active');
+    }
 
     $.ajax({
         url: "../actions/projectsAPI.php",
@@ -19,26 +68,63 @@ function getProjects(activity) {
                 works: []  // Initialize an empty array to hold work IDs
             }));
 
-            document.querySelectorAll('.project-info').forEach(el => el.remove());
+            // Count projects by status
+            updateProjectCounts();
 
+            // Fetch works and associate with projects
             allProjects.forEach(project => {
                 fetchWorkIdsForProject(project.id).then(workIds => {
                     project.works = workIds;  // Store work IDs in the project object
                 });
             });
-            insertData(data);  // You might want to call this after all IDs are fetched if necessary
-            getThenPopulateWorks();
+
+            insertData(data);
+            // Clear any existing search filter
+            $('#projectSearch').val('');
         },
-        error: function () {
-            console.log("An error occurred.");
+        error: function (xhr, status, error) {
+            console.log("An error occurred: " + error);
+            showToast('Failed to load projects. Please try again.', 'error');
+            $('#existingPostInformation').html(`
+                <div class="col-12 text-center py-5">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i> Failed to load projects.
+                        <button class="btn btn-outline-danger mt-3" onclick="getProjects('${pageNumber}')">
+                            <i class="fas fa-sync"></i> Try Again
+                        </button>
+                    </div>
+                </div>
+            `);
         },
     });
 }
 
+function updateProjectCounts() {
+    // Count projects by status
+    projectCounts.active = allProjects.filter(p => p.active == 1 && p.deleted == 0).length;
+    projectCounts.inactive = allProjects.filter(p => p.active == 0 && p.deleted == 0).length;
+    projectCounts.deleted = allProjects.filter(p => p.deleted == 1).length;
+
+    // Update the UI
+    $('#activeCount').text(projectCounts.active);
+    $('#inactiveCount').text(projectCounts.inactive);
+    $('#deletedCount').text(projectCounts.deleted);
+}
+
 function insertData(data) {
     let items = data;
-
     $('#existingPostInformation').empty();
+
+    if (items.length === 0) {
+        $('#existingPostInformation').html(`
+            <div class="col-12 text-center py-5">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No projects found.
+                </div>
+            </div>
+        `);
+        return;
+    }
 
     items.forEach(function (item) {
         let id = item.id;
@@ -49,102 +135,198 @@ function insertData(data) {
         let deleted = item.deleted;
         let isCurrentProject = item.isCurrentProject;
 
-        // Create a Bootstrap card div element with the data
-        let card = $('<div>').addClass('card shadow-grow mb-4');
-        let cardBody = $('<div>').addClass('card-body');
-        $('<h5>').addClass('card-title').text(title).appendTo(cardBody);
-        //$('<p>').addClass('card-text').text('Location: ' + location).appendTo(cardBody);
-        $('<p>').addClass('card-text').text('ID: ' + id).appendTo(cardBody);
-        $('<p>').addClass('card-text').text('Description: ' + description).appendTo(cardBody);
-        $('<p>').addClass('card-text').text('Order of display: ' + orderOfDisplay).appendTo(cardBody);
+        // Description is not needed in the card view
 
-        card.append(cardBody);
+        // Determine status badge
+        let statusBadge = '';
+        let statusClass = '';
 
-        // Add padding to the card
-        card.css('padding', '20px');
+        if (deleted == 1) {
+            statusBadge = '<span class="badge badge-deleted">Deleted</span>';
+            statusClass = 'status-deleted';
+        } else if (active == 1) {
+            statusBadge = '<span class="badge badge-active">Active</span>';
+            statusClass = 'status-active';
+        } else {
+            statusBadge = '<span class="badge badge-inactive">Inactive</span>';
+            statusClass = 'status-inactive';
+        }
 
-        // Add mouse-over hover effect
-        card.hover(
-            function () {
-                $(this).addClass('shadow-lg');
-            },
-            function () {
-                $(this).removeClass('shadow-lg');
+        // Add current project badge if applicable
+        let currentBadge = '';
+        if (isCurrentProject == 1 && deleted == 0) {
+            currentBadge = '<span class="badge badge-current">Current Project</span>';
+            if (active == 1) {
+                statusClass = 'status-current';
             }
-        );
+        }
 
-        // Open modal with inputs filled when the photo is clicked
-        card.click(function () {
-            openProjectInfo(id, title, description, active, orderOfDisplay, deleted, isCurrentProject);
+        // Find the works count for this project
+        const worksCount = allProjects.find(p => p.id === id)?.works?.length || 0;
+        const worksCountBadge = `<span class="works-count" title="${worksCount} works associated">${worksCount}</span>`;
+
+        // Create the card HTML
+        const cardHtml = `
+            <div class="col-md-4 mb-4">
+                <div class="card project-card shadow-grow position-relative" data-id="${id}">
+                    <div class="status-indicator ${statusClass}"></div>
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #ffffff;">${title} ${worksCountBadge}</h5>
+                        <div class="mb-3">
+                            ${statusBadge} ${currentBadge}
+                        </div>
+                        <p class="card-text"><strong>ID:</strong> ${id}</p>
+                        <p class="card-text"><strong>Order:</strong> ${orderOfDisplay}</p>
+                        <button class="btn btn-sm btn-outline-light mt-2 edit-project-btn">
+                            <i class="fas fa-edit"></i> Edit Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append the card to the container
+        $('#existingPostInformation').append(cardHtml);
+
+        // Add click event to the card
+        $(`[data-id="${id}"]`).click(function(e) {
+            if (!$(e.target).hasClass('edit-project-btn') &&
+                !$(e.target).parent().hasClass('edit-project-btn')) {
+                openProjectInfo(id, title, description, active, orderOfDisplay, deleted, isCurrentProject);
+            }
         });
 
-        // Append the card to the existingPhotoInformation element
-        $('#existingPostInformation').append(card);
+        // Add click event to the edit button
+        $(`[data-id="${id}"] .edit-project-btn`).click(function(e) {
+            e.stopPropagation();
+            openProjectInfo(id, title, description, active, orderOfDisplay, deleted, isCurrentProject);
+        });
+    });
+}
+
+function filterProjects(searchTerm) {
+    if (!searchTerm) {
+        // If search is empty, show all projects
+        $('.project-card').parent().show();
+        return;
+    }
+
+    // Filter cards based on search term
+    $('.project-card').each(function() {
+        const card = $(this);
+        const cardText = card.text().toLowerCase();
+
+        if (cardText.includes(searchTerm)) {
+            card.parent().show();
+        } else {
+            card.parent().hide();
+        }
     });
 }
 
 function openProjectInfo(id, title, description, active, orderOfDisplay, deleted, isCurrentProject) {
-    fetchWorkIdsForProject(id)
+    // Show loading state in works list
+    $('#worksList').html(`
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading works...</span>
+            </div>
+        </div>
+    `);
 
-    //getThenPopulateWorks();
+    // Reset search and select all checkbox
+    $('#workSearch').val('');
+    $('#selectAllWorks').prop('checked', false);
 
-    checkWorkCheckboxes(id);
-
-    document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteWork()">Delete Project</button>';
-
+    // Set delete/restore button
     if (deleted == 1) {
-        document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-info" onclick="restoreWork()">Restore post</button>';
+        document.getElementById('deleteOrRestore').innerHTML = `
+            <button type="button" class="btn btn-info" onclick="confirmRestore()">
+                <i class="fas fa-trash-restore"></i> Restore Project
+            </button>
+        `;
+    } else {
+        document.getElementById('deleteOrRestore').innerHTML = `
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                <i class="fas fa-trash-alt"></i> Delete Project
+            </button>
+        `;
     }
 
-    var openActiveYes = document.getElementById('editActiveYesPost');
-    var openActiveNo = document.getElementById('editActiveNoPost');
-
-    let openCurrentYes = document.getElementById('editCurrentYesPost');
-    let openCurrentNo = document.getElementById('editCurrentNoPost');
-
-    // Set the values of the modal inputs
+    // Set form values
     $('#projectId').val(id);
     $('#editProjectTitle').val(title);
     $('#editProjectDescription').val(description);
     $('#editOrderOfDisplay').val(orderOfDisplay);
 
-
-    if (active == 1)
-    {
-        openActiveYes.checked = true;
-    }
-    else
-    {
-        openActiveNo.checked = true;
+    // Set radio buttons
+    if (active == 1) {
+        $('#editActiveYesPost').prop('checked', true);
+    } else {
+        $('#editActiveNoPost').prop('checked', true);
     }
 
     if (isCurrentProject == 1) {
-        openCurrentYes.checked = true;
+        $('#editCurrentYesPost').prop('checked', true);
     } else {
-        openCurrentNo.checked = true;
+        $('#editCurrentNoPost').prop('checked', true);
     }
 
-    // Open the Bootstrap modal
+    // Load works for this project
+    fetchWorkIdsForProject(id).then(workIds => {
+        // Store in the projects array
+        const projectIndex = allProjects.findIndex(p => p.id === id);
+        if (projectIndex !== -1) {
+            allProjects[projectIndex].works = workIds;
+        }
+
+        // Load all works and check the ones associated with this project
+        getThenPopulateWorks();
+    });
+
+    // Show the modal
     $('#projectUpdateModal').modal('show');
+
+    // Default to the details tab
+    $('#projectTabs a[href="#details"]').tab('show');
 }
 
 function openPostForm() {
-    $("#projectPostModal").modal('show');
+    // Reset the form
+    $('#createProjectForm')[0].reset();
+
+    // Default values
+    $('#activeYesPost').prop('checked', true);
+    $('#currentNoPost').prop('checked', true);
+    $('#postOrderOfDisplay').val(1);
+
+    // Show the modal
+    $('#projectPostModal').modal('show');
 }
 
 function createProject() {
+    // Validate only required fields (title is required, description is NOT)
+    let isValid = true;
 
-    let isActiveProject = $('input[name=isActivePost]:checked').val();
-    let projectInt = 1;
-    if (isActiveProject != 'true') {
-        projectInt = 0;
+    // Check title field
+    if (!$('#titlePostName').val().trim()) {
+        $('#titlePostName').addClass('is-invalid');
+        isValid = false;
+    } else {
+        $('#titlePostName').removeClass('is-invalid');
     }
+
+    if (!isValid) {
+        showToast('Please fill in the project title', 'error');
+        return;
+    }
+
+    // Get form values
+    let isActiveProject = $('input[name=isActivePost]:checked').val();
+    let projectInt = isActiveProject === 'true' ? 1 : 0;
 
     let isCurrentProject = $('input[name=isCurrentProjectPost]:checked').val();
-    let isCurrentProjectInt = 1;
-    if (isCurrentProject != 'true') {
-        isCurrentProjectInt = 0;
-    }
+    let isCurrentProjectInt = isCurrentProject === 'true' ? 1 : 0;
 
     var postData = new FormData();
     postData.append('title', $('#titlePostName').val());
@@ -153,8 +335,11 @@ function createProject() {
     postData.append('orderOfDisplay', $('#postOrderOfDisplay').val());
     postData.append('isCurrentProject', isCurrentProjectInt);
 
-
-    document.getElementById('uploadWorkButton').disabled = true;
+    // Disable the button to prevent multiple submissions
+    $('#uploadWorkButton').prop('disabled', true).html(`
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        Creating...
+    `);
 
     $.ajax({
         url: '../actions/projectsAPI.php',
@@ -166,30 +351,46 @@ function createProject() {
             showToast('Project successfully created!', 'success');
             getProjects(pageNumber);
             $('#projectPostModal').modal('hide');
-            document.getElementById('uploadWorkButton').disabled = false;
+
+            // Reset the form
+            $('#createProjectForm')[0].reset();
         },
         error: function (xhr, status, error) {
             console.error('Error:', error);
-            showToast('Project not created, error', 'error');
-            document.getElementById('uploadWorkButton').disabled = false;
+            showToast('Failed to create project: ' + error, 'error');
+        },
+        complete: function() {
+            // Re-enable the button
+            $('#uploadWorkButton').prop('disabled', false).html(`
+                <i class="fas fa-save"></i> Create Project
+            `);
         }
     });
 }
 
 function updateWork() {
-    let isActive = $('input[name=editIsActivePost]:checked').val();
-    let activeInt = 1;
-    if (isActive != 'true')
-    {
-        activeInt = 0;
+    // Validate only required fields (title is required, description is NOT)
+    let isValid = true;
+
+    // Check title field
+    if (!$('#editProjectTitle').val().trim()) {
+        $('#editProjectTitle').addClass('is-invalid');
+        isValid = false;
+    } else {
+        $('#editProjectTitle').removeClass('is-invalid');
     }
 
-    let isCurrentProject = $('input[name=editIsCurrentProjectPost]:checked').val();
-    let isCurrentProjectInt = 1;
-    if (isCurrentProject != 'true')
-    {
-        isCurrentProjectInt = 0;
+    if (!isValid) {
+        showToast('Please fill in the project title', 'error');
+        return;
     }
+
+    // Get form values
+    let isActive = $('input[name=editIsActivePost]:checked').val();
+    let activeInt = isActive === 'true' ? 1 : 0;
+
+    let isCurrentProject = $('input[name=editIsCurrentProjectPost]:checked').val();
+    let isCurrentProjectInt = isCurrentProject === 'true' ? 1 : 0;
 
     var formData = {
         id: $('#projectId').val(),
@@ -200,8 +401,13 @@ function updateWork() {
         isCurrentProject: isCurrentProjectInt,
     };
 
-    console.log(formData);
-    // Send the form data via AJAX
+    // Disable buttons
+    const $saveButton = $('#projectUpdateModal .modal-footer .btn-primary');
+    $saveButton.prop('disabled', true).html(`
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        Saving...
+    `);
+
     $.ajax({
         url: '../actions/projectsAPI.php',
         type: 'PATCH',
@@ -209,59 +415,88 @@ function updateWork() {
         success: function (response) {
             showToast('Project successfully updated!', 'success');
             getProjects(pageNumber);
-            addWorksToProject()
-            console.log('Data updated successfully!');
-            console.log(formData);
+            addWorksToProject();
             $('#projectUpdateModal').modal('hide');
-
-            // You can perform additional actions here
         },
         error: function (xhr, status, error) {
-            // Handle the error response
-            showToast('There was an error', 'error');
+            showToast('Error updating project: ' + error, 'error');
             console.error('Error:', error);
-            // You can perform error handling here
+        },
+        complete: function() {
+            // Re-enable the button
+            $saveButton.prop('disabled', false).html(`
+                <i class="fas fa-save"></i> Save Changes
+            `);
         }
     });
 }
 
+function confirmDelete() {
+    const projectTitle = $('#editProjectTitle').val();
+    $('#confirmationMessage').text(`Are you sure you want to delete the project "${projectTitle}"? This action cannot be undone.`);
+
+    // Set the action for the confirmation button
+    $('#confirmActionBtn').off('click').on('click', function() {
+        deleteWork();
+        $('#confirmationModal').modal('hide');
+    });
+
+    $('#confirmationModal').modal('show');
+}
+
+function confirmRestore() {
+    const projectTitle = $('#editProjectTitle').val();
+    $('#confirmationMessage').text(`Are you sure you want to restore the project "${projectTitle}"?`);
+
+    // Set the action for the confirmation button
+    $('#confirmActionBtn').off('click').on('click', function() {
+        restoreWork();
+        $('#confirmationModal').modal('hide');
+    });
+
+    $('#confirmationModal').modal('show');
+}
+
 function deleteWork() {
-    {
-        var formData = {
-            id: $('#projectId').val(),
-        };
-        $.ajax({
-            url: '../actions/projectsAPI.php',
-            type: 'DELETE',
-            data: formData,
-            success: function (response) {
-                getProjects('everything')
-                showToast('Project successfully deleted!', 'success');
-                $('#projectUpdateModal').modal('hide');
-            },
-            error: function (xhr, status, error) {
-                showToast('There was a problem', 'error');
-                console.error('Error:', error);
-            }
-        });
-    }
+    var formData = {
+        id: $('#projectId').val(),
+    };
+
+    // Disable the delete button
+    const $deleteButton = $('#deleteOrRestore button');
+    $deleteButton.prop('disabled', true).html(`
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        Deleting...
+    `);
+
+    $.ajax({
+        url: '../actions/projectsAPI.php',
+        type: 'DELETE',
+        data: formData,
+        success: function (response) {
+            getProjects(pageNumber);
+            showToast('Project successfully deleted!', 'success');
+            $('#projectUpdateModal').modal('hide');
+        },
+        error: function (xhr, status, error) {
+            showToast('Error deleting project: ' + error, 'error');
+            console.error('Error:', error);
+        },
+        complete: function() {
+            // Re-enable the button (although modal will be closed)
+            $deleteButton.prop('disabled', false).html(`
+                <i class="fas fa-trash-alt"></i> Delete Project
+            `);
+        }
+    });
 }
 
 function restoreWork() {
-
-    let isActive = $('input[name=editIsActivePost]:checked').val(); // Retrieve the selected radio button value
-    let activeInt = 1;
-    if (isActive != 'true')
-    {
-        activeInt = 0;
-    }
+    let isActive = $('input[name=editIsActivePost]:checked').val();
+    let activeInt = isActive === 'true' ? 1 : 0;
 
     let isCurrentProject = $('input[name=editIsCurrentProjectPost]:checked').val();
-    let isCurrentProjectInt = 1;
-    if (isCurrentProject != 'true')
-    {
-        isCurrentProjectInt = 0;
-    }
+    let isCurrentProjectInt = isCurrentProject === 'true' ? 1 : 0;
 
     var formData = {
         id: $('#projectId').val(),
@@ -270,186 +505,162 @@ function restoreWork() {
         orderOfDisplay: $('#editOrderOfDisplay').val(),
         active: activeInt,
         isCurrentProject: isCurrentProjectInt,
-        restore : 'restore'
+        restore: 'restore'
     };
+
+    // Disable the restore button
+    const $restoreButton = $('#deleteOrRestore button');
+    $restoreButton.prop('disabled', true).html(`
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        Restoring...
+    `);
 
     $.ajax({
         url: '../actions/projectsAPI.php',
         type: 'PATCH',
         data: formData,
         success: function (response) {
-            getProjects('invisible')
+            getProjects(pageNumber);
             showToast('Project successfully restored!', 'success');
             $('#projectUpdateModal').modal('hide');
         },
         error: function (xhr, status, error) {
-            showToast('Error, contact Stef', 'error');
+            showToast('Error restoring project: ' + error, 'error');
             console.error('Error:', error);
+        },
+        complete: function() {
+            // Re-enable the button (although modal will be closed)
+            $restoreButton.prop('disabled', false).html(`
+                <i class="fas fa-trash-restore"></i> Restore Project
+            `);
         }
     });
-}
-
-function getProjectsAsMenuItems() {
-    let dropDownOptionsText = "";
-    yearData =
-        $.ajax({
-            url: "../actions/projectsAPI.php",
-            type: "GET",
-            data: {activity: 'active'},
-            dataType: "json",
-            success: function (data) {
-                console.log(data);
-                //insertData(data);
-                dropDownOptionsText = makeProjectsDropDownText(data);
-                console.log(dropDownOptionsText);
-            },
-            error: function () {
-                console.log("An error occurred.");
-            },
-        });
-    return dropDownOptionsText;
-}
-
-function makeProjectsDropDownText(projects) {
-    let finalText = "";
-
-    projects.forEach(project => {
-        if (project.deleted === 0) { // Assuming 'deleted' is used to mark soft-deleted projects
-            finalText += `<option value="${project.id}">${project.title}</option>`;
-        }
-    });
-
-    return finalText;
-}
-
-function getActiveWorks() {
-    let theWorks;
-    $.ajax({
-        url: "../actions/picturesAPI.php",
-        type: "GET",
-        data: {'theYear': 'Select Works'},
-        dataType: "json",
-        success: function (data) {
-            theWorks = data;
-            console.log(data);
-        },
-        error: function () {
-            console.log("An error occurred.");
-        },
-    });
-    return theWorks;
 }
 
 function getThenPopulateWorks() {
-    let id = document.getElementById('projectId');
+    const projectId = $('#projectId').val();
+
     $.ajax({
         url: "../actions/picturesAPI.php",
         type: "GET",
         data: {'theYear': 'projectsAPI'},
         dataType: "json",
         success: function (data) {
+            // Store all works globally for filtering
+            allWorks = data;
+            filteredWorks = [...allWorks];
+
             populateWorksList(data);
-            checkWorkCheckboxes(id);
-            //fetchWorkIdsForProject(id);
+            checkWorkCheckboxes(projectId);
         },
-        error: function () {
-            console.log("An error occurred.");
+        error: function (xhr, status, error) {
+            console.log("An error occurred when loading works: " + error);
+            showToast('Failed to load works. Please try again.', 'error');
+
+            $('#worksList').html(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> Failed to load works.
+                    <button class="btn btn-outline-danger mt-3" onclick="getThenPopulateWorks()">
+                        <i class="fas fa-sync"></i> Try Again
+                    </button>
+                </div>
+            `);
         },
     });
 }
 
+function filterWorks(searchTerm) {
+    if (!allWorks || allWorks.length === 0) return;
+
+    if (!searchTerm) {
+        // If search is empty, show all works
+        filteredWorks = [...allWorks];
+    } else {
+        // Filter works based on search term
+        filteredWorks = allWorks.filter(work =>
+            work.name.toLowerCase().includes(searchTerm) ||
+            (work.description && work.description.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    // Update the works list
+    populateWorksList(filteredWorks);
+
+    // Reapply checkboxes for the current project
+    checkWorkCheckboxes($('#projectId').val());
+}
 
 function addWorksToProject() {
     const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
     const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id')).sort();
     const projectId = document.getElementById('projectId').value;
 
-    // Fetch existing work IDs for this project from allProjects array (assuming it's available globally)
+    // Fetch existing work IDs for this project from allProjects array
     const currentProject = allProjects.find(project => project.id === projectId);
     if (!currentProject) {
         console.error('Current project not found');
+        showToast('Project not found. Please try again.', 'error');
         return;
     }
 
     // Compare existing work IDs with newly selected work IDs
     const existingWorkIds = currentProject.works.sort();
 
-    // Using JSON.stringify for simple array comparison; consider a more robust method for larger data sets or critical use cases
+    // If no changes, don't update
     if (JSON.stringify(existingWorkIds) === JSON.stringify(workIds)) {
-        console.log('No changes in project works; not updating the database.');
-        return; // Stop further execution if no changes
+        showToast('No changes in associated works.', 'info');
+        return;
     }
 
-    // Continue with database update if there are changes
-    postWorksProjectsDB(projectId, workIds);
+    // Show loading state
+    const $saveButton = $('#works .btn-primary');
+    $saveButton.prop('disabled', true).html(`
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        Saving...
+    `);
+
+    // Continue with database update
+    postWorksProjectsDB(projectId, workIds, $saveButton);
 }
 
-function postWorksProjectsDB(projectId, workIds) {
-    console.log(workIds);
-
+function postWorksProjectsDB(projectId, workIds, $button) {
     $.ajax({
         url: "../actions/worksOfProjectsAPI.php",
         type: "POST",
         data: {'projectId': projectId, 'workIds': workIds},
         dataType: "json",
         success: function (data) {
-            showToast('Works successfully added to project', 'success');
-            getProjects(pageNumber);
+            showToast('Works successfully associated with project!', 'success');
+
+            // Update the project in allProjects
+            const projectIndex = allProjects.findIndex(p => p.id === projectId);
+            if (projectIndex !== -1) {
+                allProjects[projectIndex].works = workIds;
+            }
+
+            // Update works count in UI
+            updateWorksCountBadge(projectId, workIds.length);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("An error occurred: " + textStatus + ", " + errorThrown);
-            showToast('There has been a problem, tell bubbers', 'error');
+            showToast('Failed to update associated works.', 'error');
+        },
+        complete: function() {
+            // Re-enable the button
+            if ($button) {
+                $button.prop('disabled', false).html(`
+                    <i class="fas fa-save"></i> Save Associated Works
+                `);
+            }
         }
     });
-
 }
 
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('myToastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'myToast'; // Base class
-    toast.textContent = message;
-
-    // Apply styles directly
-    toast.style.color = '#fff';
-    toast.style.backgroundColor = '#25252f';
-    toast.style.border = '1px solid #ddd';
-    toast.style.borderLeft = '15px solid #00b894';
-    toast.style.padding = '12px 20px';
-    toast.style.borderRadius = '8px';
-    toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-    toast.style.width = '300px';
-    toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-    toast.style.transform = 'translateX(100%)';
-    toast.style.opacity = '0';
-
-    // Setting background color based on the type of message
-    switch (type) {
-        case 'success':
-            toast.style.borderLeftColor = '#2ecc71'; // Green for success
-            break;
-        case 'error':
-            toast.style.borderLeftColor = '#e74c3c'; // Red for error
-            break;
-        default:
-            toast.style.borderLeftColor = '#3498db'; // Blue for general info
-    }
-
-    // Append the toast to the container
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-        toast.style.transform = 'translateX(0)';
-        toast.style.opacity = '1';
-    }, 100); // Delay to allow CSS transition
-
-    // Automatically remove the toast
-    setTimeout(() => {
-        toastContainer.removeChild(toast);
-    }, 5000); // Display for 4 seconds
+function updateWorksCountBadge(projectId, count) {
+    $(`.project-card[data-id="${projectId}"] .works-count`).text(count);
 }
 
 function fetchWorkIdsForProject(id) {
-
     return $.ajax({
         url: '../actions/worksOfProjectsAPI.php',
         type: 'GET',
@@ -458,101 +669,229 @@ function fetchWorkIdsForProject(id) {
     });
 }
 
-
 function checkWorkCheckboxes(currentProjectId) {
-    // Retrieve the current project from the allProjects array
+    // Find the current project
     const currentProject = allProjects.find(project => project.id === currentProjectId);
+    if (!currentProject) return;
 
-    if (!currentProject) {
-        return; // Exit if the current project is not found
-    }
-
-    // Get the work IDs from the current project
+    // Get work IDs for this project
     const workIds = currentProject.works || [];
 
-    // First, uncheck all checkboxes
-    $('input[type="checkbox"][data-work-id]').prop('checked', false);
+    // First uncheck all checkboxes
+    $('#worksList input[type="checkbox"]').prop('checked', false);
 
-    // Always clear previous "In [projects]" text before setting new
-    $('.project-info').remove();  // Clear all existing project info labels
+    // Remove any existing project info
+    $('.project-info').remove();
 
-    // Process each work
-    $('input[type="checkbox"][data-work-id]').each(function () {
+    // Check checkboxes for works in this project
+    $('#worksList input[type="checkbox"]').each(function() {
         const workId = $(this).attr('data-work-id');
         const listItem = $(this).closest('li');
 
-        // Check the checkbox if work is part of the current project
         if (workIds.includes(workId)) {
             $(this).prop('checked', true);
         }
 
-        // Append project info, excluding the current project
+        // Add project info labels
         appendProjectInfo(workId, listItem[0], currentProjectId);
     });
+
+    // Update "Select All" checkbox state
+    updateSelectAllCheckbox();
 }
 
+function updateSelectAllCheckbox() {
+    const totalCheckboxes = $('#worksList input[type="checkbox"]').length;
+    const checkedCheckboxes = $('#worksList input[type="checkbox"]:checked').length;
 
-function appendProjectInfo(workId, listItem, excludeProjectId = null) {
-    // Optionally exclude one project from the "Also in" list
-    const projects = allProjects.filter(p => p.works.includes(workId) && p.id !== excludeProjectId);
-    if (projects.length > 0) {
-        const projectNames = projects.map(p => p.title).join(", ");
-        const projectInfo = document.createElement('small');
-        projectInfo.classList.add('project-info');  // Add class for easy selection/removal
-        projectInfo.textContent = "In: " + projectNames;  // Update the text to "Also in"
-        projectInfo.style.marginLeft = '10px';
-        listItem.appendChild(projectInfo);
+    if (totalCheckboxes === 0) {
+        $('#selectAllWorks').prop('checked', false);
+    } else if (checkedCheckboxes === 0) {
+        $('#selectAllWorks').prop('checked', false);
+        $('#selectAllWorks').prop('indeterminate', false);
+    } else if (checkedCheckboxes === totalCheckboxes) {
+        $('#selectAllWorks').prop('checked', true);
+        $('#selectAllWorks').prop('indeterminate', false);
+    } else {
+        $('#selectAllWorks').prop('checked', false);
+        $('#selectAllWorks').prop('indeterminate', true);
     }
 }
 
+function appendProjectInfo(workId, listItem, excludeProjectId = null) {
+    // Find projects that contain this work, excluding the current project
+    const projects = allProjects.filter(p =>
+        p.works && p.works.includes(workId) &&
+        p.id !== excludeProjectId &&
+        p.deleted == 0
+    );
+
+    if (projects.length > 0) {
+        const projectsContainer = document.createElement('div');
+        projectsContainer.classList.add('project-info', 'mt-1');
+
+        const projectNames = projects.map(p => {
+            // Create a badge for each project
+            return `<span class="badge badge-info mr-1">${p.title}</span>`;
+        }).join('');
+
+        projectsContainer.innerHTML = `<small>Also in: ${projectNames}</small>`;
+        listItem.appendChild(projectsContainer);
+    }
+}
 
 function populateWorksList(works) {
     const worksList = document.getElementById('worksList');
+
+    if (!works || works.length === 0) {
+        worksList.innerHTML = `
+            <div class="alert alert-info m-3">
+                <i class="fas fa-info-circle"></i> No works available.
+            </div>
+        `;
+        return;
+    }
+
     worksList.innerHTML = '';
+
     works.forEach(work => {
         const listItem = createListItem(work);
         worksList.appendChild(listItem);
-        appendProjectInfo(work.id, listItem);
     });
+
+    // After populating the list, check works for current project
+    if ($('#projectId').val()) {
+        checkWorkCheckboxes($('#projectId').val());
+    }
 }
 
 function createListItem(work) {
     const listItem = document.createElement('li');
-    listItem.style.paddingBottom = '10px';
-    listItem.style.cursor = 'pointer';
+    listItem.className = 'work-item';
 
+    const workItemContent = document.createElement('div');
+    workItemContent.className = 'work-item-content';
+
+    // Checkbox
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
+    checkbox.className = 'work-item-checkbox';
     checkbox.setAttribute('data-work-id', work.id);
-    checkbox.style.transform = "scale(1.5)";
-    checkbox.style.marginRight = "20px";
 
+    // Thumbnail
     const thumbnail = document.createElement('img');
+    thumbnail.className = 'work-item-thumbnail';
     thumbnail.src = '../thumbnails/' + work.location;
     thumbnail.alt = work.name;
-    thumbnail.style.maxWidth = '50px';
-    thumbnail.style.marginRight = "20px";
+    thumbnail.onerror = function() {
+        this.src = 'https://via.placeholder.com/40?text=No+Image';
+    };
 
-    const textNode = document.createTextNode(work.name);
-    const textSpan = document.createElement('span');
-    textSpan.appendChild(textNode);
-    textSpan.style.marginLeft = "10px";
+    // Work name
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'work-item-name';
+    nameSpan.textContent = work.name;
 
-    listItem.appendChild(checkbox);
-    listItem.appendChild(thumbnail);
-    listItem.appendChild(textSpan);
+    // Add elements to the content container
+    workItemContent.appendChild(checkbox);
+    workItemContent.appendChild(thumbnail);
+    workItemContent.appendChild(nameSpan);
 
-    // Use local data to check project association
+    // Add content to list item
+    listItem.appendChild(workItemContent);
 
-    listItem.addEventListener('click', function (event) {
+    // Add click event to the list item (except checkbox)
+    listItem.addEventListener('click', function(event) {
         if (event.target !== checkbox) {
             checkbox.checked = !checkbox.checked;
+            // Update "Select All" checkbox state
+            updateSelectAllCheckbox();
         }
+    });
+
+    // Add change event to the checkbox
+    checkbox.addEventListener('change', function() {
+        updateSelectAllCheckbox();
     });
 
     return listItem;
 }
 
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('myToastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
 
+    // Create toast content based on type
+    let icon = 'info-circle';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'exclamation-circle';
 
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${icon} mr-2"></i>
+            <div>${message}</div>
+        </div>
+        <button type="button" class="close ml-2" data-dismiss="toast" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    `;
 
+    // Add close button event
+    const closeBtn = toast.querySelector('.close');
+    closeBtn.addEventListener('click', function() {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toastContainer.removeChild(toast);
+        }, 300);
+    });
+
+    // Append to container
+    toastContainer.appendChild(toast);
+
+    // Trigger animation in next tick
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode === toastContainer) {
+                toastContainer.removeChild(toast);
+            }
+        }, 300);
+    }, 5000);
+}
+
+function validateForm(formId) {
+    const form = document.getElementById(formId);
+
+    // Check required fields
+    const requiredFields = form.querySelectorAll('[required]');
+    let isValid = true;
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.classList.add('is-invalid');
+
+            // Add error message if not already present
+            if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'invalid-feedback';
+                errorMsg.textContent = 'This field is required';
+                field.parentNode.insertBefore(errorMsg, field.nextSibling);
+            }
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+
+    if (!isValid) {
+        showToast('Please fill in all required fields', 'error');
+    }
+
+    return isValid;
+}
