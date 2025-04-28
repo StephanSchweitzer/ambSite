@@ -522,6 +522,12 @@ if ($_SESSION["ambar"] != "connected") {
                 margin-left: 0;
             }
         }
+
+        .dropdown-menu.border-white {
+            border: 1px solid white !important; /* Makes border thicker and ensures it overrides other styles */
+            border-radius: 2px;                 /* Slightly rounded corners */
+            box-shadow: 0 0 3px rgba(255,255,255,0.3); /* Optional: adds a subtle glow effect */
+        }
     </style>
 </head>
 <body>
@@ -590,20 +596,23 @@ if ($_SESSION["ambar"] != "connected") {
     <!-- Main Content -->
     <div class="content-area">
         <div class="main-content">
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3">Picture Administration</h1>
                 <div class="d-flex">
                     <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-secondary dropdown-toggle border border-white" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-sort"></i> Sort
                         </button>
-                        <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                        <ul class="dropdown-menu border border-white" aria-labelledby="sortDropdown">
                             <li><a class="dropdown-item sort-option" data-sort="name-asc" href="#">Name (A-Z)</a></li>
                             <li><a class="dropdown-item sort-option" data-sort="name-desc" href="#">Name (Z-A)</a></li>
-                            <li><a class="dropdown-item sort-option" data-sort="newest" href="#">Newest First</a></li>
-                            <li><a class="dropdown-item sort-option" data-sort="oldest" href="#">Oldest First</a></li>
-                            <li><a class="dropdown-item sort-option" data-sort="order-desc" href="#">Display Order (Highest First)</a></li>
-                            <li><a class="dropdown-item sort-option" data-sort="order-asc" href="#">Display Order (Lowest First)</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="upload-newest" href="#">Latest Uploads</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="upload-oldest" href="#">Oldest Uploads</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="order-desc" href="#">Display Order (High-Low)</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="order-asc" href="#">Display Order (Low-High)</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="newest" href="#">Year (Newest)</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="oldest" href="#">Year (Oldest)</a></li>
                         </ul>
                     </div>
                 </div>

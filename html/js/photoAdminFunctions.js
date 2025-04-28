@@ -275,6 +275,9 @@ function loadAndDisplayProjectTitles() {
       // Add a default option
       dropdown.append($('<option>').text('Select a Project').attr('disabled', true).attr('selected', true).attr('value', ''));
 
+      // Add "All Projects" option
+      dropdown.append($('<option>').text('All Projects').val('all'));
+
       projects.forEach(function(project) {
         let title = project.title;
         let option = $('<option>').text(title).val(title);
@@ -284,7 +287,11 @@ function loadAndDisplayProjectTitles() {
       // Event listener for project selection
       dropdown.change(function() {
         let selectedTitle = $(this).val();
-        if (selectedTitle) {
+        if (selectedTitle === 'all') {
+          // Clear project filter and get all works
+          currentFilters.project = null;
+          getAllWorks(pageNumber); // Assuming we start with page 1
+        } else if (selectedTitle) {
           currentFilters.project = selectedTitle;
           getProjectWorks(selectedTitle);
         }
@@ -301,7 +308,7 @@ function loadAndDisplayProjectTitles() {
 // Get works for a specific project
 function getProjectWorks(project) {
   $('#loadingSpinner').show();
-  pageNumber = 'active';
+  //pageNumber = 'active';
   whichProject = {
     project: project
   };
@@ -312,7 +319,6 @@ function getProjectWorks(project) {
     data: whichProject,
     dataType: "json",
     success: function(data) {
-      console.log("Project works loaded:", data);
       makeProjectCards(data);
       $('#loadingSpinner').hide();
     },
@@ -503,6 +509,10 @@ function sortItemsByCurrentCriteria(items) {
       return items.sort((a, b) => (b.orderOfDisplay || 0) - (a.orderOfDisplay || 0));
     case 'order-asc':
       return items.sort((a, b) => (a.orderOfDisplay || 0) - (b.orderOfDisplay || 0));
+    case 'upload-newest':
+      return items.sort((a, b) => (b.id || 0) - (a.id || 0));
+    case 'upload-oldest':
+      return items.sort((a, b) => (a.id || 0) - (b.id || 0));
     default:
       return items;
   }
@@ -512,15 +522,12 @@ function sortItemsByCurrentCriteria(items) {
 function applyFilters() {
   if (!originalWorks || originalWorks.length === 0) return;
 
-  console.log("Applying filters:", currentFilters);
-
   // Start with the original dataset every time
   let filteredWorks = [...originalWorks];
 
   // Apply search filter
   if (currentFilters.search && currentFilters.search.trim() !== '') {
     const searchTerms = currentFilters.search.toLowerCase().trim();
-    console.log("Searching for:", searchTerms);
 
     filteredWorks = filteredWorks.filter(work => {
       return (
@@ -533,19 +540,15 @@ function applyFilters() {
       );
     });
 
-    console.log("After search filter:", filteredWorks.length);
   }
 
   // Apply medium filter
   if (currentFilters.medium && currentFilters.medium !== '') {
-    console.log("Filtering by medium:", currentFilters.medium);
     filteredWorks = filteredWorks.filter(work => work.medium === currentFilters.medium);
-    console.log("After medium filter:", filteredWorks.length);
   }
 
   // Apply tag filter
   if (currentFilters.tag && currentFilters.tag !== 'all') {
-    console.log("Filtering by tag:", currentFilters.tag);
     switch (currentFilters.tag) {
       case 'select-works':
         filteredWorks = filteredWorks.filter(work => work.isSelectWork == 1);
@@ -563,7 +566,6 @@ function applyFilters() {
         filteredWorks = filteredWorks.filter(work => work.availability == 1);
         break;
     }
-    console.log("After tag filter:", filteredWorks.length);
   }
 
   // Make sure we have works to display
@@ -615,7 +617,6 @@ function countWorksStatistics() {
     data: { theYear: 'everything' },
     dataType: "json",
     success: function(data) {
-      console.log("Statistics data loaded:", data.length, "works");
 
       if (Array.isArray(data)) {
         const totalVisible = data.filter(work => work.visible == 1).length;
@@ -626,7 +627,6 @@ function countWorksStatistics() {
         $('#selectWorksCount').text(selectWorks);
         $('#carouselWorksCount').text(carousel);
 
-        console.log("Statistics updated -", "Total:", totalVisible, "Select Works:", selectWorks, "Carousel:", carousel);
       }
     },
     error: function(xhr, status, error) {
