@@ -416,6 +416,30 @@ if ($_SESSION["ambar"] != "connected") {
             text-align: center;
             width: 25px;
         }
+
+        .nav-tabs .nav-link {
+            color: #ffffff; /* White text for better contrast on dark background */
+            font-weight: 500; /* Slightly bolder font */
+        }
+
+        /* Style for inactive tabs */
+        .nav-tabs .nav-link:not(.active) {
+            color: #e0e0e0; /* Light grey for inactive tabs */
+        }
+
+        /* Style for active tab */
+        .nav-tabs .nav-link.active {
+            background-color: #343a40; /* Darker grey background */
+            color: #ffc107; /* Yellow/gold color for the active tab text */
+            border-color: #495057 #495057 #343a40; /* Matching border colors */
+            font-weight: 600; /* Make active tab text bolder */
+        }
+
+        /* Hover state for better interactivity */
+        .nav-tabs .nav-link:hover:not(.active) {
+            color: #ffc107; /* Same as active color on hover */
+            border-color: #636b74 #636b74 #495057; /* Slightly lighter borders on hover */
+        }
     </style>
 </head>
 <body>

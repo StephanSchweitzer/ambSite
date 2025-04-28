@@ -481,6 +481,7 @@ function updateWork() {
             showToast('Project successfully updated!', 'success');
             getProjects(pageNumber);
             // Don't automatically call addWorksToProject() here - this was causing the loop problem
+            addWorksToProject();
             $('#projectUpdateModal').modal('hide');
         },
         error: function (xhr, status, error) {
