@@ -10,7 +10,18 @@ function loadAndInsertNavBarLinks() {
         success: function (response) {
             if (response.status === 'success') {
                 insertLinks(response.data);
-                loadAndDisplayProjectTitles()
+                loadAndDisplayProjectTitles();
+
+                // Set up event listeners for newsletter form
+                $(document).on('click', '#newsletterSubmit', function() {
+                    sendEmailToDB();
+                });
+
+                $(document).on('keypress', '#newsletterEmail', function(event) {
+                    if (event.which === 13) { // Enter key
+                        sendEmailToDB();
+                    }
+                });
             } else {
                 console.log("error with loading links")
             }
@@ -26,10 +37,22 @@ function insertLinks(links) {
         let linkRedirection = link.linkRedirection;
         let onclick = link['onclick'];
         let isNewTab = link.isNewTab;
-        let attachedFollowingDiv = link.attachedFollowingDiv
+        let attachedFollowingDiv = link.attachedFollowingDiv;
 
-        createNewNavLinkRow(displayedText, linkRedirection, onclick, isNewTab, attachedFollowingDiv)
+        createNewNavLinkRow(displayedText, linkRedirection, onclick, isNewTab, attachedFollowingDiv);
     });
+
+    // After creating all links, check if the newsletter div exists and add the form
+    if ($('#newsletterSignUp').length > 0) {
+        $('#newsletterSignUp').html(`
+        <div class="newsletter-container">
+            <input type="email" id="newsletterEmail" placeholder="Enter your email address" class="newsletter-input">
+            <div class="button-container">
+                <button id="newsletterSubmit" class="newsletter-button">Subscribe</button>
+            </div>
+        </div>
+    `);
+    }
 }
 
 function createNewNavLinkRow(displayedText, linkRedirection, instructionString, isNewTab, attachedFollowingDiv) {
@@ -69,25 +92,29 @@ function createNewNavLinkRow(displayedText, linkRedirection, instructionString, 
     {
         attachedFollowingDiv = JSON.parse(attachedFollowingDiv)
         const additionalContent = $('<div></div>').attr({
-        id: attachedFollowingDiv.id,
-        class: attachedFollowingDiv.class
+            id: attachedFollowingDiv.id,
+            class: attachedFollowingDiv.class
         });
 
-    $('#navLinksBox').append(additionalContent);
-    $('#navLinksBox').append(`<div id="breaksForTitles"><br></div>`);
+        $('#navLinksBox').append(additionalContent);
+        $('#navLinksBox').append(`<div id="breaksForTitles"><br></div>`);
 
-    return;
+        return;
     }
 
-        $('#navLinksBox').append('<br><br>');
+    $('#navLinksBox').append('<br><br>');
 
 }
 
 const functionMappings = {
     "getProjectsAndWorks": function(param) {
         getProjectsAndWorks(param);
-    },    "toggleSublinks": function(event) {
+    },
+    "toggleSublinks": function(event) {
         toggleSublinks(event, 'selectProjectCategories');
+    },
+    "toggleNewsLetterSignUp": function(event) {
+        toggleNewsLetterSignUp(event);
     },
     "loadShop": loadShop,
     "openInfo": openInfo
@@ -104,164 +131,201 @@ const specialMappings = {
 };
 
 function loadAndDisplayProjectTitles() {
-  $.ajax({
-    url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
-    type: 'GET',
-    dataType: 'json',
-    success: function(projects) {
-      let container = $('#selectProjectCategories');
-        container.empty(); // Clear existing content
-        container.append('<br>')
-        projects.forEach(function(project) {
-            let title = project.title; // Assuming each project has a 'title' property
-            let link = $('<a>')
-            .attr('href', '#projectSection'+project.title.trim())
-            .text(title);
-            link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));
-            container.append(link, '<br><br>'); // Append link and a line break for spacing
-          });
-      },
-      error: function() {
-        console.log('Error loading project titles.');
-      }
+    $.ajax({
+        url: '../actions/projectsAPI.php', // URL to the PHP script that fetches project titles
+        type: 'GET',
+        dataType: 'json',
+        success: function(projects) {
+            let container = $('#selectProjectCategories');
+            container.empty(); // Clear existing content
+            container.append('<br>')
+            projects.forEach(function(project) {
+                let title = project.title; // Assuming each project has a 'title' property
+                let link = $('<a>')
+                    .attr('href', '#projectSection'+project.title.trim())
+                    .text(title);
+                link.click(() => getProjectsAndWorks('projectSection'+project.title.trim()));
+                container.append(link, '<br><br>'); // Append link and a line break for spacing
+            });
+        },
+        error: function() {
+            console.log('Error loading project titles.');
+        }
     });
 }
 
+// Newsletter functions
+function toggleNewsLetterSignUp(event) {
+    event.preventDefault();
+    var newsletterForm = $("#newsletterSignUp");
+    newsletterForm.slideToggle();
+}
 
+function sendEmailToDB() {
+    const email = $("#newsletterEmail").val();
+    if (validateEmail(email)) {
+        // Make API call to save the email
+        $.ajax({
+            url: '../actions/newsletterAPI.php',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ email: email }),
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Clear the input field after submission
+                    $("#newsletterEmail").val("");
+                    // Show a thank you message
+                    alert("Thank you for subscribing!");
+                    // Hide the form after successful submission
+                    $("#newsletterSignUp").slideUp();
+                } else {
+                    alert("Error: " + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error sending email:", error);
+                alert("An error occurred. Please try again later.");
+            }
+        });
+    } else {
+        alert("Please enter a valid email address");
+    }
+}
 
-
-
-//REPEATED STUFF BELOW TILL I FIGURE IT OUT
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
 
 function toggleSublinks(event, sublinksId)
 {
     console.log("toggle")
-  event.preventDefault();
-  var sublinks = $("#" + sublinksId);
-  //$(".hiddenLinkStuff").not(sublinks).slideUp();
-  sublinks.slideToggle();
-  $("#breaksForTitles").slideToggle();
+    event.preventDefault();
+    var sublinks = $("#" + sublinksId);
+    //$(".hiddenLinkStuff").not(sublinks).slideUp();
+    sublinks.slideToggle();
+    $("#breaksForTitles").slideToggle();
 }
 
 function getProjectsAndWorks(partOfThePage)
 {
-  $('#imagesAndContent').css('padding-top', '50px');
+    $('#imagesAndContent').css('padding-top', '50px');
 
-  if (selectWorksAreShown)
-  {
-    return;
-  }
+    if (selectWorksAreShown)
+    {
+        return;
+    }
 
-  $.ajax({
-    url: "../actions/projectsAPI.php",
-    type: "GET",
-    data: {'activity' : 'active'},
-    dataType: "json",
-    success: function(data) {
-      makeProjectCards(data, partOfThePage);
+    $.ajax({
+        url: "../actions/projectsAPI.php",
+        type: "GET",
+        data: {'activity' : 'active'},
+        dataType: "json",
+        success: function(data) {
+            makeProjectCards(data, partOfThePage);
 
-    },
-    error: function() {
-      console.log("An error occurred.");
-    },
-  });
+        },
+        error: function() {
+            console.log("An error occurred.");
+        },
+    });
 
-  selectWorksAreShown = true;
+    selectWorksAreShown = true;
 }
 
 function makeProjectCards(projects, partOfThePage) {
-  $('#imagesAndContent').empty();
-  images.length = 0;
+    $('#imagesAndContent').empty();
+    images.length = 0;
 
-  let projectPromises = projects.map(project => {
-    return fetchWorkIdsForProject(project.id).then(workIds => {
-      return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
+    let projectPromises = projects.map(project => {
+        return fetchWorkIdsForProject(project.id).then(workIds => {
+            return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
                 return { project, allWorksForProject }; // Return project info with its works
-              });
+            });
+        });
     });
-  });
 
-  Promise.all(projectPromises).then(results => {
-    results.forEach(({ project, allWorksForProject }) => {
-      let mainProj = createProjectElement(project);
-      allWorksForProject.forEach(information => {
-        let card = createWorkCardElement(information);
-        mainProj.find('.projectWorks').first().append(card);
-      });
-      if (projects[projects.length - 1].title != project.title)
-      {
-        mainProj.append('<div class="work-separator" id="seperator'+project.title+'"> 𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢</div>');
-      }
-      $('#imagesAndContent').append(mainProj);
-      console.log(projects, project.title)
+    Promise.all(projectPromises).then(results => {
+        results.forEach(({ project, allWorksForProject }) => {
+            let mainProj = createProjectElement(project);
+            allWorksForProject.forEach(information => {
+                let card = createWorkCardElement(information);
+                mainProj.find('.projectWorks').first().append(card);
+            });
+            if (projects[projects.length - 1].title != project.title)
+            {
+                mainProj.append('<div class="work-separator" id="seperator'+project.title+'"> 𓏲 ๋࣭ ࣪ ˖·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。𖦹 ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖𓇢</div>');
+            }
+            $('#imagesAndContent').append(mainProj);
+            console.log(projects, project.title)
+        });
+        jumpToSection(partOfThePage);
+        //below is where the code to initialize the little window for the youtube video
+        //openFlowerVideo();
+        history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
+        document.title = 'Select Works - Ambar Velasco';
+    }).catch(error => {
+        console.error('Error:', error);
     });
-    jumpToSection(partOfThePage);
-      //below is where the code to initialize the little window for the youtube video
-      //openFlowerVideo();
-              history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
-  document.title = 'Select Works - Ambar Velasco';
-  }).catch(error => {
-    console.error('Error:', error);
-  });
 }
 
 function jumpToSection(partOfThePage)
 {
     if (partOfThePage !== null)
-  {
-    //sleep(300).then(() => {
-    var element = document.getElementById(''+partOfThePage);
-    element.scrollIntoView();
-    // });
-  }
+    {
+        //sleep(300).then(() => {
+        var element = document.getElementById(''+partOfThePage);
+        element.scrollIntoView();
+        // });
+    }
 }
 
 function loadShop()
 {
-	yearData = { activity: 'active' }
-	$.ajax({
-		url: "../actions/shopAPI.php",
-		type: "GET",
-		data: yearData,
-		dataType: "json",
-		success: function(data) {
-			$('#imagesAndContent').empty();
-			$('#imagesAndContent').css('padding-top', '50px');
-			//$('#imagesAndContent').css('padding-top', '7vh');
-			$('<div>', {
-				class: 'shop-top-space',
-				css: {
+    yearData = { activity: 'active' }
+    $.ajax({
+        url: "../actions/shopAPI.php",
+        type: "GET",
+        data: yearData,
+        dataType: "json",
+        success: function(data) {
+            $('#imagesAndContent').empty();
+            $('#imagesAndContent').css('padding-top', '50px');
+            //$('#imagesAndContent').css('padding-top', '7vh');
+            $('<div>', {
+                class: 'shop-top-space',
+                css: {
                     height: '20px' // Adjust the value as needed
                 }
             }).prependTo('#imagesAndContent');
             //$('#imagesAndContent').append("<p>this is a test<p>");
 
-			data.forEach(function(item) {
-            // Create the shopItem and append to the imagesAndContent container
-				$('#imagesAndContent').append(createShopItem(item));
-			});
+            data.forEach(function(item) {
+                // Create the shopItem and append to the imagesAndContent container
+                $('#imagesAndContent').append(createShopItem(item));
+            });
 
-			history.pushState({page: 'shop'}, 'Shop', '/shop');
-  			document.title = 'Shop - Ambar Velasco';
-		},
-		error: function() {
-			console.log("An error occurred.");
-		},
-	});
+            history.pushState({page: 'shop'}, 'Shop', '/shop');
+            document.title = 'Shop - Ambar Velasco';
+        },
+        error: function() {
+            console.log("An error occurred.");
+        },
+    });
 }
 
 async function openInfo()
-  {
+{
     $('#imagesAndContent').css('padding-top', '50px');
-   const aboutMe = await fetchCurrentAboutMe();
-   let description = aboutMe.description.replace(/\n/g, "<br>");;
+    const aboutMe = await fetchCurrentAboutMe();
+    let description = aboutMe.description.replace(/\n/g, "<br>");;
 
     let infoflex = 'infoflex';
     if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
     {
-      infoflex = 'infoflexMobile';
+        infoflex = 'infoflexMobile';
 
-      document.getElementById('imagesAndContent').innerHTML = `
+        document.getElementById('imagesAndContent').innerHTML = `
       <div class="`+infoflex+`">
 
       <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
@@ -277,9 +341,9 @@ async function openInfo()
 
     }
     else if (window.matchMedia('(max-width: 1450px)').matches) {
-      infoflex = 'infoflexMobile';
+        infoflex = 'infoflexMobile';
 
-      document.getElementById('imagesAndContent').innerHTML = `
+        document.getElementById('imagesAndContent').innerHTML = `
       <div class="`+infoflex+`">
 
       <div class="size2">
@@ -298,7 +362,7 @@ async function openInfo()
     }
     else
     {
-      document.getElementById('imagesAndContent').innerHTML = `
+        document.getElementById('imagesAndContent').innerHTML = `
       <div class="`+infoflex+`">
       <div class="size1" id="aboutMeInfo">
       <br>
@@ -322,6 +386,6 @@ async function openInfo()
       </div>
       `;
     }
-       history.pushState({ page: 'about' }, 'About - Ambar Velasco', '/about');
+    history.pushState({ page: 'about' }, 'About - Ambar Velasco', '/about');
     document.title = 'About - Ambar Velasco'; // Optionally, update the document title
-  }
+}

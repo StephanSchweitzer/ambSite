@@ -1,0 +1,292 @@
+/* Newsletter Admin Styles */
+
+/* Stat Cards */
+.stat-card {
+    background-color: rgba(52, 73, 94, 0.7);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card h3 {
+    font-size: 32px;
+    margin-bottom: 5px;
+    color: #3498db;
+    font-weight: 700;
+}
+
+.stat-card p {
+    color: #ecf0f1;
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Table Styling */
+.table {
+    background-color: rgba(52, 73, 94, 0.6);
+    color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th {
+    background-color: rgba(44, 62, 80, 0.7);
+    color: white;
+    border-bottom: 2px solid #2c3e50;
+    border-top: none;
+    padding: 12px 15px;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover td,
+.table tbody tr:hover th {
+    color: white !important; /* Force white text on hover */
+}
+
+/* Fix for table hover styling */
+.table tbody tr:hover {
+    background-color: rgba(44, 62, 80, 0.8); /* Dark background on hover */
+    color: white !important; /* Force white text on hover */
+}
+
+/* Make sure links in table stay visible on hover */
+.table tbody tr:hover a {
+    color: #3498db !important; /* Keep links blue on hover */
+}
+
+.table td, .table th {
+    vertical-align: middle;
+    border-top: 1px solid rgba(236, 240, 241, 0.1);
+    padding: 12px 15px;
+}
+
+/* Badges */
+.badge {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+}
+
+.badge-success {
+    background-color: #2ecc71;
+}
+
+.badge-secondary {
+    background-color: #7f8c8d;
+}
+
+/* Form Elements */
+.form-control {
+    background-color: rgba(52, 73, 94, 0.6);
+    border: 1px solid #34495e;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    background-color: rgba(52, 73, 94, 0.8);
+    border-color: #3498db;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.form-control::placeholder {
+    color: rgba(236, 240, 241, 0.6);
+}
+
+.input-group-text {
+    background-color: #34495e;
+    border: 1px solid #34495e;
+    color: white;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #3498db;
+    border-color: #2980b9;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2573a7;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    border-color: #c0392b;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #a93226;
+}
+
+.btn-success {
+    background-color: #2ecc71;
+    border-color: #27ae60;
+}
+
+.btn-success:hover {
+    background-color: #27ae60;
+    border-color: #219d54;
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination .page-link {
+    background-color: rgba(52, 73, 94, 0.7);
+    border-color: #2c3e50;
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    background-color: rgba(52, 73, 94, 0.9);
+    color: white;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #3498db;
+    border-color: #2980b9;
+    color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+    background-color: rgba(44, 62, 80, 0.5);
+    border-color: #2c3e50;
+    color: rgba(236, 240, 241, 0.4);
+}
+
+/* Modal Styling */
+.modal-content {
+    background-color: #34495e;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(236, 240, 241, 0.1);
+    padding: 15px 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(236, 240, 241, 0.1);
+    padding: 15px 20px;
+}
+
+.close {
+    color: white;
+    text-shadow: none;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.close:hover {
+    color: white;
+    opacity: 1;
+}
+
+/* Additional fix for the email list textarea */
+#emailListText {
+    background-color: #2c3e50 !important;  /* Dark blue background */
+    color: #ecf0f1 !important;             /* Light text color */
+    border: 1px solid #3498db !important;  /* Blue border for better visibility */
+    font-family: monospace !important;     /* Monospace font for better readability of emails */
+    padding: 12px !important;              /* More padding for comfort */
+    font-size: 14px !important;            /* Slightly larger font */
+}
+
+/* Force textarea to maintain color even when focused/active */
+#emailListText:focus,
+#emailListText:hover,
+#emailListText:active {
+    background-color: #2c3e50 !important;
+    color: #ecf0f1 !important;
+    border-color: #3498db !important;
+}
+
+/* Custom Switch */
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #3498db;
+    border-color: #2980b9;
+}
+
+.custom-control-label::before {
+    background-color: rgba(52, 73, 94, 0.6);
+    border-color: #2c3e50;
+}
+
+.custom-switch .custom-control-label::after {
+    background-color: #ecf0f1;
+}
+
+/* Toast Notifications */
+.toast {
+    background-color: #34495e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.toast .toast-header {
+    border-bottom: 1px solid rgba(236, 240, 241, 0.1);
+}
+
+.toast .toast-body {
+    padding: 12px 15px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: 15px;
+    }
+
+    .table thead {
+        display: none;
+    }
+
+    .table, .table tbody, .table tr, .table td {
+        display: block;
+        width: 100%;
+    }
+
+    .table tr {
+        margin-bottom: 15px;
+        border-bottom: 2px solid #2c3e50;
+    }
+
+    .table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+    }
+
+    .table td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: 45%;
+        text-align: left;
+        font-weight: 600;
+    }
+}

@@ -29,7 +29,7 @@ if ($_SESSION["ambar"] != "connected")
         <a href="aboutMeAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage About Section</a>
         <a href="shopAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Shop</a>
         <a href="navbarAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Navbar</a>
-
+        <a href="newsletterAdmin.php" class="btn btn-outline-primary btn-lg" role="button">Manage Newsletter</a>
     </div>
     <form action="../signIn/logout.php" method="post" class="mt-4">
         <button type="submit" class="btn btn-danger btn-lg">Logout</button>
