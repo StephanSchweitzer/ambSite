@@ -47,6 +47,7 @@ if ($_SESSION["ambar"] != "connected") {
         .content-area {
             margin-left: 250px;
             padding: 20px;
+            width: 100%;
         }
 
         .admin-container {
