@@ -655,6 +655,17 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
     $('#restoreWorkBtn').click(function() {
       restoreWork();
     });
+  } else {
+    // Add event listener for delete button - THIS FIXES THE DELETE ISSUE
+    $('#deleteWorkBtn').click(function() {
+      showConfirmationModal(
+          'Delete Work',
+          'Are you sure you want to delete this work? This will remove it from Select Works and Carousel.',
+          function() {
+            deleteWork();
+          }
+      );
+    });
   }
 
   // Set values of form fields
@@ -736,6 +747,23 @@ function openPostForm() {
 // Post a new photo
 function postPhoto() {
   console.log("Starting upload process...");
+
+  // Required field validation
+  if (!$('#photoPostName').val()) {
+    showToast('Please enter a name for the work', 'warning');
+    return;
+  }
+
+  if (!$('#photoPostCreationYear').val()) {
+    showToast('Please enter a creation year for the work', 'warning');
+    return;
+  }
+
+  var fileInput = $('#photoPostUpload')[0].files[0];
+  if (!fileInput) {
+    showToast('Please select an image file', 'warning');
+    return;
+  }
 
   let isColor = $('input[name=isColorPost]:checked').val();
   let isAvailable = $('input[name=isAvailablePost]:checked').val();
@@ -837,6 +865,17 @@ function postPhoto() {
 // Update an existing work
 function updateWork() {
   console.log("Starting work update...");
+
+  // Required field validation for update
+  if (!$('#photoName').val()) {
+    showToast('Please enter a name for the work', 'warning');
+    return;
+  }
+
+  if (!$('#photoCreationYear').val()) {
+    showToast('Please enter a creation year for the work', 'warning');
+    return;
+  }
 
   // Get form data
   let isColor = $('input[name=isColorEdit]:checked').val();

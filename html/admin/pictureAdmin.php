@@ -733,8 +733,8 @@ if ($_SESSION["ambar"] != "connected") {
                             <input type="hidden" id="photoId">
 
                             <div class="mb-3">
-                                <label for="photoName" class="form-label">Name</label>
-                                <input type="text" class="form-control" id="photoName">
+                                <label for="photoName" class="form-label">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="photoName" required>
                             </div>
 
                             <div class="mb-3">
@@ -776,8 +776,8 @@ if ($_SESSION["ambar"] != "connected") {
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="photoCreationYear" class="form-label">Creation Year</label>
-                                        <input type="text" class="form-control" id="photoCreationYear">
+                                        <label for="photoCreationYear" class="form-label">Creation Year <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="photoCreationYear" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -887,8 +887,8 @@ if ($_SESSION["ambar"] != "connected") {
                     <div class="col-md-8">
                         <form id="addWorkForm">
                             <div class="mb-3">
-                                <label for="photoPostName" class="form-label">Name</label>
-                                <input type="text" class="form-control" id="photoPostName">
+                                <label for="photoPostName" class="form-label">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="photoPostName" required>
                             </div>
 
                             <div class="mb-3">
@@ -930,8 +930,8 @@ if ($_SESSION["ambar"] != "connected") {
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="photoPostCreationYear" class="form-label">Creation Year</label>
-                                        <input type="text" class="form-control" id="photoPostCreationYear">
+                                        <label for="photoPostCreationYear" class="form-label">Creation Year <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="photoPostCreationYear" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

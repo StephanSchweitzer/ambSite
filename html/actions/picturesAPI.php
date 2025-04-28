@@ -237,19 +237,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check session
     if ($_SESSION["ambar"] != "connected") {
-        header("Location: signIn/signIn.php?status=needCredentials");
+        header('Content-Type: application/json');
+        echo json_encode(array("success" => false, "message" => "Authentication required"));
         die;
     }
 
+    // Check if photo was uploaded
+    if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            "success" => false,
+            "message" => "File upload error",
+            "error_code" => isset($_FILES['photo']) ? $_FILES['photo']['error'] : 'No file uploaded'
+        ));
+        die;
+    }
+
+    // Check required fields
+    $requiredFields = ['name', 'medium', 'isColor', 'availability', 'creationYear', 'orderOfDisplay', 'carousel', 'selectWork'];
+    $missingFields = [];
+
+    foreach ($requiredFields as $field) {
+        if (!isset($_POST[$field]) || $_POST[$field] === '') {
+            $missingFields[] = $field;
+        }
+    }
+
+    if (count($missingFields) > 0) {
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            "success" => false,
+            "message" => "Missing required fields",
+            "missing" => $missingFields
+        ));
+        die;
+    }
+
+    // Get photo and form data
     $photo = $_FILES['photo'];
-
     $locationName = $photo['name'];
-
     $fileLocation = $locationName;
+
     $name = $_POST["name"];
-    $desc2 = $_POST["firstDescription"];
-    $desc3 = $_POST["secondDescription"];
+    $desc2 = isset($_POST["firstDescription"]) ? $_POST["firstDescription"] : '';
+    $desc3 = isset($_POST["secondDescription"]) ? $_POST["secondDescription"] : '';
     $medium = $_POST["medium"];
     $color = $_POST["isColor"];
     $isAvailable = $_POST["availability"];
@@ -257,8 +290,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $orderOfDisplay = $_POST["orderOfDisplay"];
     $carousel = $_POST["carousel"];
     $selectWork = $_POST["selectWork"];
-    $long_description = $_POST["long_description"];
+    $long_description = isset($_POST["long_description"]) ? $_POST["long_description"] : '';
 
+    // Check if destination directories exist
+    $baseImageDir = '../baseImages/';
+    $thumbnailDir = '../thumbnails/';
+
+    if (!file_exists($baseImageDir)) {
+        if (!mkdir($baseImageDir, 0755, true)) {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "Base image directory doesn't exist and couldn't be created"));
+            die;
+        }
+    } else if (!is_writable($baseImageDir)) {
+        header('Content-Type: application/json');
+        echo json_encode(array("success" => false, "message" => "Base image directory not writable"));
+        die;
+    }
+
+    if (!file_exists($thumbnailDir)) {
+        if (!mkdir($thumbnailDir, 0755, true)) {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "Thumbnail directory doesn't exist and couldn't be created"));
+            die;
+        }
+    } else if (!is_writable($thumbnailDir)) {
+        header('Content-Type: application/json');
+        echo json_encode(array("success" => false, "message" => "Thumbnail directory not writable"));
+        die;
+    }
+
+    // Process the image
     if ($photo['error'] === UPLOAD_ERR_OK) {
         $tempFilePath = $photo['tmp_name'];
 
@@ -266,17 +328,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fileExtension = pathinfo($photo['name'], PATHINFO_EXTENSION);
         $baseName = basename($photo['name'], "." . $fileExtension);
         $newFileName = $baseName . ".jpeg";
-        $destination = '../baseImages/' . $newFileName;
+        $destination = $baseImageDir . $newFileName;
 
-        convertToProgressiveJPEGAndUpload($tempFilePath, $destination);
+        try {
+            // Convert and upload the image
+            convertToProgressiveJPEGAndUpload($tempFilePath, $destination);
+            $fileLocation = $newFileName;
 
-        $fileLocation = $newFileName;
-
-        $thumbnailDirectory = '../thumbnails/';
-        createAndSaveThumbnail($destination, $thumbnailDirectory, $newFileName);
+            // Create thumbnail
+            createAndSaveThumbnail($destination, $thumbnailDir, $newFileName);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode(array(
+                "success" => false,
+                "message" => "Image processing error",
+                "error" => $e->getMessage()
+            ));
+            die;
+        }
     }
 
-    $query = "INSERT INTO allWorks (fileLocation, name, desc2,
+    // Insert into database
+    try {
+        $query = "INSERT INTO allWorks (fileLocation, name, desc2,
                     desc3, medium, color,
                     isAvailable, year, OrderOfDisplay,
                     carousel, isSelectWork, long_description)
@@ -286,15 +360,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ?, ?, ?
             )";
 
-    $theArray = array($fileLocation, $name, $desc2,
-        $desc3, $medium, $color,
-        $isAvailable, $year, $orderOfDisplay,
-        $carousel, $selectWork, $long_description);
+        $theArray = array($fileLocation, $name, $desc2,
+            $desc3, $medium, $color,
+            $isAvailable, $year, $orderOfDisplay,
+            $carousel, $selectWork, $long_description);
 
-    $uploadQuery = $conn->prepare($query);
-    $uploadQuery->execute($theArray);
+        $uploadQuery = $conn->prepare($query);
+        $uploadQuery->execute($theArray);
 
-    echo json_encode("success");
+        $newId = $conn->lastInsertId();
+
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            "success" => true,
+            "message" => "Image uploaded successfully",
+            "id" => $newId,
+            "filename" => $fileLocation
+        ));
+    } catch (PDOException $e) {
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            "success" => false,
+            "message" => "Database error",
+            "error" => $e->getMessage()
+        ));
+    }
+
     die;
 }
 
