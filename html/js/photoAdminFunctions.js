@@ -1,5 +1,6 @@
 // Global variables
 var pageNumber = 'Select Works'; // Default view
+var originalWorks = [];
 var currentWorks = []; // Store current works data
 var selectedWorks = []; // Store selected works for batch operations
 var currentFilters = {
@@ -262,6 +263,7 @@ function getAllWorks(theYear) {
     success: function(data) {
       console.log("Loaded works:", data.length);
       currentWorks = data;
+      originalWorks = [...data]; // Store a copy of the original dataset
       insertData(data);
       updateResultsInfo(data.length);
       $('#loadingSpinner').hide();
@@ -362,6 +364,7 @@ function makeProjectCards(projects) {
     });
 
     currentWorks = allWorks;
+    originalWorks = [...allWorks]; // Store original project works
     insertData(allWorks);
     updateResultsInfo(allWorks.length);
   }).catch(error => {
@@ -525,13 +528,14 @@ function sortItemsByCurrentCriteria(items) {
   }
 }
 
-// Apply all filters to the current works
+// Modify the applyFilters function to always start with the original dataset
 function applyFilters() {
-  if (!currentWorks || currentWorks.length === 0) return;
+  if (!originalWorks || originalWorks.length === 0) return;
 
   console.log("Applying filters:", currentFilters);
 
-  let filteredWorks = [...currentWorks];
+  // Start with the original dataset every time
+  let filteredWorks = [...originalWorks];
 
   // Apply search filter
   if (currentFilters.search && currentFilters.search.trim() !== '') {
