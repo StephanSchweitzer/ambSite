@@ -1067,6 +1067,7 @@ function restoreWork() {
   });
 }
 
+
 // Batch update works (for select works and carousel)
 function batchUpdateWorks(field, value) {
   if (selectedWorks.length === 0) return;
@@ -1076,58 +1077,44 @@ function batchUpdateWorks(field, value) {
   // Show loading spinner
   $('#loadingSpinner').show();
 
-  let updatePromises = selectedWorks.map(id => {
-    return new Promise((resolve, reject) => {
-      const queryString = `id=${id}&${field}=${value}`;
+  // Send a single request with all IDs instead of multiple requests
+  $.ajax({
+    url: '../actions/picturesAPI.php?action=batch',
+    type: 'PATCH',
+    data: `ids=${JSON.stringify(selectedWorks)}&${field}=${value}`,
+    contentType: 'application/x-www-form-urlencoded',
+    success: function(response) {
+      console.log("Batch update completed successfully", response);
 
-      $.ajax({
-        url: '../actions/picturesAPI.php',
-        type: 'PATCH',
-        data: queryString,
-        contentType: 'application/x-www-form-urlencoded',
-        success: function(response) {
-          resolve(response);
-        },
-        error: function(xhr, status, error) {
-          reject(error);
-        }
-      });
-    });
+      // Hide loading spinner
+      $('#loadingSpinner').hide();
+
+      // Clear selection
+      $('.work-card').removeClass('selected');
+      updateSelectedCount();
+
+      // Refresh the current view
+      getAllWorks(pageNumber);
+
+      // Show success message
+      const operation = field === 'selectWork' ? 'Select Works' : 'Carousel';
+      showToast(`${selectedWorks.length} works have been added to ${operation}!`, 'success');
+
+      // Update statistics
+      countWorksStatistics();
+    },
+    error: function(xhr, status, error) {
+      console.error("Batch update failed:", error);
+
+      // Hide loading spinner
+      $('#loadingSpinner').hide();
+
+      // Show error message
+      showToast('There was a problem updating the works', 'error');
+    }
   });
-
-  Promise.all(updatePromises)
-      .then(() => {
-        console.log("Batch update completed successfully");
-
-        // Hide loading spinner
-        $('#loadingSpinner').hide();
-
-        // Clear selection
-        $('.work-card').removeClass('selected');
-        updateSelectedCount();
-
-        // Refresh the current view
-        getAllWorks(pageNumber);
-
-        // Show success message
-        const operation = field === 'selectWork' ? 'Select Works' : 'Carousel';
-        showToast(`${selectedWorks.length} works have been added to ${operation}!`, 'success');
-
-        // Update statistics
-        countWorksStatistics();
-      })
-      .catch(error => {
-        console.error("Batch update failed:", error);
-
-        // Hide loading spinner
-        $('#loadingSpinner').hide();
-
-        // Show error message
-        showToast('There was a problem updating the works', 'error');
-      });
 }
 
-// Batch delete works
 function batchDeleteWorks() {
   if (selectedWorks.length === 0) return;
 
@@ -1136,52 +1123,41 @@ function batchDeleteWorks() {
   // Show loading spinner
   $('#loadingSpinner').show();
 
-  let deletePromises = selectedWorks.map(id => {
-    return new Promise((resolve, reject) => {
-      $.ajax({
-        url: '../actions/picturesAPI.php',
-        type: 'DELETE',
-        data: `id=${id}`,
-        contentType: 'application/x-www-form-urlencoded',
-        success: function(response) {
-          resolve(response);
-        },
-        error: function(xhr, status, error) {
-          reject(error);
-        }
-      });
-    });
+  // Use a single request for batch deletion
+  $.ajax({
+    url: '../actions/picturesAPI.php?action=batch',
+    type: 'DELETE',
+    data: `ids=${JSON.stringify(selectedWorks)}`,
+    contentType: 'application/x-www-form-urlencoded',
+    success: function(response) {
+      console.log("Batch delete completed successfully", response);
+
+      // Hide loading spinner
+      $('#loadingSpinner').hide();
+
+      // Clear selection
+      $('.work-card').removeClass('selected');
+      updateSelectedCount();
+
+      // Refresh the current view
+      getAllWorks(pageNumber);
+
+      // Show success message
+      showToast(`${selectedWorks.length} works have been deleted!`, 'success');
+
+      // Update statistics
+      countWorksStatistics();
+    },
+    error: function(xhr, status, error) {
+      console.error("Batch delete failed:", error);
+
+      // Hide loading spinner
+      $('#loadingSpinner').hide();
+
+      // Show error message
+      showToast('There was a problem deleting the works', 'error');
+    }
   });
-
-  Promise.all(deletePromises)
-      .then(() => {
-        console.log("Batch delete completed successfully");
-
-        // Hide loading spinner
-        $('#loadingSpinner').hide();
-
-        // Clear selection
-        $('.work-card').removeClass('selected');
-        updateSelectedCount();
-
-        // Refresh the current view
-        getAllWorks(pageNumber);
-
-        // Show success message
-        showToast(`${selectedWorks.length} works have been deleted!`, 'success');
-
-        // Update statistics
-        countWorksStatistics();
-      })
-      .catch(error => {
-        console.error("Batch delete failed:", error);
-
-        // Hide loading spinner
-        $('#loadingSpinner').hide();
-
-        // Show error message
-        showToast('There was a problem deleting the works', 'error');
-      });
 }
 
 // Show toast notification

@@ -300,7 +300,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
-
     if ($_SESSION["ambar"] != "connected") {
         header("Location: signIn/signIn.php?status=needCredentials");
         die;
@@ -309,35 +308,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_PATCH);
 
+    // Check if this is a batch update request
+    $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+    if ($action === 'batch') {
+        // Handle batch update
+        $ids = json_decode($_PATCH['ids'], true);
+
+        if (!is_array($ids) || empty($ids)) {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "Invalid or empty batch IDs"));
+            die;
+        }
+
+        $updateField = '';
+        $updateValue = '';
+
+        if (isset($_PATCH['selectWork'])) {
+            $updateField = 'isSelectWork';
+            $updateValue = $_PATCH['selectWork'];
+        } elseif (isset($_PATCH['carousel'])) {
+            $updateField = 'carousel';
+            $updateValue = $_PATCH['carousel'];
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "No valid update field specified"));
+            die;
+        }
+
+        // Create placeholders for IN clause
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $query = "UPDATE allWorks SET $updateField = ? WHERE workID IN ($placeholders)";
+
+        // First parameter is the update value, followed by all IDs
+        $params = array_merge([$updateValue], $ids);
+
+        $updateQuery = $conn->prepare($query);
+
+        if ($updateQuery->execute($params)) {
+            header('Content-Type: application/json');
+            echo json_encode(array(
+                "success" => true,
+                "message" => "Batch update successful",
+                "updated" => count($ids),
+                "field" => $updateField,
+                "value" => $updateValue
+            ));
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(array(
+                "success" => false,
+                "message" => "Failed to perform batch update",
+                "error" => $updateQuery->errorInfo()
+            ));
+        }
+
+        die;
+    }
+
+    // Regular single-item update starts here...
     $id = $_PATCH['id'];
 
-    // Support for batch update operations - only update what's provided
-    if (isset($_PATCH['selectWork'])) {
-        $query = "UPDATE allWorks SET isSelectWork = ? WHERE workID = ?";
-        $params = array($_PATCH['selectWork'], $id);
+    // Check for special single-field updates - these use a special parameter to indicate single-field intent
+    if (isset($_PATCH['fieldUpdate']) && $_PATCH['fieldUpdate'] === 'single') {
+        if (isset($_PATCH['selectWork'])) {
+            $query = "UPDATE allWorks SET isSelectWork = ? WHERE workID = ?";
+            $params = array($_PATCH['selectWork'], $id);
 
-        $updateQuery = $conn->prepare($query);
-        if ($updateQuery->execute($params)) {
-            echo json_encode(array("success" => true, "message" => $_PATCH));
-        } else {
-            echo json_encode(array("success" => false, "message" => "Failed to update Select Work status"));
+            $updateQuery = $conn->prepare($query);
+            if ($updateQuery->execute($params)) {
+                header('Content-Type: application/json');
+                echo json_encode(array("success" => true, "message" => "Select Work status updated successfully"));
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(array("success" => false, "message" => "Failed to update Select Work status"));
+            }
+            die;
         }
-        die;
+
+        if (isset($_PATCH['carousel'])) {
+            $query = "UPDATE allWorks SET carousel = ? WHERE workID = ?";
+            $params = array($_PATCH['carousel'], $id);
+
+            $updateQuery = $conn->prepare($query);
+            if ($updateQuery->execute($params)) {
+                header('Content-Type: application/json');
+                echo json_encode(array("success" => true, "message" => "Carousel status updated successfully"));
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(array("success" => false, "message" => "Failed to update Carousel status"));
+            }
+            die;
+        }
     }
 
-    if (isset($_PATCH['carousel'])) {
-        $query = "UPDATE allWorks SET carousel = ? WHERE workID = ?";
-        $params = array($_PATCH['carousel'], $id);
-
-        $updateQuery = $conn->prepare($query);
-        if ($updateQuery->execute($params)) {
-            echo json_encode(array("success" => true, "message" => "Carousel status updated successfully"));
-        } else {
-            echo json_encode(array("success" => false, "message" => "Failed to update Carousel status"));
-        }
-        die;
-    }
-
+    // Check for restore operation
     $restoreTest = isset($_PATCH['restore']) ? $_PATCH['restore'] : '';
 
     if ($restoreTest == "restore") {
@@ -354,6 +420,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
     }
 
     // Full update with all fields
+    // Check if we have required fields for a full update
+    if (!isset($_PATCH['name']) || !isset($_PATCH['medium'])) {
+        header('Content-Type: application/json');
+        echo json_encode(array("success" => false, "message" => "Required fields missing for full update"));
+        die;
+    }
+
     $name = $_PATCH['name'];
     $firstDescription = $_PATCH['firstDescription'];
     $secondDescription = $_PATCH['secondDescription'];
@@ -368,7 +441,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
 
     $theQuery = "UPDATE allWorks SET name = ?, desc2 = ?, desc3 = ?, medium = ?, color = ?, isAvailable = ?, year = ?, orderOfDisplay = ?, carousel = ?, isSelectWork = ?, long_description = ? WHERE workID = ?";
 
-    $theArray = array($name, $firstDescription, $secondDescription, $medium, $isColor, $availability, $creationYear, $orderOfDisplay, $carousel, $selectWork, $long_description, $id,);
+    $theArray = array($name, $firstDescription, $secondDescription, $medium, $isColor, $availability, $creationYear, $orderOfDisplay, $carousel, $selectWork, $long_description, $id);
 
     $updateQuery = $conn->prepare($theQuery);
 
@@ -395,7 +468,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-
     if ($_SESSION["ambar"] != "connected") {
         header("Location: signIn/signIn.php?status=needCredentials");
         die;
@@ -404,6 +476,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_DELETE);
 
+    // Check if this is a batch delete request
+    $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+    if ($action === 'batch') {
+        // Handle batch delete
+        $ids = json_decode($_DELETE['ids'], true);
+
+        if (!is_array($ids) || empty($ids)) {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "Invalid or empty batch IDs"));
+            die;
+        }
+
+        // Create placeholders for IN clause
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $theQuery = "UPDATE allWorks 
+                    SET visible = 0, 
+                        carousel = 0, 
+                        isSelectWork = 0, 
+                        isAvailable = 0 
+                    WHERE workID IN ($placeholders)";
+
+        $updateQuery = $conn->prepare($theQuery);
+
+        if ($updateQuery->execute($ids)) {
+            header('Content-Type: application/json');
+            echo json_encode(array(
+                "success" => true,
+                "message" => "Batch delete successful",
+                "deleted" => count($ids)
+            ));
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(array(
+                "success" => false,
+                "message" => "Failed to perform batch delete",
+                "error" => $updateQuery->errorInfo()
+            ));
+        }
+
+        die;
+    }
+
+    // Regular single-item delete starts here...
     $id = $_DELETE['id'];
 
     $theQuery = "UPDATE allWorks 
@@ -427,5 +544,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
     die;
 }
-
 ?>
