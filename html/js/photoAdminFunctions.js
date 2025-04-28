@@ -212,29 +212,9 @@ function disableMultiSelect() {
   $('#multiSelectToolbar').hide();
   selectedWorks = [];
 
-  // Restore normal click handler
-  $('.work-card').off('click').on('click', function() {
-    const workId = $(this).data('id');
-    const work = currentWorks.find(w => w.id === workId);
-    if (work) {
-      openPhotoInfo(
-          work.id,
-          "../thumbnails/"+work.location,
-          work.name,
-          work.firstDescription,
-          work.secondDescription,
-          work.medium,
-          work.isColor,
-          work.availability,
-          work.creationYear,
-          work.orderOfDisplay,
-          work.carousel,
-          work.visible,
-          work.isSelectWork,
-          work.long_description
-      );
-    }
-  });
+  // Completely refresh the view to restore all the original click handlers
+  // This ensures all cards get proper event handlers reapplied
+  insertData(currentWorks);
 }
 
 // Update selected count
