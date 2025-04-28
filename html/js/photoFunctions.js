@@ -725,7 +725,7 @@ async function openInfo() {
     $('#imagesAndContent').css('padding-top', '50px');
     const aboutMe = await fetchCurrentAboutMe();
     let description = aboutMe.description.replace(/\n/g, "<br>");
-    ;
+    let imageLocation = aboutMe.pictureLocation;
 
     let infoflex = 'infoflex';
     if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -734,7 +734,7 @@ async function openInfo() {
         document.getElementById('imagesAndContent').innerHTML = `
       <div class="` + infoflex + `">
 
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
+      <img src="`+ imageLocation + `" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
 
       <div class="iconsRow" style="width:100%">
            </div>
@@ -745,7 +745,7 @@ async function openInfo() {
       </div>
       `;
 
-    } else if (window.matchMedia('(max-width: 1450px)').matches) {
+    } else if (window.matchMedia('(max-width: 1206px)').matches) {
         infoflex = 'infoflexMobile';
 
         document.getElementById('imagesAndContent').innerHTML = `
@@ -753,7 +753,7 @@ async function openInfo() {
 
       <div class="size2">
       <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-height:55vh; margin-top:7vh">
+      <img src="`+ imageLocation + `" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-height:55vh; margin-top:7vh">
       </div>
       </div>
       <div class="iconsRow" style="width:100%">
@@ -766,7 +766,7 @@ async function openInfo() {
       `;
     } else {
         document.getElementById('imagesAndContent').innerHTML = `
-      <div class="` + infoflex + `">
+      <div class="infoflex">
       <div class="size1" id="aboutMeInfo">
       <br>
       <p>
