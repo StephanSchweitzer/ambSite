@@ -61,11 +61,11 @@ $newNewsletterCount = getNewNewsletterCount($conn);
         <h1 class="admin-header text-center">Administration Dashboard</h1>
     </div>
 
-    <div class="admin-welcome">Welcome back, Admin</div>
+    <div class="admin-welcome">Welcome back boober</div>
     <div class="admin-date"><?php echo date("l, F j, Y"); ?></div>
 
     <div class="row admin-dashboard">
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4 mb-4">
             <a href="pictureAdmin.php" class="text-decoration-none">
                 <div class="admin-card">
                     <div class="admin-card-icon">
@@ -77,7 +77,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
             </a>
         </div>
 
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4 mb-4">
             <a href="manageProjects.php" class="text-decoration-none">
                 <div class="admin-card">
                     <div class="admin-card-icon">
@@ -89,7 +89,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
             </a>
         </div>
 
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4 mb-4">
             <a href="aboutMeAdmin.php" class="text-decoration-none">
                 <div class="admin-card">
                     <div class="admin-card-icon">
@@ -101,7 +101,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
             </a>
         </div>
 
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4 mb-4">
             <a href="shopAdmin.php" class="text-decoration-none">
                 <div class="admin-card">
                     <div class="admin-card-icon">
@@ -113,7 +113,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
             </a>
         </div>
 
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4 mb-4">
             <a href="navbarAdmin.php" class="text-decoration-none">
                 <div class="admin-card">
                     <div class="admin-card-icon">
@@ -125,7 +125,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
             </a>
         </div>
 
-        <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4 mb-4">
             <a href="newsletterAdmin.php" class="text-decoration-none">
                 <div class="admin-card position-relative">
                     <?php if ($newNewsletterCount > 0): ?>
