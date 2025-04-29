@@ -473,28 +473,69 @@ function updateWork() {
         Saving...
     `);
 
+    // Check if we have any selected works
+    const projectId = $('#projectId').val();
+    const selectedWorks = document.querySelectorAll('#worksList input[type="checkbox"]:checked');
+    const workIds = Array.from(selectedWorks).map(selectedWork => selectedWork.getAttribute('data-work-id')).sort();
+
+    // Get the current project
+    const currentProject = allProjects.find(project => project.id === projectId);
+    const existingWorkIds = currentProject?.works?.sort() || [];
+
+    // Check if the works have changed
+    const worksChanged = JSON.stringify(existingWorkIds) !== JSON.stringify(workIds);
+
+    // First save the project details
     $.ajax({
         url: '../actions/projectsAPI.php',
         type: 'PATCH',
         data: formData,
         success: function (response) {
-            showToast('Project successfully updated!', 'success');
-            getProjects(pageNumber);
-            // Don't automatically call addWorksToProject() here - this was causing the loop problem
-            addWorksToProject();
-            $('#projectUpdateModal').modal('hide');
+            // If works tab has been loaded and works have changed
+            if ($('#worksList').children().length > 0 && worksChanged) {
+                // Save the associated works
+                postWorksProjectsDB(projectId, workIds)
+                    .then(function() {
+                        // Update the UI after everything is saved
+                        getProjects(pageNumber);
+                        showToast('Project and associated works successfully updated!', 'success');
+                        $('#projectUpdateModal').modal('hide');
+                    })
+                    .catch(function(error) {
+                        // Still update the UI even if works update fails
+                        getProjects(pageNumber);
+                        showToast('Project updated but there was an issue with associated works.', 'warning');
+                        $('#projectUpdateModal').modal('hide');
+                    })
+                    .always(function() {
+                        // Always re-enable the button
+                        $saveButton.prop('disabled', false).html(`
+                            <i class="fas fa-save"></i> Save Changes
+                        `);
+                    });
+            } else {
+                // No work changes, just update the UI
+                getProjects(pageNumber);
+                showToast('Project successfully updated!', 'success');
+                $('#projectUpdateModal').modal('hide');
+
+                // Re-enable the button
+                $saveButton.prop('disabled', false).html(`
+                    <i class="fas fa-save"></i> Save Changes
+                `);
+            }
         },
         error: function (xhr, status, error) {
             showToast('Error updating project: ' + error, 'error');
             console.error('Error:', error);
-        },
-        complete: function() {
+
             // Re-enable the button
             $saveButton.prop('disabled', false).html(`
                 <i class="fas fa-save"></i> Save Changes
             `);
         }
     });
+
     updateAllProjectCounts();
 }
 
@@ -688,14 +729,26 @@ function addWorksToProject() {
     `);
 
     // Continue with database update
-    postWorksProjectsDB(projectId, workIds, $saveButton);
+    return postWorksProjectsDB(projectId, workIds, $saveButton);
 }
 
+
+// For the project admin page - fix postWorksProjectsDB function
 function postWorksProjectsDB(projectId, workIds, $button) {
-    $.ajax({
+    // Ensure workIds is always an array, even if empty
+    if (!Array.isArray(workIds)) {
+        workIds = [];
+    }
+
+    // jQuery's ajax will automatically remove empty arrays from POST data
+    // So we'll stringify the array to ensure it's sent properly
+    return $.ajax({
         url: "../actions/worksOfProjectsAPI.php",
         type: "POST",
-        data: {'projectId': projectId, 'workIds': workIds},
+        data: {
+            'projectId': projectId,
+            'workIds': JSON.stringify(workIds)  // Stringify to preserve empty arrays
+        },
         dataType: "json",
         success: function (data) {
             showToast('Works successfully associated with project!', 'success');
