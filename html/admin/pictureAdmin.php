@@ -1005,121 +1005,162 @@ if ($_SESSION["ambar"] != "connected") {
                         </div>
                     </div>
                     <div class="col-md-8">
-                        <form id="addWorkForm">
-                            <div class="mb-3">
-                                <label for="photoPostName" class="form-label">Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="photoPostName" required>
-                            </div>
+                        <!-- Tabs Navigation -->
+                        <ul class="nav nav-tabs mb-3" id="workCreateTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="create-details-tab" data-bs-toggle="tab" data-bs-target="#create-details-pane" type="button" role="tab" aria-controls="create-details-pane" aria-selected="true">Work Details</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="create-projects-tab" data-bs-toggle="tab" data-bs-target="#create-projects-pane" type="button" role="tab" aria-controls="create-projects-pane" aria-selected="false">Associated Projects</button>
+                            </li>
+                        </ul>
 
-                            <div class="mb-3">
-                                <label for="photoPostMedium" class="form-label">Medium</label>
-                                <select class="form-select" id="photoPostMedium">
-                                    <option value="Fixed Motion">Fixed Motion</option>
-                                    <option value="Tape Diaries">Tape Diaries</option>
-                                    <option value="Force">Force</option>
-                                    <option value="Drip">Drip</option>
-                                    <option value="Where is my mind?">Where is my mind?</option>
-                                    <option value="Portraits">Portraits</option>
-                                    <option value="Leaves / Petals">Leaves / Petals</option>
-                                    <option value="Illustration">Illustration</option>
-                                    <option value="Mise en scene">Mise en scene</option>
-                                    <option value="Paris">Paris</option>
-                                    <option value="In conversation with a flower">In conversation with a flower</option>
-                                    <option value="Recyclart">Recyclart</option>
-                                    <option value="Bio">Bio</option>
-                                    <option value="Contact">Contact</option>
-                                    <option value="CV">CV</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="photoPostFirstDescription" class="form-label">Materials Description</label>
-                                <textarea class="form-control" id="photoPostFirstDescription" rows="2"></textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="photoPostLongDescription" class="form-label">Long Description</label>
-                                <textarea class="form-control" id="photoPostLongDescription" rows="3"></textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="photoPostSecondDescription" class="form-label">Optional Description (not displayed publicly)</label>
-                                <input type="text" class="form-control" id="photoPostSecondDescription">
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="workCreateTabContent">
+                            <!-- Work Details Tab -->
+                            <div class="tab-pane fade show active" id="create-details-pane" role="tabpanel" aria-labelledby="create-details-tab">
+                                <form id="addWorkForm">
                                     <div class="mb-3">
-                                        <label for="photoPostCreationYear" class="form-label">Creation Year <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="photoPostCreationYear" required>
+                                        <label for="photoPostName" class="form-label">Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="photoPostName" required>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="postOrderOfDisplay" class="form-label">Display Order</label>
-                                        <input type="number" class="form-control" id="postOrderOfDisplay">
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label d-block">Image Type</label>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isColorPost" id="colorYesPost" value="true" checked>
-                                            <label class="form-check-label" for="colorYesPost">Color</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isColorPost" id="colorNoPost" value="false">
-                                            <label class="form-check-label" for="colorNoPost">Black & White</label>
-                                        </div>
+                                        <label for="photoPostMedium" class="form-label">Medium</label>
+                                        <select class="form-select" id="photoPostMedium">
+                                            <option value="Fixed Motion">Fixed Motion</option>
+                                            <option value="Tape Diaries">Tape Diaries</option>
+                                            <option value="Force">Force</option>
+                                            <option value="Drip">Drip</option>
+                                            <option value="Where is my mind?">Where is my mind?</option>
+                                            <option value="Portraits">Portraits</option>
+                                            <option value="Leaves / Petals">Leaves / Petals</option>
+                                            <option value="Illustration">Illustration</option>
+                                            <option value="Mise en scene">Mise en scene</option>
+                                            <option value="Paris">Paris</option>
+                                            <option value="In conversation with a flower">In conversation with a flower</option>
+                                            <option value="Recyclart">Recyclart</option>
+                                            <option value="Bio">Bio</option>
+                                            <option value="Contact">Contact</option>
+                                            <option value="CV">CV</option>
+                                        </select>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
+
                                     <div class="mb-3">
-                                        <label class="form-label d-block">Availability</label>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isAvailablePost" id="availableYesPost" value="true" checked>
-                                            <label class="form-check-label" for="availableYesPost">Available</label>
+                                        <label for="photoPostFirstDescription" class="form-label">Materials Description</label>
+                                        <textarea class="form-control" id="photoPostFirstDescription" rows="2"></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="photoPostLongDescription" class="form-label">Long Description</label>
+                                        <textarea class="form-control" id="photoPostLongDescription" rows="3"></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="photoPostSecondDescription" class="form-label">Optional Description (not displayed publicly)</label>
+                                        <input type="text" class="form-control" id="photoPostSecondDescription">
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="photoPostCreationYear" class="form-label">Creation Year <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="photoPostCreationYear" required>
+                                            </div>
                                         </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isAvailablePost" id="availableNoPost" value="false">
-                                            <label class="form-check-label" for="availableNoPost">Unavailable</label>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="postOrderOfDisplay" class="form-label">Display Order</label>
+                                                <input type="number" class="form-control" id="postOrderOfDisplay">
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label d-block">Image Type</label>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isColorPost" id="colorYesPost" value="true" checked>
+                                                    <label class="form-check-label" for="colorYesPost">Color</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isColorPost" id="colorNoPost" value="false">
+                                                    <label class="form-check-label" for="colorNoPost">Black & White</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label d-block">Availability</label>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isAvailablePost" id="availableYesPost" value="true" checked>
+                                                    <label class="form-check-label" for="availableYesPost">Available</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isAvailablePost" id="availableNoPost" value="false">
+                                                    <label class="form-check-label" for="availableNoPost">Unavailable</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label d-block">Select Works</label>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isSelectWorksPost" id="selectWorksYesPost" value="true">
+                                                    <label class="form-check-label" for="selectWorksYesPost">Include</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isSelectWorksPost" id="selectWorksNoPost" value="false" checked>
+                                                    <label class="form-check-label" for="selectWorksNoPost">Don't include</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label d-block">Carousel</label>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isCarouselPost" id="carouselYesPost" value="true">
+                                                    <label class="form-check-label" for="carouselYesPost">Include</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="isCarouselPost" id="carouselNoPost" value="false" checked>
+                                                    <label class="form-check-label" for="carouselNoPost">Don't include</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label d-block">Select Works</label>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isSelectWorksPost" id="selectWorksYesPost" value="true">
-                                            <label class="form-check-label" for="selectWorksYesPost">Include</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isSelectWorksPost" id="selectWorksNoPost" value="false" checked>
-                                            <label class="form-check-label" for="selectWorksNoPost">Don't include</label>
-                                        </div>
+                            <!-- Associated Projects Tab -->
+                            <div class="tab-pane fade" id="create-projects-pane" role="tabpanel" aria-labelledby="create-projects-tab">
+                                <div class="project-search-container mb-3 position-relative">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" class="form-control" id="createProjectSearch" placeholder="Search projects...">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label d-block">Carousel</label>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isCarouselPost" id="carouselYesPost" value="true">
-                                            <label class="form-check-label" for="carouselYesPost">Include</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="isCarouselPost" id="carouselNoPost" value="false" checked>
-                                            <label class="form-check-label" for="carouselNoPost">Don't include</label>
-                                        </div>
-                                    </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="createSelectAllProjects">
+                                    <label class="form-check-label" for="createSelectAllProjects" style="color: #ffffff;">
+                                        Select All Projects
+                                    </label>
+                                </div>
+
+                                <div class="projects-container">
+                                    <ul id="createProjectsList" class="list-group" style="max-height: 350px; overflow-y: auto; background-color: #2c3e50; border: 1px solid #495057; border-radius: 8px;">
+                                        <li class="list-group-item text-center" style="background-color: #343a40; color: #ffffff; border-color: #495057;">
+                                            <p class="text-muted" style="color: #a8c7e0 !important;">Click the "Associated Projects" tab to load projects</p>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>

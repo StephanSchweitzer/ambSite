@@ -23,6 +23,21 @@ $(document).ready(function() {
   // Initialize event listeners
   initializeEventListeners();
 
+  $('button[data-bs-target="#create-projects-pane"]').on('click', function() {
+    loadCreateProjects();
+  });
+
+  // Project search functionality for create modal
+  $('#createProjectSearch').on('input', function() {
+    filterCreateProjects($(this).val().toLowerCase());
+  });
+
+  // Select all projects checkbox for create modal
+  $('#createSelectAllProjects').on('change', function() {
+    const isChecked = $(this).prop('checked');
+    $('#createProjectsList input[type="checkbox"]').prop('checked', isChecked);
+  });
+
   // Initialize file upload validation
   document.getElementById('photoPostUpload').addEventListener('change', function(event) {
     const file = event.target.files[0];
@@ -64,6 +79,136 @@ $(document).ready(function() {
     saveWorkProjectAssociations();
   });
 });
+
+function loadCreateProjects() {
+  // Show loading indicator
+  $('#createProjectsList').html(`
+    <li class="list-group-item text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading projects...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading projects...</p>
+    </li>
+  `);
+
+  // Reset search field and select all checkbox
+  $('#createProjectSearch').val('');
+  $('#createSelectAllProjects').prop('checked', false);
+
+  // Load all active projects
+  $.ajax({
+    url: "../actions/projectsAPI.php",
+    type: "GET",
+    data: {activity: 'active'},
+    dataType: "json",
+    success: function(projects) {
+      window.createAllProjects = projects;
+      window.createFilteredProjects = [...projects];
+
+      // Display the projects with checkboxes
+      populateCreateProjectsList(window.createFilteredProjects);
+    },
+    error: function(xhr, status, error) {
+      console.error('Error fetching projects:', error);
+      $('#createProjectsList').html(`
+        <li class="list-group-item text-danger">
+          <i class="fas fa-exclamation-circle"></i> Failed to load projects: ${error}
+        </li>
+      `);
+    }
+  });
+}
+
+function populateCreateProjectsList(projects) {
+  if (!projects || projects.length === 0) {
+    $('#createProjectsList').html(`
+      <li class="list-group-item text-muted" style="background-color: #343a40; color: #ffffff;">
+        <i class="fas fa-info-circle"></i> No active projects found.
+      </li>
+    `);
+    return;
+  }
+
+  let listItems = '';
+  projects.forEach(function(project) {
+    listItems += `
+      <li class="list-group-item d-flex align-items-center" style="background-color: #343a40; color: #ffffff; border-color: #495057;">
+        <div class="form-check">
+          <input class="form-check-input create-project-checkbox" type="checkbox" value="" 
+            id="create-project-${project.id}" data-project-id="${project.id}">
+          <label class="form-check-label ms-2" for="create-project-${project.id}" style="color: #ffffff;">
+            ${project.title}
+          </label>
+        </div>
+        ${project.isCurrentProject == 1 ? '<span class="badge bg-primary ms-2">Current Project</span>' : ''}
+      </li>
+    `;
+  });
+
+  $('#createProjectsList').html(listItems);
+
+  // Add click event for the list items (excluding the checkbox)
+  $('#createProjectsList .list-group-item').click(function(e) {
+    if (!$(e.target).hasClass('form-check-input')) {
+      const checkbox = $(this).find('input[type="checkbox"]');
+      checkbox.prop('checked', !checkbox.prop('checked'));
+      updateCreateSelectAllCheckbox();
+    }
+  });
+
+  // Add change event for checkboxes
+  $('.create-project-checkbox').change(function() {
+    updateCreateSelectAllCheckbox();
+  });
+}
+
+// Update the select all checkbox based on individual selections for create modal
+function updateCreateSelectAllCheckbox() {
+  const totalCheckboxes = $('#createProjectsList input[type="checkbox"]').length;
+  const checkedCheckboxes = $('#createProjectsList input[type="checkbox"]:checked').length;
+
+  if (totalCheckboxes === 0) {
+    $('#createSelectAllProjects').prop('checked', false);
+  } else if (checkedCheckboxes === 0) {
+    $('#createSelectAllProjects').prop('checked', false);
+    $('#createSelectAllProjects').prop('indeterminate', false);
+  } else if (checkedCheckboxes === totalCheckboxes) {
+    $('#createSelectAllProjects').prop('checked', true);
+    $('#createSelectAllProjects').prop('indeterminate', false);
+  } else {
+    $('#createSelectAllProjects').prop('checked', false);
+    $('#createSelectAllProjects').prop('indeterminate', true);
+  }
+}
+
+function filterCreateProjects(searchTerm) {
+  if (!window.createAllProjects || window.createAllProjects.length === 0) {
+    return;
+  }
+
+  if (!searchTerm) {
+    // If search is empty, show all projects
+    window.createFilteredProjects = [...window.createAllProjects];
+  } else {
+    // Filter projects based on search term
+    window.createFilteredProjects = window.createAllProjects.filter(function(project) {
+      return project.title.toLowerCase().includes(searchTerm) ||
+          (project.description && project.description.toLowerCase().includes(searchTerm));
+    });
+  }
+
+  // Update the projects list
+  populateCreateProjectsList(window.createFilteredProjects);
+}
+
+function getSelectedCreateProjects() {
+  const selectedProjects = [];
+  $('#createProjectsList input[type="checkbox"]:checked').each(function() {
+    selectedProjects.push($(this).data('project-id'));
+  });
+  return selectedProjects;
+}
+
 
 function loadProjectsForWork(workId) {
   if (!workId) {
@@ -1014,6 +1159,16 @@ function openPostForm() {
   document.getElementById('addWorkForm').reset();
   document.getElementById('uploadPreview').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTk5OTkiPlNlbGVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=';
 
+  // Reset the active tab to details
+  $('#workCreateTabs button[data-bs-target="#create-details-pane"]').tab('show');
+
+  // Reset the projects list
+  $('#createProjectsList').html(`
+    <li class="list-group-item text-center" style="background-color: #343a40; color: #ffffff; border-color: #495057;">
+      <p style="color: #a8c7e0 !important;">Click the "Associated Projects" tab to load projects</p>
+    </li>
+  `);
+
   // Set default values
   document.getElementById('colorYesPost').checked = true;
   document.getElementById('availableYesPost').checked = true;
@@ -1026,6 +1181,7 @@ function openPostForm() {
 }
 
 // Post a new photo
+// Modified postPhoto function to handle project associations
 function postPhoto() {
   console.log("Starting upload process...");
 
@@ -1056,16 +1212,8 @@ function postPhoto() {
   let carouselInt = isCarousel === 'true' ? 1 : 0;
   let selectWorkInt = isSelectWork === 'true' ? 1 : 0;
 
-  var fileInput = $('#photoPostUpload')[0].files[0];
-  if (!fileInput) {
-    showToast('Please select an image file', 'warning');
-    return;
-  }
-
-  if (!$('#photoPostName').val()) {
-    showToast('Please enter a name for the work', 'warning');
-    return;
-  }
+  // Get selected projects
+  const selectedProjects = getSelectedCreateProjects();
 
   // Show loading spinner
   $('#loadingSpinner').show();
@@ -1098,33 +1246,13 @@ function postPhoto() {
     success: function(response) {
       console.log("Upload successful. Response:", response);
 
-      // Hide loading spinner
-      $('#loadingSpinner').hide();
-
-      // Re-enable upload button
-      document.getElementById('uploadWorkButton').disabled = false;
-
-      // Close modal
-      try {
-        var modal = bootstrap.Modal.getInstance(document.getElementById('photoPostModal'));
-        if (modal) {
-          modal.hide();
-        } else {
-          $('#photoPostModal').modal('hide');
-        }
-      } catch(e) {
-        console.error("Error closing modal:", e);
-        $('#photoPostModal').modal('hide');
+      // Check if we have selected projects to associate
+      if (selectedProjects.length > 0 && response && response.id) {
+        // Associate the new work with selected projects
+        associateNewWorkWithProjects(response.id, selectedProjects);
+      } else {
+        finishWorkCreation();
       }
-
-      // Refresh the current view
-      getAllWorks(pageNumber);
-
-      // Show success message
-      showToast('Your work has been successfully posted!', 'success');
-
-      // Update statistics
-      countWorksStatistics();
     },
     error: function(xhr, status, error) {
       console.error("Upload failed. Status:", status);
@@ -1141,6 +1269,58 @@ function postPhoto() {
       showToast('There has been a problem uploading your work', 'error');
     }
   });
+}
+
+function associateNewWorkWithProjects(workId, projectIds) {
+  console.log("Associating work ID", workId, "with projects:", projectIds);
+
+  $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'POST',
+    data: {
+      'workId': workId,
+      'projectIds': JSON.stringify(projectIds)  // Stringify to preserve empty arrays
+    },
+    dataType: 'json',
+    success: function(response) {
+      console.log("Project associations saved successfully:", response);
+      showToast('Work created and associated with projects successfully', 'success');
+      finishWorkCreation();
+    },
+    error: function(xhr, status, error) {
+      console.error('Error saving project associations:', error);
+      console.error('Response:', xhr.responseText);
+      showToast('Work created but project associations failed', 'warning');
+      finishWorkCreation();
+    }
+  });
+}
+
+function finishWorkCreation() {
+  // Hide loading spinner
+  $('#loadingSpinner').hide();
+
+  // Re-enable upload button
+  document.getElementById('uploadWorkButton').disabled = false;
+
+  // Close modal
+  try {
+    var modal = bootstrap.Modal.getInstance(document.getElementById('photoPostModal'));
+    if (modal) {
+      modal.hide();
+    } else {
+      $('#photoPostModal').modal('hide');
+    }
+  } catch(e) {
+    console.error("Error closing modal:", e);
+    $('#photoPostModal').modal('hide');
+  }
+
+  // Refresh the current view
+  getAllWorks(pageNumber);
+
+  // Update statistics
+  countWorksStatistics();
 }
 
 // Update an existing work
