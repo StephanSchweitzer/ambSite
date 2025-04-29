@@ -1,157 +1,521 @@
-var currentPage = 'active';
-const list = document.getElementById('navbarLinks');
-const navItems = document.querySelectorAll('.dragNavBar');
+// Global variables
+let listOfLinks = [];
+let listOfLinksToDelete = [];
 let draggedItem = null;
-let listOfLinks = []
-let listOfLinksToDelete = []
+let deleteItemId = null;
 
+// Initialize the page when the document is ready
 $(document).ready(function () {
+    // Load navigation links
     loadAndInsertLinks();
-    initializeDisplayTextListeners();
+
+    // Initialize event listeners
+    initializeEventListeners();
+
+    // Setup search functionality
+    setupSearch();
 });
 
+/**
+ * Initialize all event listeners
+ */
+function initializeEventListeners() {
+    // Preview toggle
+    $('#previewToggle').on('change', function() {
+        $('#navbarPreview').toggle(this.checked);
+    });
+
+    // Setup drag and drop - using the working method from old code
+    setupDragDrop();
+
+    // Delete confirmation modal
+    $('#confirmDeleteBtn').on('click', function() {
+        if (deleteItemId) {
+            deleteLink(deleteItemId);
+            deleteItemId = null;
+            $('#deleteConfirmModal').modal('hide');
+        }
+    });
+}
+
+/**
+ * Set up the search functionality
+ */
+function setupSearch() {
+    $('#searchLinks').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+
+        $('.nav-item-card').each(function() {
+            const displayText = $(this).find('.displayed-text').val().toLowerCase();
+            const linkUrl = $(this).find('.link-redirection').val().toLowerCase();
+
+            const isMatch = displayText.includes(searchTerm) || linkUrl.includes(searchTerm);
+            $(this).toggle(isMatch);
+        });
+    });
+}
+
+/**
+ * Setup drag and drop functionality
+ */
+function setupDragDrop() {
+    const list = document.getElementById('navbarLinks');
+
+    // Drag start
+    list.addEventListener('dragstart', function(e) {
+        draggedItem = e.target.closest('li');
+
+        // Add visual feedback
+        draggedItem.classList.add('dragging');
+        draggedItem.style.opacity = '0.5';
+
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', draggedItem.outerHTML);
+    });
+
+    // Drag over
+    list.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        const target = e.target.closest('li');
+
+        if (target && target !== draggedItem) {
+            const bounding = target.getBoundingClientRect();
+            const offset = bounding.y + bounding.height / 2;
+
+            if (e.clientY - offset > 0) {
+                target.after(draggedItem);
+            } else {
+                target.before(draggedItem);
+            }
+        }
+    });
+
+    // Drag end
+    list.addEventListener('dragend', function(e) {
+        // Remove visual effects
+        draggedItem.classList.remove('dragging');
+        draggedItem.style.opacity = '';
+
+        updateNavbarOrder();
+    });
+
+    // These additional event listeners help with cross-browser compatibility
+    list.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+    });
+
+    list.addEventListener('dragleave', function(e) {
+        // Optional handling for drag leave
+    });
+
+    list.addEventListener('drop', function(e) {
+        e.preventDefault();
+    });
+}
+
+/**
+ * Load and insert navigation links from the server
+ */
 function loadAndInsertLinks() {
+    // Don't show loading toast - it's unnecessary for quick operations
+
     $.ajax({
         url: '../actions/navLinksAPI.php',
         type: 'GET',
         dataType: 'json',
-        success: function (response) {
+        success: function(response) {
             if (response.status === 'success') {
                 insertLinks(response.data);
+                updatePreview();
+                // Don't show success toast on initial load
             } else {
+                // Keep error toast - important for users to know
                 showToast('Error fetching navigation links', 'error');
             }
         },
-        error: function () {
+        error: function() {
+            // Keep error toast - important for users to know
             showToast('An error occurred while fetching links', 'error');
         }
     });
 }
 
-function deleteLink(uniqueId) {
-    let html_id = '#navLink_' + uniqueId;
-    $(html_id).remove();
-    listOfLinksToDelete.push(uniqueId);
-    removeLinkFromArray(uniqueId);
-
-    console.log(listOfLinks, listOfLinksToDelete);
-}
-
+/**
+ * Insert navigation links into the list
+ * @param {Array} links - Array of link objects
+ */
 function insertLinks(links) {
     $('#navbarLinks').empty();
     listOfLinks = links;
-    links.forEach(function (link) {
-        let id = link.ID;
-        let displayedText = link.displayedText;
-        let linkRedirection = link.linkRedirection;
-        let isChangeable = link.isChangeable;
-        let isNewTab = link.isNewTab;
-
-        createNewNavLinkRow(id, displayedText, linkRedirection, isChangeable, isNewTab)
+    links.forEach(function(link) {
+        createNewNavLinkRow(
+            link.ID,
+            link.displayedText,
+            link.linkRedirection,
+            link.isChangeable,
+            link.isNewTab,
+            link.onclick,
+            link.attachedFollowingDiv
+        );
     });
 }
 
-// Function to initialize the event listener for all display text input fields
-function initializeDisplayTextListeners() {
-    $('input[id^="display_"]').on('input', function () {
-        const uniqueId = $(this).attr('id').split('_')[1];
-        updateDisplayedText(uniqueId);
+/**
+ * Create a new navigation link row
+ * @param {string|number} id - Link ID
+ * @param {string} displayedText - Link text
+ * @param {string} linkRedirection - Link URL
+ * @param {number} isChangeable - Whether the link is changeable (0 or 1)
+ * @param {number} isNewTab - Whether the link opens in a new tab (0 or 1)
+ * @param {string} onclick - Custom onclick event handler
+ * @param {string} attachedFollowingDiv - JSON string for attached div
+ */
+function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRedirection = "", isChangeable = 1, isNewTab = 0, onclick = "", attachedFollowingDiv = "") {
+    // Create list item with draggable attribute - make sure it's properly draggable
+    const listItem = $('<li>').attr({
+        id: `navLink_${id}`,
+        class: 'nav-item-card mb-2 dragNavBar navLink', // Added dragNavBar and navLink classes from old code
+        draggable: 'true'
     });
-}
 
-function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRedirection = "", isChangeable = 1, isNewTab = 0) {
-    const listItem = $('<li>').attr(
-        {
-        draggable: 'true',
-        class: 'dragNavBar navLink',
-        id: `navLink_${id}`
-    });
+    // Create the main row
+    const mainRow = $('<div>').addClass('row align-items-center');
 
-    // Create the inner div for alignment
-    const innerDiv = $('<div>').addClass('d-flex align-items-center');
+    // Drag handle and lock icon column
+    const handleCol = $('<div>').addClass('col-auto').css('width', '50px');
+    const handleWrapper = $('<div>').addClass('d-flex align-items-center justify-content-start');
 
-    // Add the displayed text span
-    const spanText = $('<span>').attr({
-        id: `text_navLink_${id}`,
-        class: 'me-2'
-    }).css('flex', '0 0 20vw').text(displayedText);
+    // Drag handle icon
+    const dragIcon = $('<i>').addClass('bi bi-grip-vertical me-2 drag-handle').css('cursor', 'grab');
+    handleWrapper.append(dragIcon);
 
-    // Display text input field
-    const inputDisplayedText = $('<input>').attr({
+    // Lock icon if not changeable
+    if (parseInt(isChangeable) === 0) {
+        const lockIcon = $('<i>').addClass('bi bi-lock-fill text-warning');
+        handleWrapper.append(lockIcon);
+    }
+
+    handleCol.append(handleWrapper);
+
+    // Text input column
+    const textCol = $('<div>').addClass('col-md-4');
+    const textGroup = $('<div>').addClass('input-group input-group-sm');
+    const textLabel = $('<span>').addClass('input-group-text').text('Text');
+    const textInput = $('<input>').attr({
         type: 'text',
-        id: `display_navLink_${id}`,
-        placeholder: 'Displayed text',
+        id: `display_${id}`,
+        class: 'form-control form-control-sm displayed-text',
         value: displayedText
-    }).addClass('form-control form-control-sm displayed-text').css({
-        flex: '1',
-        marginRight: '8px'
-    }).on('input', function() {
-        updateDisplayedText(`navLink_${id}`);
     });
+    textGroup.append(textLabel, textInput);
+    textCol.append(textGroup);
 
-    const inputLinkRedirection = $('<input>').attr({
+    // URL input column
+    const urlCol = $('<div>').addClass('col-md');
+    const urlGroup = $('<div>').addClass('input-group input-group-sm');
+    const urlLabel = $('<span>').addClass('input-group-text').text('URL');
+    const urlInput = $('<input>').attr({
         type: 'text',
-        id: `link_navLink_${id}`,
-        placeholder: isChangeable == 0 ? 'Only Stef can change' : 'Link redirection',
-        value: isChangeable == 0 ? '' : linkRedirection,
-        disabled: isChangeable == 0
-    }).addClass('form-control form-control-sm link-redirection').css('flex', '1');
+        id: `link_${id}`,
+        class: 'form-control form-control-sm link-redirection',
+        placeholder: parseInt(isChangeable) === 0 ? 'Only admin can change' : 'Link URL',
+        value: parseInt(isChangeable) === 0 ? '' : linkRedirection,
+        disabled: parseInt(isChangeable) === 0
+    });
+    urlGroup.append(urlLabel, urlInput);
+    urlCol.append(urlGroup);
 
-    // Create the delete button with event handler
-    const deleteButton = $('<button>').attr({
-        id: `deleteButton_${id}`,
-        class: 'btn btn-danger',
-        style: 'margin-left: 20px;',
-        disabled: isChangeable == 0
-    }).text('Delete').on('click', function() {
-        deleteLink(id)
+    // Delete button column
+    const deleteCol = $('<div>').addClass('col-auto');
+    const deleteBtn = $('<button>').attr({
+        id: `deleteBtn_${id}`,
+        class: 'btn btn-sm btn-outline-danger',
+        disabled: parseInt(isChangeable) === 0
+    }).html('<i class="bi bi-trash"></i>');
+
+    // Set up delete confirmation
+    deleteBtn.on('click', function() {
+        const displayText = $(`#display_${id}`).val();
+        $('#deleteItemName').text(displayText);
+        deleteItemId = id;
+        $('#deleteConfirmModal').modal('show');
     });
 
-    innerDiv.append(spanText, inputDisplayedText, inputLinkRedirection, deleteButton);
-    listItem.append(innerDiv);
+    deleteCol.append(deleteBtn);
 
+    // Assemble the row
+    mainRow.append(handleCol, textCol, urlCol, deleteCol);
+    listItem.append(mainRow);
+
+    // Add hidden fields for other data
+    const hiddenFields = $('<div>').addClass('d-none');
+
+    // New Tab checkbox
+    const newTabInput = $('<input>').attr({
+        type: 'checkbox',
+        id: `newTab_${id}`,
+        checked: parseInt(isNewTab) === 1
+    });
+
+    // OnClick field
+    const onclickInput = $('<input>').attr({
+        type: 'hidden',
+        id: `onclick_${id}`,
+        value: onclick || ''
+    });
+
+    // AttachedFollowingDiv data
+    const attachedDivInput = $('<input>').attr({
+        type: 'hidden',
+        id: `attachedFollowingDiv_${id}`,
+        value: attachedFollowingDiv || ''
+    });
+
+    hiddenFields.append(newTabInput, onclickInput, attachedDivInput);
+    listItem.append(hiddenFields);
+
+    // Add to the list
     $('#navbarLinks').append(listItem);
 }
 
+/**
+ * Update the preview section
+ */
+function updatePreview() {
+    const previewNav = $('#previewNavbar');
+    if (!previewNav.length) return; // Skip if preview element doesn't exist
+
+    previewNav.empty();
+
+    $('.nav-item-card').each(function() {
+        const id = this.id.replace('navLink_', '');
+        const displayText = $(`#display_${id}`).val();
+        const linkUrl = $(`#link_${id}`).val();
+        const newTab = $(`#newTab_${id}`).is(':checked');
+        const onClick = $(`#onclick_${id}`).val();
+        const hasAttachedDiv = $(`#hasDivToggle_${id}`).is(':checked');
+
+        // Create the main link
+        const previewItem = $('<li>').addClass('nav-item');
+        const previewLink = $('<a>').addClass('nav-link').attr({
+            href: linkUrl || '#',
+            target: newTab ? '_blank' : ''
+        }).text(displayText);
+
+        if (newTab) {
+            previewLink.append(' <i class="bi bi-box-arrow-up-right" style="font-size: 0.75em;"></i>');
+        }
+
+        // Add onclick indicator if it exists
+        if (onClick) {
+            previewLink.append(' <i class="bi bi-code-slash text-info ms-1" title="Has onClick: ' + onClick + '"></i>');
+        }
+
+        previewItem.append(previewLink);
+
+        // Add attached div indicator if enabled
+        if (hasAttachedDiv) {
+            const divId = $(`#divId_${id}`).val();
+            const divClass = $(`#divClass_${id}`).val();
+
+            previewItem.append(
+                $('<div>').addClass('attached-div-preview mt-1 ps-3 border-start border-info')
+                    .append(
+                        $('<small>').addClass('text-muted').html(
+                            `<i class="bi bi-braces"></i> Attached Div: <code>${divId}</code> <span class="text-info">[${divClass}]</span>`
+                        )
+                    )
+            );
+        }
+
+        previewNav.append(previewItem);
+    });
+}
+
+/**
+ * Save an individual link using PATCH
+ * @param {string|number} id - Link ID
+ */
+function saveIndividualLink(id) {
+    // Show loading indicator for this specific button
+    const saveBtn = $(`#saveBtn_${id}`);
+    const originalContent = saveBtn.html();
+    saveBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...').prop('disabled', true);
+
+    // Gather the data for this link
+    const displayedText = $(`#display_${id}`).val();
+    const linkRedirection = $(`#link_${id}`).val();
+    const onclick = $(`#onclick_${id}`).val();
+    const isNewTab = $(`#newTab_${id}`).is(':checked') ? 1 : 0;
+
+    // Handle attached div data
+    let attachedFollowingDiv = null;
+    if ($(`#hasDivToggle_${id}`).is(':checked')) {
+        const divId = $(`#divId_${id}`).val();
+        const divClass = $(`#divClass_${id}`).val();
+
+        if (divId) {
+            attachedFollowingDiv = JSON.stringify({
+                id: divId,
+                class: divClass
+            });
+        }
+    }
+
+    // Get the position (order)
+    const position = $(`#navLink_${id}`).index() + 1;
+
+    // Create the data object
+    const data = {
+        ID: id,
+        displayedText: displayedText,
+        linkRedirection: linkRedirection,
+        displayedOrder: position,
+        onclick: onclick,
+        isNewTab: isNewTab
+    };
+
+    if (attachedFollowingDiv !== null) {
+        data.attachedFollowingDiv = attachedFollowingDiv;
+    }
+
+    // Send the PATCH request
+    $.ajax({
+        url: '../actions/navLinksAPI.php',
+        type: 'PATCH',
+        data: data,
+        success: function(response) {
+            // Restore the button
+            saveBtn.html(originalContent).prop('disabled', false);
+
+            if (response.status === 'success') {
+                // Keep success toast - important feedback for save operation
+                showToast(`Link "${displayedText}" saved successfully`, 'success');
+
+                // Highlight the row briefly to indicate success
+                $(`#navLink_${id}`).addClass('save-success');
+                setTimeout(function() {
+                    $(`#navLink_${id}`).removeClass('save-success');
+                }, 2000);
+            } else {
+                // Keep error toast - important for users to know
+                showToast('Error saving link: ' + response.message, 'error');
+            }
+        },
+        error: function(xhr) {
+            // Restore the button
+            saveBtn.html(originalContent).prop('disabled', false);
+
+            let errorMsg = 'An error occurred while saving';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.message) {
+                    errorMsg = response.message;
+                }
+            } catch (e) {
+                // If parsing fails, use the status text
+                errorMsg = xhr.statusText;
+            }
+
+            // Keep error toast - important for users to know
+            showToast(`Error: ${errorMsg}`, 'error');
+        }
+    });
+}
+
+/**
+ * Delete a navigation link
+ * @param {string|number} uniqueId - Link ID
+ */
+function deleteLink(uniqueId) {
+    let html_id = '#navLink_' + uniqueId;
+    $(html_id).fadeOut(300, function() {
+        $(this).remove();
+        updatePreview();
+    });
+
+    listOfLinksToDelete.push(uniqueId);
+    removeLinkFromArray(uniqueId);
+
+    // Show a toast for successful deletion
+    const displayText = $(`#display_${uniqueId}`).val() || 'Link';
+    showToast(`"${displayText}" has been deleted`, 'success');
+}
+
+/**
+ * Remove a link from the links array
+ * @param {string|number} id - Link ID
+ */
+function removeLinkFromArray(id) {
+    listOfLinks = listOfLinks.filter(link => link.ID !== id);
+}
+
+/**
+ * Update the order of navigation items
+ */
+function updateNavbarOrder() {
+    updatePreview();
+    // Don't show a toast for order updates - it would be too frequent
+}
+
+/**
+ * Collect link data from the form
+ * @returns {Array} - Array of link objects
+ */
 function collectLinksData() {
     let links = [];
-    $('.navLink').each(function(index) {
-        // Strip the "navLink_" prefix from the ID
+    $('.nav-item-card').each(function(index) {
         const id = this.id.replace('navLink_', '');
-        const displayedText = $(this).find('.displayed-text').val();
-        const linkRedirection = $(this).find('.link-redirection').val();
-        const isChangeable = $(this).find('.link-redirection').val();
-        // Construct the link object with an order index
-        links.push({
+        const displayedText = $(`#display_${id}`).val();
+        const linkRedirection = $(`#link_${id}`).val();
+        const onclick = $(`#onclick_${id}`).val();
+        const isNewTab = $(`#newTab_${id}`).is(':checked') ? 1 : 0;
+
+        // Handle attached div data
+        let attachedFollowingDiv = null;
+        if ($(`#hasDivToggle_${id}`).is(':checked')) {
+            const divId = $(`#divId_${id}`).val();
+            const divClass = $(`#divClass_${id}`).val();
+
+            if (divId) {
+                attachedFollowingDiv = JSON.stringify({
+                    id: divId,
+                    class: divClass
+                });
+            }
+        }
+
+        const linkData = {
             id: id,
             displayedText: displayedText,
             linkRedirection: linkRedirection,
-            order: index + 1 // 1-based order index
-        });
+            onclick: onclick,
+            isNewTab: isNewTab,
+            order: index + 1
+        };
+
+        if (attachedFollowingDiv !== null) {
+            linkData.attachedFollowingDiv = attachedFollowingDiv;
+        }
+
+        links.push(linkData);
     });
 
     return links;
 }
 
-function removeLinkFromArray(id) {
-    listOfLinks = listOfLinks.filter(link => link.ID !== id);
-}
-
-
-// Function to update the span text based on input field changes
-function updateDisplayedText(uniqueId) {
-    const inputDisplay = $(`#display_${uniqueId}`);
-    const spanDisplay = $(`#text_${uniqueId}`);
-    spanDisplay.text(inputDisplay.val());
-}
-
-
-
+/**
+ * Save links to the server
+ */
 function saveLinks() {
-    let linksToUpdateOrSave = collectLinksData();
+    // Show loading spinner
+    $('#saveSpinner').show();
 
-    const payload =
-    {
+    let linksToUpdateOrSave = collectLinksData();
+    const totalLinks = linksToUpdateOrSave.length;
+    const deletedCount = listOfLinksToDelete.length;
+
+    const payload = {
         createOrUpdate: linksToUpdateOrSave,
         delete: listOfLinksToDelete
     };
@@ -159,136 +523,52 @@ function saveLinks() {
     $.ajax({
         url: '../actions/navLinksAPI.php',
         type: 'POST',
-        contentType: 'application/json',  // Ensure content type is set to JSON
-        data: JSON.stringify(payload),  // Stringify the JSON data
-        success: function (response) {
-            console.log(response);
-            showToast('Links successfully updated', 'success');
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        success: function(response) {
+            $('#saveSpinner').hide();
+
+            // Show a more detailed success message
+            let message = 'Links successfully updated';
+            if (deletedCount > 0) {
+                message += ` (${totalLinks} saved, ${deletedCount} deleted)`;
+            }
+
+            showToast(message, 'success');
+            listOfLinksToDelete = []; // Reset delete list
             loadAndInsertLinks();
         },
-        error: function () {
-            showToast('Error creating link', 'error');
+        error: function() {
+            $('#saveSpinner').hide();
+            showToast('Error saving links', 'error');
         }
     });
 }
 
-
-
+/**
+ * Show a toast notification
+ * @param {string} message - Message to display
+ * @param {string} type - Type of toast (success, error, info)
+ */
 function showToast(message, type = 'info') {
-  const toastContainer = document.getElementById('myToastContainer');
-  const toast = document.createElement('div');
-  toast.className = 'myToast'; // Base class
-  toast.textContent = message;
+    // Clear existing toasts of the same type to prevent stacking
+    $('.toast-container .bg-' + (type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info')).remove();
 
-  // Apply styles directly
-  toast.style.color = '#fff';
-  toast.style.backgroundColor = '#25252f';
-  toast.style.border = '1px solid #ddd';
-  toast.style.borderLeft = '15px solid #00b894';
-  toast.style.padding = '12px 20px';
-  toast.style.borderRadius = '8px';
-  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-  toast.style.width = '300px';
-  toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-  toast.style.transform = 'translateX(100%)';
-  toast.style.opacity = '0';
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
 
-  // Setting background color based on the type of message
-  switch (type) {
-      case 'success':
-          toast.style.borderLeftColor = '#2ecc71'; // Green for success
-          break;
-      case 'error':
-          toast.style.borderLeftColor = '#e74c3c'; // Red for error
-          break;
-      default:
-          toast.style.borderLeftColor = '#3498db'; // Blue for general info
-  }
-
-  // Append the toast to the container
-  toastContainer.appendChild(toast);
-  setTimeout(() => {
-      toast.style.transform = 'translateX(0)';
-      toast.style.opacity = '1';
-  }, 100); // Delay to allow CSS transition
-
-  // Automatically remove the toast
-  setTimeout(() => {
-      toastContainer.removeChild(toast);
-  }, 5000); // Display for 4 seconds
-}
-
-
-
-
-//managing the user interface below
-
-
-function updateLinks()
-{
-    return
-}
-
-
-
-list.addEventListener('dragstart', function (e) {
-    draggedItem = e.target;
-    // Add the 'dragging' class to the dragged item
-    e.target.classList.add('dragging');
-
-    // Temporarily disable hover effects on all dragNavBar items
-    navItems.forEach(item => {
-        item.classList.add('dragging');
+    $('.toast-container').append(toastHTML);
+    const toastElement = new bootstrap.Toast(document.getElementById(toastId), {
+        delay: 3000 // Reduced from 5000 to 3000 for less intrusive experience
     });
-    draggedItem.style.opacity = '0.5';
-
-});
-
-list.addEventListener('dragover', function(e) {
-    e.preventDefault(); // Necessary to allow dropping
-    const target = e.target.closest('li'); // Ensure we get the LI even if nested elements are targeted
-    if (target && target !== draggedItem) {
-        const bounding = target.getBoundingClientRect();
-        const offset = bounding.y + bounding.height / 2; // Get the vertical mid-point
-        if (e.clientY - offset > 0) {
-            target.after(draggedItem);
-        } else {
-            target.before(draggedItem);
-        }
-    }
-});
-
-list.addEventListener('dragend', function(e) {
-    // Remove the 'dragging' class
-    e.target.classList.remove('dragging');
-
-    // Re-enable hover effects on all items
-    navItems.forEach(item => {
-        item.classList.remove('dragging');
-    });
-    draggedItem.style.opacity = '';
-
-    updateNavbarOrder();
-});
-
-function updateNavbarOrder() {
-    // Log the updated order for demonstration purposes
-    console.log("Order updated:", Array.from(list.children).map(item => item.id));
-    // Implement server call or local storage update here if necessary
+    toastElement.show();
 }
-
-list.addEventListener('dragenter', function(e) {
-    e.preventDefault();
-    // Manage the insert position here, without changing styles
-});
-
-list.addEventListener('dragleave', function(e) {
-    // Optionally manage hover effect here if needed
-});
-
-list.addEventListener('drop', function(e) {
-    // Drop event logic here
-});
-
-
-
