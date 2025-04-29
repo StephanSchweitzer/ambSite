@@ -508,3 +508,136 @@ function validateEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
 }
+
+function highlightNewSubscribers() {
+    if (typeof newSubscriberIds !== 'undefined' && newSubscriberIds.length > 0) {
+        newSubscriberIds.forEach(id => {
+            const row = $(`#subscribersList tr[data-id="${id}"]`);
+            if (row.length) {
+                row.addClass('new-subscriber-row');
+                // Add the "New" badge to the row
+                const statusCell = row.find('td:nth-child(4)');
+                if (!statusCell.find('.badge-info').length) {
+                    statusCell.append(' <span class="badge badge-pill badge-info ml-2">New</span>');
+                }
+            }
+        });
+    }
+}
+
+// Enhanced filter function to include "new" filter
+function enhancedFilterSubscribers(searchText, statusFilter) {
+    // First hide all rows
+    $('#subscribersList tr').hide();
+
+    // Special case for "new" filter
+    if (statusFilter === 'new' && typeof newSubscriberIds !== 'undefined') {
+        newSubscriberIds.forEach(id => {
+            const row = $(`#subscribersList tr[data-id="${id}"]`);
+            if (row.length) {
+                // If there's search text, check if it matches
+                if (!searchText || row.text().toLowerCase().includes(searchText)) {
+                    row.show();
+                }
+            }
+        });
+        return;
+    }
+
+    // Apply regular filtering for other cases
+    $('#subscribersList tr').each(function() {
+        const rowText = $(this).text().toLowerCase();
+        const email = $(this).find('td:nth-child(2)').text().toLowerCase();
+        const active = $(this).find('td:nth-child(4)').text().includes('Active');
+
+        let statusMatch = false;
+
+        if (statusFilter === 'all') {
+            statusMatch = true;
+        } else if (statusFilter === 'active' && active) {
+            statusMatch = true;
+        } else if (statusFilter === 'inactive' && !active) {
+            statusMatch = true;
+        }
+
+        if (statusMatch && (!searchText || rowText.includes(searchText) || email.includes(searchText))) {
+            $(this).show();
+        }
+    });
+
+    // Update pagination after filtering
+    updatePagination();
+}
+
+// Modify your existing event handlers to use the enhanced filter
+// For example, replace your existing filter code with:
+$('#searchInput, #statusFilter').on('input change', function() {
+    const searchText = $('#searchInput').val().toLowerCase();
+    const statusFilter = $('#statusFilter').val();
+    enhancedFilterSubscribers(searchText, statusFilter);
+});
+
+// Add this to your document ready function
+$(document).ready(function() {
+    // Your existing code...
+
+    // Apply highlights after data is loaded
+    const originalLoadSubscribers = window.loadSubscribers || function(){};
+    window.loadSubscribers = function() {
+        originalLoadSubscribers.apply(this, arguments);
+
+        // Add a slight delay to ensure DOM is updated
+        setTimeout(highlightNewSubscribers, 500);
+    };
+
+    // Show welcome modal
+    if (typeof newSubscriberIds !== 'undefined' && newSubscriberIds.length > 0) {
+        $('#welcomeBackModal').modal('show');
+    }
+
+    // Add sort functionality
+    $('#sortFilter').on('change', function() {
+        const sortValue = $(this).val();
+        sortSubscribers(sortValue);
+    });
+});
+
+// Function to sort subscribers
+function sortSubscribers(sortType) {
+    const rows = $('#subscribersList tr').get();
+
+    rows.sort(function(a, b) {
+        let compA, compB;
+
+        if (sortType === 'email_asc' || sortType === 'email_desc') {
+            compA = $(a).find('td:nth-child(2)').text().toLowerCase();
+            compB = $(b).find('td:nth-child(2)').text().toLowerCase();
+        } else if (sortType === 'date_asc' || sortType === 'date_desc') {
+            compA = new Date($(a).find('td:nth-child(3)').attr('data-date') || 0);
+            compB = new Date($(b).find('td:nth-child(3)').attr('data-date') || 0);
+        }
+
+        // Default sorting (for invalid sort types)
+        if (compA === undefined || compB === undefined) {
+            return 0;
+        }
+
+        // Apply sort direction
+        if (sortType.endsWith('_desc')) {
+            return compB < compA ? -1 : compB > compA ? 1 : 0;
+        } else {
+            return compA < compB ? -1 : compA > compB ? 1 : 0;
+        }
+    });
+
+    // Replace current rows with sorted ones
+    $.each(rows, function(index, row) {
+        $('#subscribersList').append(row);
+    });
+
+    // Update pagination after sorting
+    updatePagination();
+
+    // Re-highlight new subscribers
+    highlightNewSubscribers();
+}
