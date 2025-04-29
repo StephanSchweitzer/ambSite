@@ -14,7 +14,7 @@ header('Content-Type: text/html; charset=UTF-8');
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
     <link rel="icon" type="image/x-icon" href="imgMid/transpLeafStack.ico">
-    <script src="js/navLinksFunctions.js" defer></script>
+    <script src="js/navLinksFunctions.js"></script>
     <script src="js/photoFunctions.js" defer></script>
     <script src="js/shopFunctions.js" defer></script>
     <link rel="stylesheet" href="ambar.css">

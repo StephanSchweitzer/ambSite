@@ -1,6 +1,18 @@
-$( window ).on( "load", function() {
+document.addEventListener('DOMContentLoaded', function() {
     loadAndInsertNavBarLinks();
 });
+
+// You could even make it more aggressive by executing immediately
+// This will run as soon as the script is loaded
+(function() {
+    // Check if document is already loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadAndInsertNavBarLinks);
+    } else {
+        // Document already loaded, execute immediately
+        loadAndInsertNavBarLinks();
+    }
+})();
 
 function loadAndInsertNavBarLinks() {
     $.ajax({
