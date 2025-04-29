@@ -10,7 +10,7 @@ if ($_SESSION["ambar"] != "connected") {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Picture Administration</title>
+    <title>Works Administration</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
@@ -541,7 +541,7 @@ if ($_SESSION["ambar"] != "connected") {
 <div class="d-flex">
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="admin-title">Picture Admin</div>
+        <div class="admin-title">Works Admin</div>
 
         <a href="mainAdmin.php" class="btn btn-outline-light btn-sm w-100 mb-3">
             <i class="fas fa-arrow-left"></i> Main Admin
@@ -598,7 +598,7 @@ if ($_SESSION["ambar"] != "connected") {
         <div class="main-content">
 
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3">Picture Administration</h1>
+                <h1 class="h3">Works Administration</h1>
                 <div class="d-flex">
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle border border-white" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">

@@ -364,13 +364,43 @@ if ($_SESSION["ambar"] != "connected") {
         }
 
         .count-card {
-            background-color: #343a40;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             padding: 15px;
             width: 30%;
             cursor: pointer;
             transition: transform 0.2s ease;
+            color: #f8f9fa;
+        }
+
+        .count-card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Specific color styling for each type of count card */
+        /* Active Projects - blue */
+        .count-card:nth-child(1) {
+            background-color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        /* Inactive Projects - yellow/orange */
+        .count-card:nth-child(2) {
+            background-color: var(--warning-color);
+            border: 1px solid var(--warning-color);
+            color: #212529; /* Dark text for better contrast on yellow */
+        }
+
+        /* Deleted Projects - red */
+        .count-card:nth-child(3) {
+            background-color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        /* Adjust text color for better contrast */
+        .count-card:nth-child(2) .count-number,
+        .count-card:nth-child(2) .count-label {
+            color: #212529;
         }
 
         .count-card:hover {
