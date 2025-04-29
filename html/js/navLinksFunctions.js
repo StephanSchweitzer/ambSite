@@ -155,10 +155,17 @@ function loadAndDisplayProjectTitles() {
 }
 
 // Newsletter functions
+
 function toggleNewsLetterSignUp(event) {
     event.preventDefault();
     var newsletterForm = $("#newsletterSignUp");
-    newsletterForm.slideToggle();
+    newsletterForm.slideToggle(function() {
+        // Check if the form is visible after toggling
+        if (newsletterForm.is(":visible")) {
+            // Set focus on the email input field
+            $("#newsletterEmail").focus();
+        }
+    });
 }
 
 function sendEmailToDB() {
