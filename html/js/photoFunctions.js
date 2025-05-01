@@ -237,6 +237,8 @@ function getProjectsAndWorks(partOfThePage) {
 // Add this to photoFunctions.js
 function loadProjectSection(projectSectionId) {
     // Create and show a fixed loading overlay
+    ensureDropdownOpen('selectProjectCategories');
+
     const loadingOverlay = $('<div>').addClass('fullpage-loading')
         .html('<div class="loading-spinner"></div><p>Loading images...</p>');
     $('body').append(loadingOverlay);

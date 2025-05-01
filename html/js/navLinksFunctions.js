@@ -164,21 +164,25 @@ function loadAndDisplayProjectTitles() {
                     .attr('href', '#' + sectionId)
                     .text(title);
 
-                // Modified click handler to use the new loading function
+                // Modified click handler that keeps dropdown open
                 link.on('click', function(e) {
                     e.preventDefault(); // Prevent default jump behavior
-
-                    // Close the dropdown menu
-                    $("#selectProjectCategories").slideUp();
-                    $("#breaksForTitles").slideUp();
+                    e.stopPropagation(); // Prevent bubbling up to close dropdown
 
                     // Load the specific section with proper loading indicator
                     if (typeof window.loadProjectSection === 'function') {
                         window.loadProjectSection(sectionId);
+
+                        // Force dropdown to stay open
+                        setTimeout(function() {
+                            window.ensureDropdownOpen('selectProjectCategories');
+                        }, 100);
                     } else {
-                        // Fallback if function doesn't exist
+                        // Fallback
                         window.getProjectsAndWorks(sectionId);
                     }
+
+                    return false; // Prevent event propagation
                 });
 
                 container.append(link, '<br><br>');
@@ -189,6 +193,7 @@ function loadAndDisplayProjectTitles() {
         }
     });
 }
+
 
 // Newsletter functions
 function toggleNewsLetterSignUp(event) {
@@ -241,8 +246,17 @@ function validateEmail(email) {
 
 function toggleSublinks(event, sublinksId) {
     event.preventDefault();
+    event.stopPropagation(); // Prevent event bubbling
     var sublinks = $("#" + sublinksId);
-    // Properly toggle sublinks using slideToggle like the original
     sublinks.slideToggle();
     $("#breaksForTitles").slideToggle();
+}
+
+// Add this new function to photoFunctions.js
+function ensureDropdownOpen(sublinksId) {
+    var sublinks = $("#" + sublinksId);
+    if (!sublinks.is(":visible")) {
+        sublinks.show();
+        $("#breaksForTitles").show();
+    }
 }
