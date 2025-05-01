@@ -3,112 +3,62 @@ var currentImageIndex = 0; // Global variable to track the current image index
 let images = []; // Global array to store image URLs
 let startX, startY;
 let isPinching = false;
-var imageIsRows = ''; //img-containerForRows
-var projectIsRows = ''; //projectWorksForRows use this as the variable to put them back in rows
+var imageIsRows = ''; //img-containerForRows - keep as empty string for single column
+var projectIsRows = ''; //projectWorksForRows - keep as empty string for single column
 var isMobile = false;
 var zIndexCounter = 22;
+var scrollPosition = 0;
 
-$(window).on("load", function () {
-
-    //this fixes the width of all thumbnails
-
-    // if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) )
-    // {
-    //   $('#popUpImage').removeClass('popUpImage')
-    //   $('#popUpImage').addClass('popUpImageMobile')
-    //   $('#imagesAndContent').removeClass('imagesAndContent')
-    //   $('#imagesAndContent').addClass('imagesAndContentMobile')
-    //   $('#blockForHeader').removeClass('blockForHeader')
-    //   $('#blockForHeader').addClass('blockForHeaderMobile')
-    //   $('#whiteForTheTopMaybe').addClass('headerNoMove3')
-    //   $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-    //   $('#whiteForTheTop').addClass('headerNoMove3')
-    //   $('#navLinksBox').removeClass('navLinksBox')
-    //   $('#navLinksBox').addClass('navLinksBoxMobile')
-    //   $('#selectProjectCategories').addClass('hiddenLinkStuff')
-    //   $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
-    // }
-
-    $(document).ready(function () {
-        $('#bigPicModal').on('click', function (event) {
-            // Check if the clicked element is not the title, description, or image
-            if (!$(event.target).closest('#popUpImage').length) {
-                // If the clicked area is not the title, description, or image, close the modal
-                $('#bigPicModal').modal('hide');
-            }
-        });
-    });
-
-
-    $('.size12020').each(function (index, element) {
+$(window).on("load", function() {
+    // Fix width of all thumbnails
+    $('.size12020, .size12021, .size12022').each(function(index, element) {
         let theWidth = this.width;
-        $(this).closest('.holdForNow').css("min-width", (theWidth - 1) + "px");
-        $(this).closest('.holdPhotoandBlack').css("min-width", (theWidth - 1) + "px");
-        //this corrects the source of the larger images
-        //$(this).removeClass('invisible')
-        let idOfForm = "#20" + $(this).attr("id") + "IMG";
-        console.log(idOfForm);
+        $(this).closest('.holdForNow, .holdForNowNew').css("min-width", (theWidth - 1) + "px");
+        $(this).closest('.holdPhotoandBlack, .holdPhotoandBlackNew').css("min-width", (theWidth - 1) + "px");
+
+        // Correct the source of the larger images
+        let idOfForm = "#" + ($(this).hasClass('size12020') ? '20' :
+                $(this).hasClass('size12021') ? '21' : '22') +
+            $(this).attr("id") + "IMG";
         let imgPath = $(idOfForm).attr("sourceForJS");
-        console.log(imgPath);
         $(idOfForm).attr("src", imgPath);
     });
 
-    $('.size12020New').each(function (index, element) {
-        let theWidth = this.width;
-        $(this).closest('.holdForNowNew').css("min-width", (theWidth - 1) + "px");
-        $(this).closest('.holdPhotoandBlackNew').css("min-width", (theWidth - 1) + "px");
-        //this corrects the source of the larger images
-        //$(this).removeClass('invisible')
-        let idOfForm = "#20" + $(this).attr("id") + "IMG";
-        console.log(idOfForm);
-        let imgPath = $(idOfForm).attr("sourceForJS");
-        console.log(imgPath);
-        $(idOfForm).attr("src", imgPath);
-    });
+    // Make invisible elements visible with a delay for text
+    $('.invisible').removeClass('invisible');
 
-    $('.size12021').each(function (index, element) {
-        let theWidth = this.width;
-        $(this).closest('.holdForNow').css("min-width", (theWidth - 1) + "px");
-        $(this).closest('.holdPhotoandBlack').css("min-width", (theWidth - 1) + "px");
-        //this corrects the source of the larger images
-        //$(this).removeClass('invisible')
-        let idOfForm = "#21" + $(this).attr("id") + "IMG";
-        console.log(idOfForm);
-        let imgPath = $(idOfForm).attr("sourceForJS");
-        console.log(imgPath);
-        $(idOfForm).attr("src", imgPath);
-    });
-
-    $('.size12022').each(function (index, element) {
-        let theWidth = this.width;
-        $(this).closest('.holdForNow').css("min-width", (theWidth - 1) + "px");
-        $(this).closest('.holdPhotoandBlack').css("min-width", (theWidth - 1) + "px");
-        //this corrects the source of the larger images
-        //$(this).removeClass('invisible')
-        let idOfForm = "#22" + $(this).attr("id") + "IMG";
-        console.log(idOfForm);
-        let imgPath = $(idOfForm).attr("sourceForJS");
-        console.log(imgPath);
-        $(idOfForm).attr("src", imgPath);
-    });
-
-    $('.invisible').each(function (index, element) {
-        $(this).removeClass('invisible')
-    });
-
-    setTimeout(function () {
-        $('.invisibleText').each(function (index, element) {
-            $(this).removeClass('invisibleText')
-        });
+    setTimeout(function() {
+        $('.invisibleText').removeClass('invisibleText');
     }, 500);
 
     createAndShowSideBarLinks();
+});
 
-})
+$(document).ready(function() {
+    // Setup modal for click outside to close
+    $('#bigPicModal').on('click', function(event) {
+        if (!$(event.target).closest('#popUpImage, .modal-nav-arrows, .nav-arrow').length) {
+            $('#bigPicModal').modal('hide');
+        }
+    });
 
-$(document).ready(function () {
+    // Modal scroll management
+    $('.modal').on('hidden.bs.modal', function() {
+        $('body').removeClass('no-scroll').css('top', '');
+        $(window).scrollTop(scrollPosition);
+        $('#modifyZIndex').removeClass('headerNoMove2').addClass('headerNoMove');
+        $('#whiteForTheTop').removeClass('headerNoMove3').addClass('whiteComeAndGo');
+    });
 
-    document.getElementById('popUpImage').addEventListener('click', function (event) {
+    $('.modal').on('show.bs.modal', function() {
+        scrollPosition = $(window).scrollTop();
+        $('body').addClass('no-scroll').css('top', -scrollPosition);
+        $('#modifyZIndex').removeClass('headerNoMove').addClass('headerNoMove2');
+        $('#whiteForTheTop').removeClass('whiteComeAndGo').addClass('headerNoMove3');
+    });
+
+    // Image modal click handlers
+    document.getElementById('popUpImage').addEventListener('click', function(event) {
         if (isPinching) {
             return;
         }
@@ -124,16 +74,18 @@ $(document).ready(function () {
         }
     });
 
-    document.addEventListener('keydown', function (event) {
-        if (event.keyCode === 37) { // Left arrow key
-            changeImage(-1); // Go to the previous image
-        } else if (event.keyCode === 39) { // Right arrow key
-            changeImage(1); // Go to the next image
+    document.addEventListener('keydown', function(event) {
+        if ($('#bigPicModal').hasClass('show')) {
+            if (event.keyCode === 37) { // Left arrow key
+                changeImage(-1); // Go to the previous image
+            } else if (event.keyCode === 39) { // Right arrow key
+                changeImage(1); // Go to the next image
+            }
         }
     });
 
-
-    document.getElementById('popUpImage').addEventListener('touchstart', function (e) {
+    // Touch events for mobile
+    document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
         isPinching = false;
         if (e.touches.length === 1) {
             this.style.transition = 'none';  // Disable transitions for immediate feedback
@@ -145,7 +97,7 @@ $(document).ready(function () {
         }
     }, false);
 
-    document.getElementById('popUpImage').addEventListener('touchmove', function (e) {
+    document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
         if (e.touches.length === 2) {
             // Continue to handle pinch gesture
             isPinching = true;
@@ -164,7 +116,7 @@ $(document).ready(function () {
         }
     }, false);
 
-    document.getElementById('popUpImage').addEventListener('touchend', function (e) {
+    document.getElementById('popUpImage').addEventListener('touchend', function(e) {
         this.style.transition = 'transform 0.3s ease';  // Re-enable transitions
         if (!isPinching && e.changedTouches.length === 1) {
             let endX = e.changedTouches[0].clientX;
@@ -186,26 +138,23 @@ $(document).ready(function () {
         }
     }, false);
 
+    // Add arrow navigation
+    const prevArrow = document.getElementById('prevImage');
+    const nextArrow = document.getElementById('nextImage');
 
-    $('.modal').on('hidden.bs.modal', function () {
-        $('body').removeClass('no-scroll').css('top', '');
-        $(window).scrollTop(scrollPosition);
-        $('#modifyZIndex').removeClass('headerNoMove2')
-        $('#modifyZIndex').addClass('headerNoMove')
-        $('#whiteForTheTop').removeClass('headerNoMove3')
-        $('#whiteForTheTop').addClass('whiteComeAndGo')
-    })
+    if (prevArrow) {
+        prevArrow.addEventListener('click', function() {
+            changeImage(-1);
+        });
+    }
 
-    $('.modal').on('show.bs.modal', function () {
-        scrollPosition = $(window).scrollTop();
-        $('body').addClass('no-scroll').css('top', -scrollPosition);
-        $('#modifyZIndex').removeClass('headerNoMove')
-        $('#modifyZIndex').addClass('headerNoMove2')
-        $('#whiteForTheTop').removeClass('whiteComeAndGo')
-        $('#whiteForTheTop').addClass('headerNoMove3')
-    })
+    if (nextArrow) {
+        nextArrow.addEventListener('click', function() {
+            changeImage(1);
+        });
+    }
 
-
+    // Determine page type by route and load appropriate content
     var path = window.location.pathname;
 
     if (path === '/shop') {
@@ -218,114 +167,48 @@ $(document).ready(function () {
         openCurrentProject();
     } else {
         getCarousel();
-
     }
 
-
+    // Check for mobile devices and adjust styling
     if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        $('#popUpImage').removeClass('popUpImage')
-        $('#popUpImage').addClass('popUpImageMobile')
-        $('#imagesAndContent').removeClass('imagesAndContent')
-        $('#imagesAndContent').addClass('imagesAndContentMobile')
-        $('#blockForHeader').removeClass('blockForHeader')
-        $('#blockForHeader').addClass('blockForHeaderMobile')
-        $('#whiteForTheTopMaybe').addClass('headerNoMove3')
+        $('#popUpImage').removeClass('popUpImage').addClass('popUpImageMobile');
+        $('#imagesAndContent').removeClass('imagesAndContent').addClass('imagesAndContentMobile');
+        $('#blockForHeader').removeClass('blockForHeader').addClass('blockForHeaderMobile');
+        $('#whiteForTheTopMaybe').addClass('headerNoMove3');
         $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-        $('#whiteForTheTop').addClass('headerNoMove3')
-        $('#navLinksBox').removeClass('navLinksBox')
-        $('#navLinksBox').addClass('navLinksBoxMobile')
-        $('#homePageCarousel').removeClass('homePageCarousel')
-        $('#homePageCarousel').addClass('homePageCarouselMobile')
-        $('#selectProjectCategories').removeClass('hiddenLinkStuff')
-        $('#selectProjectCategories').addClass('hiddenLinkStuffMobile')
-        $('#ambName').removeClass('ambarNamePic')
-        $('#ambName').addClass('ambarNamePicMobile')
-        imageIsRows = ''
-        projectIsRows = ''
+        $('#whiteForTheTop').addClass('headerNoMove3');
+        $('#navLinksBox').removeClass('navLinksBox').addClass('navLinksBoxMobile');
+        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
+        $('#selectProjectCategories').removeClass('hiddenLinkStuff').addClass('hiddenLinkStuffMobile');
+        $('#ambName').removeClass('ambarNamePic').addClass('ambarNamePicMobile');
+
+        imageIsRows = '';
+        projectIsRows = '';
         isMobile = true;
 
-
+        // Improve tap targets for mobile
         const allLinks = document.querySelectorAll('a');
-
         allLinks.forEach(link => {
             link.style.padding = '.05em';
             link.style.margin = '-.05em';
         });
 
         const genreLinks = document.querySelectorAll('a.mainLinkGenres');
-
         genreLinks.forEach(link => {
             link.style.padding = '.7em';
             link.style.margin = '-.7em';
         });
-
     }
-
-
 });
-
 
 function createAndShowSideBarLinks() {
     return;
-    // $.ajax({
-    //   url: 'actions/sidebarAPI.php',
-    //   method: 'GET',
-    //   dataType: 'json',
-    //   success: function(response) {
-    //     orderSideBar(response);
-    //   },
-    //   error: function(xhr, status, error) {
-    //     console.log('Error:', error);
-    //   }
-    // });
-}
-
-function orderSideBar(sideBarInformation) {
-
+    // Keep empty as per original code
 }
 
 function accessPictureForm(divName) {
     let newDiveName = '#' + divName;
     $(newDiveName).modal('show');
-    let pic1 = document.getElementById('leafTwist');
-}
-
-function test() {
-    $("#photoModal").modal('show');
-}
-
-function toggleSublinks(event, sublinksId) {
-    event.preventDefault();
-    var sublinks = $("#" + sublinksId);
-    //$(".hiddenLinkStuff").not(sublinks).slideUp();
-    sublinks.slideToggle();
-    $("#breaksForTitles").slideToggle();
-}
-
-function getWorksInformation(genre) {
-    //pageNumber = genre;
-    genre = {
-        theYear: genre
-    }
-
-    $.ajax({
-        url: 'actions/picturesAPI.php',
-        method: 'GET',
-        data: genre,
-        dataType: 'json',
-        success: function (response) {
-            console.log(response);
-            insertWorks(response);
-        },
-        error: function (xhr, status, error) {
-            console.log('Error:', error);
-        }
-    });
-
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function getProjectsAndWorks(partOfThePage) {
@@ -340,37 +223,176 @@ function getProjectsAndWorks(partOfThePage) {
         type: "GET",
         data: {'activity': 'active'},
         dataType: "json",
-        success: function (data) {
+        success: function(data) {
             makeProjectCards(data, partOfThePage);
-
         },
-        error: function () {
+        error: function() {
             console.log("An error occurred.");
         },
     });
 
-    //jumpToSection(partOfThePage);
-
     selectWorksAreShown = true;
 }
 
+// Add this to photoFunctions.js
+function loadProjectSection(projectSectionId) {
+    // Create and show a fixed loading overlay
+    const loadingOverlay = $('<div>').addClass('fullpage-loading')
+        .html('<div class="loading-spinner"></div><p>Loading images...</p>');
+    $('body').append(loadingOverlay);
+
+    // Make sure projects are loaded
+    if (!selectWorksAreShown) {
+        // If projects aren't loaded, load them first
+        $.ajax({
+            url: "../actions/projectsAPI.php",
+            type: "GET",
+            data: {'activity': 'active'},
+            dataType: "json",
+            success: function(data) {
+                makeProjectCards(data, null); // Load projects but don't scroll yet
+
+                // After projects load, wait for images and then scroll
+                preloadVisibleImagesAndScroll(projectSectionId);
+            },
+            error: function(xhr, status, error) {
+                console.log("Error loading projects:", error);
+                $('.fullpage-loading').remove();
+            }
+        });
+    } else {
+        // Projects already loaded, just preload visible images and scroll
+        preloadVisibleImagesAndScroll(projectSectionId);
+    }
+}
+
+// Helper function to preload images and scroll
+function preloadVisibleImagesAndScroll(projectSectionId) {
+    const targetSection = document.getElementById(projectSectionId);
+    if (!targetSection) {
+        $('.fullpage-loading').remove();
+        return;
+    }
+
+    // Get all unloaded images in the document
+    const lazyImages = document.querySelectorAll('img[data-src]');
+
+    // If no images need loading, scroll immediately
+    if (lazyImages.length === 0) {
+        $('.fullpage-loading').remove();
+        smoothScrollTo(projectSectionId);
+        return;
+    }
+
+    // Create a counter to track loaded images
+    let loadedCount = 0;
+    let errorCount = 0;
+    const totalImages = lazyImages.length;
+
+    // Update loading message
+    $('.fullpage-loading p').text(`Loading images (0/${totalImages})...`);
+
+    // Set a safety timeout in case some images never load
+    const safetyTimeout = setTimeout(() => {
+        // Force finish loading after 10 seconds if not all images loaded
+        if (loadedCount + errorCount < totalImages) {
+            console.warn(`Timed out waiting for all images. Loaded: ${loadedCount}, Errors: ${errorCount}, Total: ${totalImages}`);
+
+            // Force load remaining images
+            lazyImages.forEach(img => {
+                if (!img.classList.contains('loaded') && !img.classList.contains('error')) {
+                    img.src = img.dataset.src || '';
+                    img.removeAttribute('data-src');
+                    img.classList.add('loaded');
+                }
+            });
+
+            // Remove overlay and scroll
+            $('.fullpage-loading').fadeOut(300, function() {
+                $(this).remove();
+                smoothScrollTo(projectSectionId);
+            });
+        }
+    }, 10000); // 10 second timeout
+
+    // Function to check if loading is complete
+    function checkComplete() {
+        if (loadedCount + errorCount >= totalImages) {
+            clearTimeout(safetyTimeout);
+
+            // All images processed, remove overlay and scroll
+            $('.fullpage-loading').fadeOut(300, function() {
+                $(this).remove();
+                smoothScrollTo(projectSectionId);
+            });
+        } else {
+            // Update progress message
+            $('.fullpage-loading p').text(`Loading images (${loadedCount + errorCount}/${totalImages})...`);
+        }
+    }
+
+    // Load all images with proper error handling
+    lazyImages.forEach(img => {
+        // Skip if already loaded
+        if (img.classList.contains('loaded') || img.classList.contains('error')) {
+            loadedCount++;
+            checkComplete();
+            return;
+        }
+
+        const newImg = new Image();
+
+        newImg.onload = function() {
+            // Replace data-src with actual src
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            img.classList.add('loaded');
+            loadedCount++;
+            checkComplete();
+        };
+
+        newImg.onerror = function() {
+            console.error('Failed to load image:', img.dataset.src);
+            // Mark as error but still show something
+            img.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22232%22%20height%3D%22131%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20232%20131%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_188f638d5a2%20text%20%7B%20fill%3A%236c757d%3Bfont-family%3Avar%28--font-primary%29%3Bfont-size%3A12px%3Bfont-weight%3Avar%28--font-weight-light%29%3B%20%7D%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_188f638d5a2%22%3E%3Crect%20width%3D%22232%22%20height%3D%22131%22%20fill%3D%22%23f5f5f5%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2288.5%22%20y%3D%2270.6%22%3EImage%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E';
+            img.removeAttribute('data-src');
+            img.classList.add('error');
+            errorCount++;
+            checkComplete();
+        };
+
+        // Start loading (with a slight delay between images to prevent overloading)
+        setTimeout(() => {
+            newImg.src = img.dataset.src;
+        }, 50 * lazyImages.indexOf(img)); // Stagger loading slightly
+    });
+}
+
+// Smooth scrolling function
+function smoothScrollTo(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    console.log("scrolling now")
+
+    const headerOffset = 100;
+    const elementPosition = element.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+    window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+    });
+}
+
+
+// Modify the jumpToSection function in photoFunctions.js
 function jumpToSection(partOfThePage) {
     if (partOfThePage != null) {
-        console.log('Part of the page:', partOfThePage);
-
-        var element = document.getElementById(partOfThePage);
-        console.log('Element:', element);
-
-        if (element) {
-            element.scrollIntoView();
-        } else {
-            console.error(`Element with ID '${partOfThePage}' not found.`);
-        }
+        loadProjectSection(partOfThePage);
     }
 }
 
 function fetchWorkIdsForProject(id) {
-
     return $.ajax({
         url: '../actions/worksOfProjectsAPI.php',
         type: 'GET',
@@ -379,19 +401,41 @@ function fetchWorkIdsForProject(id) {
     });
 }
 
-function getWorkFromId(id) {
+function createProjectElement(project) {
+    let title = project.title;
+    let description = project.description ? project.description.replace(/\n/g, '<br>') : '';
 
-    return $.ajax({
-        url: '../actions/worksOfProjectsAPI.php',
-        type: 'GET',
-        data: {'projectId': id},
-        dataType: 'json'
+    // Create project wrapper with the SINGLE column layout
+    let projectDiv = $('<div>').addClass('project').attr({
+        'alt': title,
+        'id': 'projectSection' + title.trim()
+    }).css({
+        'border': '0px',
+        'text-align': 'center'
     });
+
+    // Create header section
+    let titleAndDescriptionDiv = $('<div>').addClass('project-header');
+    let insertTitle = $('<h2>').text(title).addClass('project-title');
+    let insertDescription = $('<p>').html(description).addClass('project-description');
+
+    titleAndDescriptionDiv.append(insertTitle, insertDescription);
+
+    // Create works container with SINGLE column layout
+    let worksOfProjectDiv = $('<div>').addClass('projectWorks');
+
+    // Assemble project
+    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv);
+
+    return projectDiv;
 }
 
 function makeProjectCards(projects, partOfThePage) {
     $('#imagesAndContent').empty();
     images.length = 0;
+
+    // Show loading indicator
+    $('#imagesAndContent').html('<div class="loading-container"><div class="loading-spinner"></div><p>Loading projects...</p></div>');
 
     let projectPromises = projects.map(project => {
         return fetchWorkIdsForProject(project.id).then(workIds => {
@@ -402,6 +446,8 @@ function makeProjectCards(projects, partOfThePage) {
     });
 
     Promise.all(projectPromises).then(results => {
+        $('#imagesAndContent').empty();
+
         results.forEach(({project, allWorksForProject}) => {
             let mainProj = createProjectElement(project);
             allWorksForProject.forEach(information => {
@@ -412,91 +458,114 @@ function makeProjectCards(projects, partOfThePage) {
                 mainProj.append('<div class="work-separator" id="seperator' + project.title + '"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
             }
             $('#imagesAndContent').append(mainProj);
-            console.log(projects, project.title)
         });
+
+        // Enable lazy loading
+        enableLazyLoading();
+
+        // Jump to specific section if needed
         jumpToSection(partOfThePage);
-        //below is where the code to initialize the little window for the YouTube video
-        //openFlowerVideo();
+
+        // Update browser history and title
         history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
         document.title = 'Select Works - Ambar Velasco';
     }).catch(error => {
         console.error('Error:', error);
+        $('#imagesAndContent').html('<div class="error-message"><p>Sorry, there was a problem loading projects. Please try again later.</p></div>');
     });
 }
 
+// Enable lazy loading for images
+// Add this to enhance the enableLazyLoading function
+function enableLazyLoading() {
+    // First, handle any images that should be immediately visible
+    const immediateLoadImages = document.querySelectorAll('img[data-src]:not(.lazy-defer)');
+    immediateLoadImages.forEach(img => {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        img.classList.add('loaded');
+    });
 
-function openFlowerVideo() {
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
-        let videoLink =
-            `
-      <br><br>
-      <iframe width="100%" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      `;
+    // Then set up lazy loading for the rest
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        img.classList.add('loaded');
+                        observer.unobserve(img);
+                    }
+                }
+            });
+        }, { rootMargin: '200px 0px' }); // Larger margin to start loading earlier
 
-        flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
-
+        document.querySelectorAll('img[data-src].lazy-defer').forEach(img => {
+            imageObserver.observe(img);
+        });
     } else {
-        let flowerDivider = document.getElementById('seperatorIn Conversation with a Flower');
-        let videoLink =
-            `
-      <br>
-      <iframe width="750" height="375" src="https://www.youtube.com/embed/P5z_o8lBbGE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      `;
-        flowerDivider.insertAdjacentHTML('beforebegin', videoLink);
-
+        // Fallback for browsers without IntersectionObserver
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            img.classList.add('loaded');
+        });
     }
-}
-
-
-function createProjectElement(project) {
-    let worksOfProjectDiv = $('<div>').addClass('projectWorks ' + projectIsRows);
-    let titleAndDescriptionDiv = $('<div>')
-    let title = project.title;
-    let description = project.description.replace(/\n/g, '<br>');
-    let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
-    let insertDescription = $('<p>').html(description).css({
-        'color': '#71797E', // Dark grey color
-        'margin-bottom': '40px' // Margin bottom
-    });
-    //decomment below if you want to redisplay the title and description of projects
-    //titleAndDescriptionDiv.append(insertTitle, insertDescription);
-    let projectDiv = $('<div>').addClass('project').attr({
-        'alt': title,
-        'id': 'projectSection' + title.trim()
-    }).css({'border': '0px', 'text-align': 'center'});
-    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
-    return projectDiv;
 }
 
 function createWorkCardElement(information) {
     let imageURL = "baseImages/" + information.location;
-    let thumbnailURL = "baseImages/" + information.location; //thumbnails the real one is
+    let thumbnailURL = "baseImages/" + information.location;
     let title = information.name;
-    let description = information.firstDescription.replace(/\n/g, '<br>');
+    let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
     let long_description = information.long_description;
 
+    // Create image info object for the modal
     let imageInfo = {
         url: imageURL,
         title: title,
         description: description,
         long_description: long_description
     };
-    //decomment below for name and description to show below the painting
-    // let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-    // let insertDescription = $('<p>').html(description);
-    let insertTitle = '';
-    let insertDescription = '';
-    let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').attr('src', thumbnailURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
+
+    // Create image container
+    let imageContainer = $('<div>').addClass('img-container');
+
+    // Create the image element with data-src for lazy loading
+    let imgElement = $('<img>')
+        .attr({
+            'data-src': thumbnailURL,
+            'src': 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', // Tiny placeholder
+            'alt': 'Image of ' + title,
+            'title': title
+        });
+
+    imageContainer.append(imgElement);
+
+    // Create overlay that shows on hover
+    let overlay = $('<div>').addClass('img-overlay');
+    let overlayTitle = $('<h3>').text(title).addClass('overlay-title');
+    overlay.append(overlayTitle);
+    imageContainer.append(overlay);
+
+    // Create card
     let card = $('<div>').addClass('card').attr('alt', title).css({
         'border': '0px',
         'text-align': 'center'
-    }).append(imageContainer, insertTitle, insertDescription);
-    card.click(() => makeBigPic(imageURL));
+    }).append(imageContainer);
+
+    // Add click handler
+    card.on('click', function() {
+        makeBigPic(imageURL);
+    });
+
+    // Add to global images array
     images.push(imageInfo);
+
     return card;
 }
-
 
 function getWorksInfoFromIdsArray(projectIds) {
     return $.ajax({
@@ -504,7 +573,6 @@ function getWorksInfoFromIdsArray(projectIds) {
         method: 'GET',
         data: {'projectIds': projectIds},
         dataType: 'json',
-
     });
 }
 
@@ -518,10 +586,10 @@ function getCarousel() {
         method: 'GET',
         data: genre,
         dataType: 'json',
-        success: function (response) {
+        success: function(response) {
             createCarousel(response);
         },
-        error: function (xhr, status, error) {
+        error: function(xhr, status, error) {
             console.log('Error:', error);
         }
     });
@@ -529,15 +597,19 @@ function getCarousel() {
 
 function createCarousel(informations) {
     images.length = 0;
-    carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
-  <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
-    active = 'active';
 
-    informations.forEach(function (information) {
+    // Create the carousel structure
+    let carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
+        <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
+
+    let active = 'active';
+
+    // Add images to carousel
+    informations.forEach(function(information) {
         let imageURL = "baseImages/" + information.location;
         let thumbnailURL = "thumbnails/" + information.location;
         let title = information.name;
-        let description = information.firstDescription.replace(/\n/g, '<br>');
+        let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
 
         let imageInfo = {
             url: imageURL,
@@ -545,88 +617,50 @@ function createCarousel(informations) {
             description: description
         };
 
-        let thisImage = `<div id="` + information.name + `" class="carousel-item ` + active + ` " >
-    <img class="d-block carousel-pic" src="` + thumbnailURL + `" onclick="makeBigPic('` + imageURL + `')">
-    </div>`;
+        let thisImage = `<div id="${information.name}" class="carousel-item ${active}" >
+            <img class="d-block carousel-pic" src="${thumbnailURL}" onclick="makeBigPic('${imageURL}')">
+            </div>`;
+
         carouselHtml += thisImage;
         active = '';
         images.push(imageInfo);
     });
 
+    // Add carousel controls
     carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
-  <span class="sr-only">Previous</span>
-  </a>
-  <a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">
-  <span class="sr-only">Next</span>
-  </a>
-  </div>`
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="sr-only">Previous</span>
+        </a>
+        <a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="sr-only">Next</span>
+        </a>
+        </div>`;
 
     document.getElementById('imagesAndContent').innerHTML = carouselHtml;
 
-    //$('#homePageCarousel').carousel();
-
     $('#homePageCarousel').carousel({
         interval: 3000
-    })
-
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        $('#homePageCarousel').removeClass('homePageCarousel')
-        $('#homePageCarousel').addClass('homePageCarouselMobile')
-    }
-
-}
-
-function insertWorks(informations) {
-    $('#imagesAndContent').empty();
-
-    informations.forEach(function (information, index) { // 'array' removed
-        let imageURL = "baseImages/" + information.location;
-        let title = information.name;
-        let description = information.firstDescription;
-
-        let card = $('<div>').addClass('card').attr('alt', title).css({'border': '0px', 'text-align': 'center'});
-
-        let imageContainer = $('<div>').addClass('img-container');
-        let image = $('<img>').attr('src', imageURL).attr('alt', 'Image of ' + title);
-        image.appendTo(imageContainer);
-
-        let insertTitle = $('<p>').text(title);
-        let formattedDescription = description.replace(/\n/g, '<br>');
-        let insertDescription = $('<p>').html(formattedDescription);
-
-        card.append(imageContainer, insertTitle, insertDescription);
-
-        // Check if this is not the last element in the array
-        if (index < informations.length - 1) {
-            card.append('<hr class="work-separator" />'); // Append the separator
-        }
-
-        card.click(function () {
-            makeBigPic(imageURL);
-        });
-
-        $('#imagesAndContent').append(card);
     });
-}
 
-// function makeBigPic(imageURL) 
-// {
-//     currentIndex = images.indexOf(imageURL);
-//     updateLightboxImage();
-//     document.getElementById('lightbox').style.display = 'block';
-// }
+    if (isMobile) {
+        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
+    }
+}
 
 function makeBigPic(clickedImageUrl) {
     const spinner = document.getElementById('spinner');
-    spinner.style.display = 'block';
+    if (spinner) spinner.style.display = 'block';
 
+    // Find the index of the clicked image in our images array
     currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
     let currentImage = images[currentImageIndex];
     const imgElement = document.getElementById('popUpImage');
 
+    // Clear current image while loading
     imgElement.src = '';
 
-    // Show modal first before loading new content
+    // Show modal first with loading spinner
     $('#bigPicModal').modal('show');
 
     // Force scroll to top immediately
@@ -636,30 +670,25 @@ function makeBigPic(clickedImageUrl) {
     imgElement.src = currentImage.url;
 
     // Handle image loading
-    imgElement.onload = function () {
-        spinner.style.display = 'none';
+    imgElement.onload = function() {
+        if (spinner) spinner.style.display = 'none';
         document.getElementById('imageTitle').textContent = currentImage.title;
         document.getElementById('imageDescription').innerHTML = currentImage.description;
+    };
 
-        if (isMobile) {
-            //document.getElementById('imageDescription').innerHTML += "<br> <br>" + currentImage.long_description;
-        }
-
+    // Handle load errors
+    imgElement.onerror = function() {
+        if (spinner) spinner.style.display = 'none';
+        console.error('Failed to load image:', currentImage.url);
+        document.getElementById('imageTitle').textContent = 'Image failed to load';
+        document.getElementById('imageDescription').innerHTML = 'Sorry, there was a problem loading this image.';
     };
 }
 
-
-function preloadImage(url) {
-    const img = new Image();
-    img.src = url;
-}
-
 function changeImage(step) {
-    console.log(currentImageIndex, step)
     currentImageIndex += step;
 
     if (currentImageIndex >= images.length) {
-        console.log("bigger")
         currentImageIndex = 0;
     } else if (currentImageIndex < 0) {
         currentImageIndex = images.length - 1;
@@ -671,7 +700,7 @@ function changeImage(step) {
     document.getElementById('imageDescription').innerHTML = '';
 
     // Show the loading spinner
-    spinner.style.display = 'block';
+    if (spinner) spinner.style.display = 'block';
 
     // Clear previous image and text
     imgElement.style.transform = '';
@@ -682,40 +711,27 @@ function changeImage(step) {
     imgElement.src = newImageSrc;
 
     // Wait for the image to load
-    imgElement.onload = function () {
+    imgElement.onload = function() {
         // Hide the loading spinner
-        spinner.style.display = 'none';
+        if (spinner) spinner.style.display = 'none';
 
         // Update the text once the image has loaded
         document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
         document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
-
-        // const prevImageIndex = (currentImageIndex - 1 + images.length) % images.length;
-        // const nextImageIndex = (currentImageIndex + 1) % images.length;
-        //
-        // preloadImage(images[prevImageIndex].url);
-        // preloadImage(images[nextImageIndex].url);
     };
-}
 
-
-function getDistanceBetweenTouches(touches) {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-
-function openModalWithImage(imageIndex) {
-
-    currentImageIndex = imageIndex;
-    document.getElementById('popUpImage').src = images[imageIndex];
-    $('#bigPicModal').modal('show');
+    // Handle load errors
+    imgElement.onerror = function() {
+        if (spinner) spinner.style.display = 'none';
+        console.error('Failed to load image:', newImageSrc);
+        document.getElementById('imageTitle').textContent = 'Image failed to load';
+        document.getElementById('imageDescription').innerHTML = 'Sorry, there was a problem loading this image.';
+    };
 }
 
 function fetchCurrentAboutMe() {
     return $.ajax({
-        url: '../actions/aboutMeAPI.php', // Replace with the correct path to your PHP script
+        url: '../actions/aboutMeAPI.php',
         type: 'GET',
         dataType: 'json',
     });
@@ -723,74 +739,70 @@ function fetchCurrentAboutMe() {
 
 async function openInfo() {
     $('#imagesAndContent').css('padding-top', '50px');
-    const aboutMe = await fetchCurrentAboutMe();
-    let description = aboutMe.description.replace(/\n/g, "<br>");
-    let imageLocation = aboutMe.pictureLocation;
 
-    let infoflex = 'infoflex';
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        infoflex = 'infoflexMobile';
+    try {
+        const aboutMe = await fetchCurrentAboutMe();
+        let description = aboutMe.description ? aboutMe.description.replace(/\n/g, "<br>") : '';
+        let imageLocation = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
 
-        document.getElementById('imagesAndContent').innerHTML = `
-      <div class="` + infoflex + `">
+        let infoflex = 'infoflex';
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            infoflex = 'infoflexMobile';
 
-      <img src="`+ imageLocation + `" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
+            document.getElementById('imagesAndContent').innerHTML = `
+          <div class="${infoflex}">
+            <img src="${imageLocation}" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
+            <div class="iconsRow" style="width:100%"></div>
+            <p style="">${description}</p>
+            <br>
+          </div>
+          `;
 
-      <div class="iconsRow" style="width:100%">
-           </div>
-      <p style="">
-      ` + description + `
-      </p>
-      <br>
-      </div>
-      `;
+        } else if (window.matchMedia('(max-width: 1206px)').matches) {
+            infoflex = 'infoflexMobile';
 
-    } else if (window.matchMedia('(max-width: 1206px)').matches) {
-        infoflex = 'infoflexMobile';
-
-        document.getElementById('imagesAndContent').innerHTML = `
-      <div class="` + infoflex + `">
-
-      <div class="size2">
-      <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-      <img src="`+ imageLocation + `" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-height:55vh; margin-top:7vh">
-      </div>
-      </div>
-      <div class="iconsRow" style="width:100%">
-           </div>
-      <p style="">
-      ` + description + `
-      </p>
-      <br>
-      </div>
-      `;
-    } else {
-        document.getElementById('imagesAndContent').innerHTML = `
-      <div class="infoflex">
-      <div class="size1" id="aboutMeInfo">
-      <br>
-      <p>
-      ` + description + `
-      </p>
-      </div>
-
-      <div class="size2">
-      <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-      <img src="baseImages/bubbers.jpg" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-width:28vw; margin-left: -5vw; margin-top:4vh">
-      </div>
-      <div class="iconsRow">
-      <!-- <p>ornament here</p> -->
-      </div>
-      <div class="iconsRow" style="padding-right:30px;">
+            document.getElementById('imagesAndContent').innerHTML = `
+          <div class="${infoflex}">
+            <div class="size2">
+              <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
+                <img src="${imageLocation}" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-height:55vh; margin-top:7vh">
+              </div>
             </div>
+            <div class="iconsRow" style="width:100%"></div>
+            <p style="">${description}</p>
+            <br>
+          </div>
+          `;
+        } else {
+            document.getElementById('imagesAndContent').innerHTML = `
+          <div class="${infoflex}">
+            <div class="size1" id="aboutMeInfo">
+              <br>
+              <p>${description}</p>
+            </div>
+            <div class="size2">
+              <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
+                <img src="${imageLocation}" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-width:28vw; margin-left: -5vw; margin-top:4vh">
+              </div>
+              <div class="iconsRow">
+                <!-- <p>ornament here</p> -->
+              </div>
+              <div class="iconsRow" style="padding-right:30px;"></div>
+            </div>
+          </div>
+          `;
+        }
 
-      </div>
-
-      </div>
-      `;
+        history.pushState({page: 'about'}, 'About - Ambar Velasco', '/about');
+        document.title = 'About - Ambar Velasco';
+    } catch (error) {
+        console.error('Error loading about information:', error);
+        $('#imagesAndContent').html(`
+            <div class="error-message">
+                <p>Sorry, we couldn't load the About Me information. Please try again later.</p>
+            </div>
+        `);
     }
-    history.pushState({page: 'about'}, 'About - Ambar Velasco', '/about');
-    document.title = 'About - Ambar Velasco'; // Optionally, update the document title
 }
 
 function openCurrentProject() {
@@ -801,13 +813,16 @@ function openCurrentProject() {
         type: "GET",
         data: {'activity': 'currentProject'},
         dataType: "json",
-        success: function (data) {
+        success: function(data) {
             makeCurrentProjectCards(data);
-
-
         },
-        error: function () {
+        error: function() {
             console.log("An error occurred.");
+            $('#imagesAndContent').html(`
+                <div class="error-message">
+                    <p>Sorry, we couldn't load the current project. Please try again later.</p>
+                </div>
+            `);
         },
     });
 
@@ -815,76 +830,83 @@ function openCurrentProject() {
 }
 
 function createCurrentProjectElement(project) {
-    let worksOfProjectDiv = $('<div>').addClass('projectWorks ');
-    let titleAndDescriptionDiv = $('<div>')
+    let worksOfProjectDiv = $('<div>').addClass('projectWorks');
+    let titleAndDescriptionDiv = $('<div>');
     let title = project.title;
-    let description = project.description.replace(/\n/g, '<br>');
+    let description = project.description ? project.description.replace(/\n/g, '<br>') : '';
     let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
     let insertDescription = $('<p>').html(description).css({
-        'color': '#71797E', // Dark grey color
-        'margin-bottom': '60px' // Margin bottom
+        'color': '#71797E',
+        'margin-bottom': '60px'
     });
-    //decomment below if you want to redisplay the title and description of projects
+
     titleAndDescriptionDiv.append(insertTitle, insertDescription);
+
     let projectDiv = $('<div>').addClass('project').attr({
         'alt': title,
         'id': 'projectSection' + title.trim()
     }).css({'border': '0px', 'text-align': 'center'});
-    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv)
+
+    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv);
+
     return projectDiv;
 }
 
 async function createCurrentProjectWorkCardElement(information) {
     let imageURL = "baseImages/" + information.location;
     let title = information.name;
-    let description = information.firstDescription.replace(/\n/g, '<br>');
+    let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
     let long_description = '';
-    if (information.long_description !== null) {
+    if (information.long_description) {
         long_description = information.long_description.replace(/\n/g, '<br>');
     }
+
     let imageInfo = {
         url: imageURL,
         title: title,
-        description: description
+        description: description,
+        long_description: long_description
     };
-    const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
+
     try {
+        const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
+
         let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
         let imageButton = $('<span>').text('Image').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
         let textButton = $('<span>').text('Description').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
-        if (isMobile){
-            buttonContainer.paddingBottom = '15px';
-        }
-        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows).append($('<img>').addClass("currentProjectImage").attr('src', imageURL).attr('alt', 'Image of ' + title).attr('Title', title).attr('Description', description));
-        console.log(isMobile)
-        let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
 
+        if (isMobile) {
+            buttonContainer.css('paddingBottom', '15px');
+        }
+
+        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows)
+            .append($('<img>').addClass("currentProjectImage")
+                .attr('src', imageURL)
+                .attr('alt', 'Image of ' + title)
+                .attr('Title', title)
+                .attr('Description', description));
+
+        let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
             position: 'relative',
             maxWidth: '80%',
             margin: 'auto',
             cursor: 'default',
             overflowY: 'auto',
             zIndex: zIndexCounter,
-            //paddingTop: '150px',
             paddingLeft: '20px',
-            paddingRight: '20px',
-            //minHeight: imageHeight,
-            //width: imageWidth,
-            //height: imageHeight
-        })
-            .hide()
+            paddingRight: '20px'
+        }).hide();
 
         zIndexCounter++;
 
         let contentHolder = $('<div>').attr({'id': 'projectSection' + information.id.trim()})
             .addClass('projectImgTxtContainer')
             .css({
-            display: 'flex',
-            flexDirection: 'column',
-            //height: '100%',
-            overflow: 'hidden',
-        })
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+            })
             .append(imageContainer, insertDescription);
 
         let card = $('<div>').addClass('card').attr('alt', title).css({
@@ -892,6 +914,7 @@ async function createCurrentProjectWorkCardElement(information) {
             'text-align': 'center',
             'margin-bottom': '60px',
         }).append(buttonContainer).append(contentHolder);
+
         imageContainer.click(() => makeBigPic(imageURL));
         images.push(imageInfo);
 
@@ -910,6 +933,7 @@ async function createCurrentProjectWorkCardElement(information) {
         return card;
     } catch (error) {
         console.error(error);
+        return null;
     }
 }
 
@@ -918,7 +942,7 @@ function loadCorrectWidthAndHeightPerImage(imageURL) {
         const img = new Image();
         img.src = imageURL;
 
-        img.onload = function () {
+        img.onload = function() {
             let screenWidth = $(window).width();
             let screenHeight = $(window).height();
             let newWidth = img.width;
@@ -946,16 +970,14 @@ function loadCorrectWidthAndHeightPerImage(imageURL) {
                 newWidth = newWidth * ratio;
             }
 
-
             resolve({width: newWidth, height: newHeight});
         };
 
-        img.onerror = function () {
+        img.onerror = function() {
             reject('Error loading image: ' + imageURL);
         };
     });
 }
-
 
 async function makeCurrentProjectCards(projects) {
     $('#imagesAndContent').empty();
@@ -972,6 +994,7 @@ async function makeCurrentProjectCards(projects) {
 
         for (const { project, allWorksForProject } of results) {
             let mainProj = createCurrentProjectElement(project);
+            $('#imagesAndContent').append(mainProj);
 
             for (const information of allWorksForProject) {
                 let card = await createCurrentProjectWorkCardElement(information);
@@ -979,21 +1002,23 @@ async function makeCurrentProjectCards(projects) {
                     mainProj.find('.projectWorks').first().append(card);
                 }
             }
-
-            $('#imagesAndContent').append(mainProj);
-            console.log(projects, project.title);
         }
 
         history.pushState({ page: 'current-project' }, 'Current Project', '/current-project');
         document.title = 'Current Project - Ambar Velasco';
-        adjustDescriptionHeightsAndWidths()
+        adjustDescriptionHeightsAndWidths();
     } catch (error) {
         console.error('Error:', error);
+        $('#imagesAndContent').html(`
+            <div class="error-message">
+                <p>Sorry, we couldn't load the current project. Please try again later.</p>
+            </div>
+        `);
     }
 }
 
 function adjustDescriptionHeightsAndWidths() {
-    $('.img-container').each(function () {
+    $('.img-container').each(function() {
         // Find the next .description_text element
         let descriptionText = $(this).next('.description_text');
         let descriptionContent = descriptionText[0];
@@ -1004,50 +1029,95 @@ function adjustDescriptionHeightsAndWidths() {
             let containerWidth = $(this).width();
 
             if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
-                containerHeight += 20
+                containerHeight += 20;
             }
 
             descriptionText.show();
-            let contentHeight = descriptionContent.scrollHeight
+            let contentHeight = descriptionContent.scrollHeight;
             descriptionText.hide();
 
             // Adjust the height of the description_text element
             descriptionText.css("max-height", containerHeight + "px");
             descriptionText.css("min-height", containerHeight + "px");
-
             descriptionText.css("width", containerWidth + "px");
 
-            //const contentHeight = measureFullTextHeight(descriptionText[0]);
-
-            // if (contentHeight > containerHeight)
-            // {
-                // Calculate the necessary padding to ensure the text starts from the top
-
-                let paddingValue = contentHeight - containerHeight;
-                if (paddingValue > containerHeight)
-                {
-                    let theDifference = paddingValue - containerHeight;
-                    console.log(theDifference);
-                }
-
-                // paddingValue = paddingValue > containerHeight ? containerHeight : paddingValue;
-                console.log(containerHeight,contentHeight, paddingValue)
-
-                // const closestProjectSection = this.closest('.projectImgTxtContainer');
-                // closestProjectSection.style.maxHeight = containerHeight + "px";
-                // console.log(descriptionText[0].firstChild)
-                // const lineBreaks = '\n\n\n\n\n'; // Adjust the number of line breaks as needed
-                // //const originalText = descriptionContent.firstChild.nodeValue;
-                // //console.log(originalText)
-                //descriptionContent.firstChild.nodeValue = lineBreaks + originalText;
-                // Apply the padding to the top of the container
-                if (!isMobile)
-                {
-                    descriptionText.css('padding-top', '20px');
-                }else{
-                    //descriptionText.css('padding-top', '5px');
-                }
+            if (!isMobile) {
+                descriptionText.css('padding-top', '20px');
+            } else {
+                descriptionText.css('padding-top', '5px');
             }
-        //}
+        }
     });
 }
+
+function loadShop() {
+    yearData = { activity: 'active' };
+    $.ajax({
+        url: "../actions/shopAPI.php",
+        type: "GET",
+        data: yearData,
+        dataType: "json",
+        success: function(data) {
+            $('#imagesAndContent').empty();
+            $('#imagesAndContent').css('padding-top', '50px');
+
+            $('<div>', {
+                class: 'shop-top-space'
+            }).prependTo('#imagesAndContent');
+
+            data.forEach(function(item) {
+                $('#imagesAndContent').append(createShopItem(item));
+            });
+
+            history.pushState({page: 'shop'}, 'Shop', '/shop');
+            document.title = 'Shop - Ambar Velasco';
+        },
+        error: function() {
+            console.log("An error occurred.");
+            $('#imagesAndContent').html(`
+                <div class="error-message">
+                    <p>Sorry, we couldn't load the shop items. Please try again later.</p>
+                </div>
+            `);
+        }
+    });
+}
+
+function createShopItem(item) {
+    let shopItem = $('<div>').addClass('shopItem');
+
+    // Create image
+    let image = $('<img>')
+        .attr('src', item.image_url)
+        .attr('alt', item.name);
+
+    // Create item details
+    let detailsDiv = $('<div>').addClass('item-details');
+    let title = $('<h3>').text(item.name);
+    let price = $('<p>').text('$' + parseFloat(item.price).toFixed(2));
+    let description = $('<p>').text(item.description);
+
+    detailsDiv.append(title, price, description);
+
+    // Create buy button with link to the item URL
+    let buyButton = $('<a>')
+        .attr({
+            'href': item.url,
+            'target': '_blank',
+            'class': 'buy-button shopify-buy-button'
+        })
+        .text('Buy Now');
+
+    // Assemble the shop item
+    shopItem.append(image, detailsDiv, buyButton);
+
+    return shopItem;
+}
+
+// Make functions available globally
+window.makeBigPic = makeBigPic;
+window.getProjectsAndWorks = getProjectsAndWorks;
+window.openInfo = openInfo;
+window.openCurrentProject = openCurrentProject;
+window.loadShop = loadShop;
+window.loadProjectSection = loadProjectSection;
