@@ -681,7 +681,7 @@ img.lazy-image.loaded {
   opacity: 100%;
 }
 
-/* Hidden link stuff */
+/* Hidden link stuff - FIXED: Preserve box model during animation */
 .hiddenLinkStuff {
   margin-left: 25px;
   display: none;
@@ -689,6 +689,10 @@ img.lazy-image.loaded {
   font-weight: var(--font-weight-light);
   margin-top: -1.5rem; /* Pull it up closer to the parent */
   margin-bottom: 1.5rem; /* Add space after the dropdown group */
+  overflow: hidden; /* Prevent content from affecting height during animation */
+  box-sizing: border-box; /* Include padding in height calculations */
+  padding-top: 0; /* Start with no padding */
+  padding-bottom: 0; /* Start with no padding */
 }
 
 /* Style for the dropdown items themselves */
@@ -718,6 +722,7 @@ img.lazy-image.loaded {
   font-size: .8em;
   display: none;
   font-family: 'NunitoBold', Arial, sans-serif;
+  padding-left: 0; /* FIXED: Remove left padding that causes underline to extend */
 }
 
 /* About page styling */
@@ -1056,9 +1061,8 @@ img.lazy-image.loaded {
 
   /* Improve spacing of links in mobile menu */
   .navLinksBoxMobile .nav-link-container {
-    margin-bottom: 12px;
+    margin-bottom: 8px; /* FIXED: Reduced margin from 12px to 8px */
     padding-bottom: 5px;
-    border-bottom: 1px solid transparent;
     transition: border-color 0.3s;
   }
 
@@ -1149,6 +1153,16 @@ img.lazy-image.loaded {
     width: 100%;
   }
 
+  /* FIXED: Remove extra space after Works nav item */
+  .navLinksBoxMobile a.mainLinkGenres[href="#"][onclick*="toggleSublinks"] {
+    margin-bottom: 0;
+  }
+
+  /* FIXED: Ensure mobile dropdown doesn't extend too far left */
+  .navLinksBoxMobile #selectProjectCategories {
+    padding-left: 5px; /* Reduced from 15px */
+    margin-left: 15px; /* Keep items indented but control the border */
+  }
 }
 
 /* Mobile specific styles */

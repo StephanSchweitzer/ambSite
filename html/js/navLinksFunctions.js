@@ -126,7 +126,6 @@ function createNewNavLinkRow(displayedText, linkRedirection, instructionString, 
             });
 
             $('#navLinksBox').append(additionalContent);
-            $('#navLinksBox').append(`<div id="breaksForTitles"><br></div>`);
             return;
         } catch (e) {
             console.error("Error parsing attachedFollowingDiv:", e);

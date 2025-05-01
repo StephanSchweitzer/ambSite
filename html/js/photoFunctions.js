@@ -1214,6 +1214,5 @@ window.ensureDropdownOpen = function(sublinksId) {
     var sublinks = $("#" + sublinksId);
     if (!sublinks.is(":visible")) {
         sublinks.show();
-        $("#breaksForTitles").show();
     }
 };
