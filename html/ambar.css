@@ -51,6 +51,56 @@ a:active { color: inherit; }
 a:visited { color: inherit; }
 a:hover { color: inherit; }
 
+/* Hamburger menu button styling */
+.hamburger-menu {
+  display: none; /* Hidden by default on desktop */
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  z-index: 1001;
+  position: absolute;
+  right: 20px;
+  top: 20px;
+}
+
+.hamburger-menu span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  margin-bottom: 5px;
+  position: relative;
+  background: var(--color-text);
+  border-radius: 3px;
+  transform-origin: 4px 0px;
+  transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+  background 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+  opacity 0.55s ease;
+}
+
+.hamburger-menu span:first-child {
+  transform-origin: 0% 0%;
+}
+
+.hamburger-menu span:nth-last-child(1) {
+  transform-origin: 0% 100%;
+  margin-bottom: 0;
+}
+
+/* Transforms for the active state */
+.hamburger-menu.active span:first-child {
+  transform: rotate(45deg) translate(1px, -1px);
+}
+
+.hamburger-menu.active span:nth-child(2) {
+  opacity: 0;
+  transform: rotate(0deg) scale(0.2, 0.2);
+}
+
+.hamburger-menu.active span:nth-last-child(1) {
+  transform: rotate(-45deg) translate(0, 0);
+}
+
 /* Modern navigation styling */
 .navLinksBox {
   top: 0;
@@ -68,11 +118,47 @@ a:hover { color: inherit; }
   top: 0;
   bottom: 0;
   position: fixed;
-  margin-top: 17vh;
-  margin-left: 5vw;
-  width: 30vw;
-  font-family: var(--font-primary);
-  z-index: 100;
+  margin-top: 0;
+  margin-left: 0;
+  width: 85vw; /* Wider nav for mobile */
+  height: 100vh;
+  background-color: var(--color-background);
+  z-index: 1000;
+  padding-top: 80px; /* Leave space for the header */
+  padding-left: 5vw;
+  transform: translateX(-100%); /* Start off-screen */
+  transition: transform 0.3s ease-in-out;
+  overflow-y: auto;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.navLinksBoxMobile.active {
+  transform: translateX(0); /* Slide in */
+}
+
+/* Overlay when menu is open */
+.nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.nav-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Adjust the main content area when menu is open */
+.main-content.menu-open #imagesAndContent {
+  filter: blur(2px);
+  pointer-events: none;
 }
 
 .mainLinkGenres {
@@ -461,6 +547,7 @@ img.lazy-image.loaded {
   background-color: white;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-direction: row;
 }
 
@@ -475,6 +562,7 @@ img.lazy-image.loaded {
   margin-top: 17px;
   margin-left: 15px;
   width: 60vw;
+  max-width: 200px;
 }
 
 /* White fade effect */
@@ -776,6 +864,7 @@ img.lazy-image.loaded {
   margin-left: 0;
   width: 100%;
   text-align: left;
+  overflow: hidden;
 }
 
 /* Modal specific styles - retained from original */
@@ -789,38 +878,6 @@ img.lazy-image.loaded {
 
 .modal-backdrop.show {
   opacity: .75;
-}
-
-/* Mobile specific styles */
-@media (max-width: 768px) {
-  .imagesAndContentMobile {
-    width: 63vw;
-    margin-top: 8vh;
-    margin-left: 36vw;
-    padding-right: 3vw;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .buttonContainer {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .nav-arrow {
-    width: 36px;
-    height: 36px;
-  }
-
-  .modal-dialog {
-    margin: 10px;
-  }
-
-  .imagesAndContentMobile p {
-    font-size: 1em;
-  }
 }
 
 /* Project title styling - making it lighter and less bold */
@@ -935,4 +992,199 @@ img.lazy-image.loaded {
 
 .nav-link-container .mainLinkGenres:hover:after {
   width: 100%;
+}
+
+/* Media queries for responsive layout */
+@media (max-width: 992px) {
+  /* Show hamburger on smaller screens */
+
+  .navLinksBoxMobile .mainLinkGenres:after {
+    content: none; /* Remove the default underline effect */
+  }
+
+  .hamburger-menu {
+    display: block;
+  }
+
+  /* Hide desktop nav */
+  .navLinksBox {
+    display: none;
+  }
+
+  /* Adjust content area */
+  #imagesAndContent {
+    width: 90vw;
+    margin-left: 5vw;
+    padding: 4vw;
+  }
+
+  /* Adjust header for mobile */
+  .blockForHeader {
+    max-width: 100%;
+    width: 100%;
+    margin-left: 0;
+    padding: 10px 20px;
+    justify-content: space-between;
+  }
+
+  /* Logo adjustments */
+  .ambarNamePicMobile {
+    margin-top: 10px;
+    margin-left: 0;
+    width: 60vw;
+    max-width: 200px;
+  }
+
+  /* About page mobile adjustments */
+  .infoflex, .infoflexMobile {
+    width: 90vw;
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .buttonContainer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #newsletterSignUp {
+    padding: 15px;
+    background-color: rgba(255,255,255,0.1);
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+
+  /* Improve spacing of links in mobile menu */
+  .navLinksBoxMobile .nav-link-container {
+    margin-bottom: 12px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s;
+  }
+
+  .navLinksBoxMobile .nav-link-container:hover {
+    border-bottom-color: rgba(0,0,0,0.2);
+  }
+
+  .navLinksBoxMobile .work-separator {
+    margin: 10px 0;
+    width: 90%;
+  }
+
+  .navLinksBoxMobile #selectProjectCategories {
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding-left: 15px;
+    border-left: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .navLinksBoxMobile #selectProjectCategories a {
+    margin-bottom: 5px;
+    display: block;
+    padding: 5px 0;
+  }
+
+  /* Newsletter styling */
+  .navLinksBoxMobile #newsletterSignUp {
+    padding: 10px 0;
+    margin-top: 10px;
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 4px;
+  }
+
+  .navLinksBoxMobile .newsletter-container {
+    padding: 0 15px;
+  }
+
+  .navLinksBoxMobile .newsletter-input {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .hamburger-menu.active {
+    position: fixed;
+    right: 20px;
+  }
+
+  .navLinksBoxMobile .mainLinkGenres {
+    padding: 8px 0;
+    display: block;
+    font-size: 1.2rem;
+  }
+
+  .navLinksBoxMobile .newsletter-input,
+  .navLinksBoxMobile .newsletter-button {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .navLinksBoxMobile #selectProjectCategories a {
+    padding: 8px 0;
+    display: block;
+    font-size: 0.9rem;
+  }
+
+  /* Fix dropdown alignment in mobile */
+  .hiddenLinkStuffMobile {
+    margin-left: 10px;
+    width: auto;
+    max-width: 90%;
+  }
+
+  /* Improve spacing between menu items */
+  .navLinksBoxMobile a.mainLinkGenres {
+    padding: 10px 0;
+    display: block;
+  }
+
+  /* Make newsletter more visible */
+  .newsletter-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .newsletter-input {
+    max-width: 100%;
+    width: 100%;
+  }
+
+}
+
+/* Mobile specific styles */
+@media (max-width: 768px) {
+  .imagesAndContentMobile {
+    width: 90vw;
+    margin-top: 8vh;
+    margin-left: 5vw;
+    padding-right: 3vw;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .buttonContainer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nav-arrow {
+    width: 36px;
+    height: 36px;
+  }
+
+  .modal-dialog {
+    margin: 10px;
+  }
+
+  .imagesAndContentMobile p {
+    font-size: 1em;
+  }
+
+  /* Adjust about page for very small screens */
+  #ambarPersoPic {
+    max-width: 90% !important;
+    margin: 0 auto;
+  }
 }

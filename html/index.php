@@ -41,6 +41,12 @@ header('Content-Type: text/html; charset=UTF-8');
             <a href="/">
                 <img src="imgMid/colorAmbarNew.png" id="ambName" fetchpriority="high" class="ambarNamePic" alt="Ambar Velasco Logo">
             </a>
+            <!-- Hamburger Menu Button -->
+            <button id="hamburgerMenu" class="hamburger-menu" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </header>
 
@@ -88,6 +94,9 @@ header('Content-Type: text/html; charset=UTF-8');
             </div>
         </div>
     </div>
+
+    <!-- Navigation Overlay for Mobile -->
+    <div class="nav-overlay"></div>
 </div>
 
 <!-- Scripts -->

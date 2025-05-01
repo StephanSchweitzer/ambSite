@@ -21,14 +21,23 @@ function loadAndInsertNavBarLinks() {
                 insertLinks(response.data);
                 loadAndDisplayProjectTitles();
 
+                // Add overlay element for mobile menu if it doesn't exist
+                if ($('.nav-overlay').length === 0) {
+                    $('body').append('<div class="nav-overlay"></div>');
+                }
+
                 // Set up event listeners for newsletter form
-                $(document).on('click', '#newsletterSubmit', function() {
+                $(document).on('click', '#newsletterSubmit', function(e) {
+                    e.stopPropagation(); // Prevent event from bubbling up
                     sendEmailToDB();
+                    return false; // Prevent default action
                 });
 
                 $(document).on('keypress', '#newsletterEmail', function(event) {
                     if (event.which === 13) { // Enter key
+                        event.stopPropagation(); // Prevent event from bubbling up
                         sendEmailToDB();
+                        return false; // Prevent default action
                     }
                 });
             } else {
@@ -54,17 +63,19 @@ function insertLinks(links) {
     // After creating all links, check if the newsletter div exists and add the form
     if ($('#newsletterSignUp').length > 0) {
         $('#newsletterSignUp').html(`
-        <div class="newsletter-container">
-            <input type="email" id="newsletterEmail" placeholder="Enter your email address" class="newsletter-input">
-            <div class="button-container">
-                <button id="newsletterSubmit" class="newsletter-button">Subscribe</button>
+            <div class="newsletter-container">
+                <input type="email" id="newsletterEmail" placeholder="Enter your email address" class="newsletter-input">
+                <div class="button-container">
+                    <button id="newsletterSubmit" class="newsletter-button">Subscribe</button>
+                </div>
             </div>
-        </div>
-    `);
+        `);
+
+        // Important: Initially hide the newsletter form
+        $('#newsletterSignUp').hide();
     }
 }
 
-// Update this function in navLinksFunctions.js
 function createNewNavLinkRow(displayedText, linkRedirection, instructionString, isNewTab, attachedFollowingDiv) {
     // Create a container div for the link to maintain proper spacing
     const linkContainer = $('<div>').addClass('nav-link-container');
@@ -147,7 +158,6 @@ const specialMappings = {
     }
 };
 
-// In navLinksFunctions.js - update loadAndDisplayProjectTitles function
 function loadAndDisplayProjectTitles() {
     $.ajax({
         url: '../actions/projectsAPI.php',
@@ -194,18 +204,29 @@ function loadAndDisplayProjectTitles() {
     });
 }
 
-
-// Newsletter functions
+// Fixed version of the toggleNewsLetterSignUp function
 function toggleNewsLetterSignUp(event) {
-    event.preventDefault();
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation(); // Stop event bubbling to prevent menu closing
+    }
+
     var newsletterForm = $("#newsletterSignUp");
-    newsletterForm.slideToggle(function() {
-        // Check if the form is visible after toggling
+
+    // Toggle the newsletter form with animation
+    newsletterForm.slideToggle(300, function() {
+        // Focus the email input if the form is now visible
         if (newsletterForm.is(":visible")) {
-            // Set focus on the email input field
             $("#newsletterEmail").focus();
         }
     });
+
+    // Keep the mobile menu open
+    if (window.innerWidth <= 992) {
+        $('#navLinksBox').addClass('active');
+    }
+
+    return false; // Prevent default action and bubbling
 }
 
 function sendEmailToDB() {
@@ -225,6 +246,13 @@ function sendEmailToDB() {
                     alert("Thank you for subscribing!");
                     // Hide the form after successful submission
                     $("#newsletterSignUp").slideUp();
+
+                    // Keep mobile menu open
+                    if (window.innerWidth <= 992) {
+                        setTimeout(function() {
+                            $('#navLinksBox').addClass('active');
+                        }, 100);
+                    }
                 } else {
                     alert("Error: " + response.message);
                 }
@@ -245,14 +273,23 @@ function validateEmail(email) {
 }
 
 function toggleSublinks(event, sublinksId) {
-    event.preventDefault();
-    event.stopPropagation(); // Prevent event bubbling
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation(); // Prevent event bubbling
+    }
+
     var sublinks = $("#" + sublinksId);
     sublinks.slideToggle();
     $("#breaksForTitles").slideToggle();
+
+    // Keep mobile menu open
+    if (window.innerWidth <= 992) {
+        $('#navLinksBox').addClass('active');
+    }
+
+    return false; // Prevent default action and bubbling
 }
 
-// Add this new function to photoFunctions.js
 function ensureDropdownOpen(sublinksId) {
     var sublinks = $("#" + sublinksId);
     if (!sublinks.is(":visible")) {

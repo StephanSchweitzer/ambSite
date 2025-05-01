@@ -10,6 +10,9 @@ var zIndexCounter = 22;
 var scrollPosition = 0;
 
 $(window).on("load", function() {
+    // Check responsive layout
+    setupResponsiveLayout();
+
     // Fix width of all thumbnails
     $('.size12020, .size12021, .size12022').each(function(index, element) {
         let theWidth = this.width;
@@ -34,7 +37,112 @@ $(window).on("load", function() {
     createAndShowSideBarLinks();
 });
 
+// Add window resize handler
+$(window).on("resize", function() {
+    setupResponsiveLayout();
+});
+
+function setupResponsiveLayout() {
+    if (window.innerWidth <= 992) {
+        // Apply mobile classes
+        $('#popUpImage').removeClass('popUpImage').addClass('popUpImageMobile');
+        $('#imagesAndContent').removeClass('imagesAndContent').addClass('imagesAndContentMobile');
+        $('#blockForHeader').removeClass('blockForHeader').addClass('blockForHeaderMobile');
+        $('#whiteForTheTopMaybe').addClass('headerNoMove3');
+        $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
+        $('#whiteForTheTop').addClass('headerNoMove3');
+        $('#navLinksBox').removeClass('navLinksBox').addClass('navLinksBoxMobile');
+        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
+        $('#selectProjectCategories').removeClass('hiddenLinkStuff').addClass('hiddenLinkStuffMobile');
+        $('#ambName').removeClass('ambarNamePic').addClass('ambarNamePicMobile');
+
+        imageIsRows = '';
+        projectIsRows = '';
+        isMobile = true;
+
+        // Improve tap targets for mobile
+        const allLinks = document.querySelectorAll('a');
+        allLinks.forEach(link => {
+            link.style.padding = '.05em';
+            link.style.margin = '-.05em';
+        });
+
+        const genreLinks = document.querySelectorAll('a.mainLinkGenres');
+        genreLinks.forEach(link => {
+            link.style.padding = '.7em';
+            link.style.margin = '-.7em';
+        });
+    } else {
+        // Apply desktop classes
+        $('#popUpImage').removeClass('popUpImageMobile').addClass('popUpImage');
+        $('#imagesAndContent').removeClass('imagesAndContentMobile').addClass('imagesAndContent');
+        $('#blockForHeader').removeClass('blockForHeaderMobile').addClass('blockForHeader');
+        $('#navLinksBox').removeClass('navLinksBoxMobile').addClass('navLinksBox');
+        $('#homePageCarousel').removeClass('homePageCarouselMobile').addClass('homePageCarousel');
+        $('#selectProjectCategories').removeClass('hiddenLinkStuffMobile').addClass('hiddenLinkStuff');
+        $('#ambName').removeClass('ambarNamePicMobile').addClass('ambarNamePic');
+
+        imageIsRows = '';
+        projectIsRows = '';
+        isMobile = false;
+
+        // Reset tap targets for desktop
+        const allLinks = document.querySelectorAll('a');
+        allLinks.forEach(link => {
+            link.style.padding = '';
+            link.style.margin = '';
+        });
+    }
+}
+
 $(document).ready(function() {
+    // Setup mobile menu toggle
+    $('#hamburgerMenu').on('click', function(e) {
+        e.stopPropagation();
+        $(this).toggleClass('active');
+        $('#navLinksBox').toggleClass('active');
+        $('.nav-overlay').toggleClass('active');
+        $('#sideBySide').toggleClass('menu-open');
+    });
+
+    // Close menu when clicking the overlay
+    $('.nav-overlay').on('click', function() {
+        $('#hamburgerMenu').removeClass('active');
+        $('#navLinksBox').removeClass('active');
+        $(this).removeClass('active');
+        $('#sideBySide').removeClass('menu-open');
+    });
+
+    // Special handling for newsletter and submenu toggles
+    $(document).on('click', '#navLinksBox a', function(e) {
+        if (window.innerWidth <= 992) {
+            // Check if this is a toggle link (for newsletter or submenu)
+            const isToggleLink = (
+                $(this).text() === "Works" ||
+                $(this).text() === "Newsletter"
+            );
+
+            // If it's a toggle link, prevent menu from closing
+            if (isToggleLink) {
+                e.stopPropagation();
+            } else if (!$(this).closest('#selectProjectCategories').length &&
+                !$(this).closest('#newsletterSignUp').length) {
+                // If it's a regular link (not in a submenu or newsletter), close the menu
+                $('#hamburgerMenu').removeClass('active');
+                $('#navLinksBox').removeClass('active');
+                $('.nav-overlay').removeClass('active');
+                $('#sideBySide').removeClass('menu-open');
+            }
+        }
+    });
+
+    // Prevent newsletter form clicks from closing the menu
+    $(document).on('click', '#newsletterSignUp, #newsletterEmail, #newsletterSubmit', function(e) {
+        if (window.innerWidth <= 992) {
+            e.stopPropagation();
+        }
+    });
+
     // Setup modal for click outside to close
     $('#bigPicModal').on('click', function(event) {
         if (!$(event.target).closest('#popUpImage, .modal-nav-arrows, .nav-arrow').length) {
@@ -167,37 +275,6 @@ $(document).ready(function() {
         openCurrentProject();
     } else {
         getCarousel();
-    }
-
-    // Check for mobile devices and adjust styling
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        $('#popUpImage').removeClass('popUpImage').addClass('popUpImageMobile');
-        $('#imagesAndContent').removeClass('imagesAndContent').addClass('imagesAndContentMobile');
-        $('#blockForHeader').removeClass('blockForHeader').addClass('blockForHeaderMobile');
-        $('#whiteForTheTopMaybe').addClass('headerNoMove3');
-        $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-        $('#whiteForTheTop').addClass('headerNoMove3');
-        $('#navLinksBox').removeClass('navLinksBox').addClass('navLinksBoxMobile');
-        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
-        $('#selectProjectCategories').removeClass('hiddenLinkStuff').addClass('hiddenLinkStuffMobile');
-        $('#ambName').removeClass('ambarNamePic').addClass('ambarNamePicMobile');
-
-        imageIsRows = '';
-        projectIsRows = '';
-        isMobile = true;
-
-        // Improve tap targets for mobile
-        const allLinks = document.querySelectorAll('a');
-        allLinks.forEach(link => {
-            link.style.padding = '.05em';
-            link.style.margin = '-.05em';
-        });
-
-        const genreLinks = document.querySelectorAll('a.mainLinkGenres');
-        genreLinks.forEach(link => {
-            link.style.padding = '.7em';
-            link.style.margin = '-.7em';
-        });
     }
 });
 
@@ -748,7 +825,9 @@ async function openInfo() {
         let imageLocation = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
 
         let infoflex = 'infoflex';
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+
+        // Use window.innerWidth instead of user-agent detection for responsive layout
+        if (window.innerWidth <= 768) {
             infoflex = 'infoflexMobile';
 
             document.getElementById('imagesAndContent').innerHTML = `
@@ -760,7 +839,7 @@ async function openInfo() {
           </div>
           `;
 
-        } else if (window.matchMedia('(max-width: 1206px)').matches) {
+        } else if (window.innerWidth <= 1206) {
             infoflex = 'infoflexMobile';
 
             document.getElementById('imagesAndContent').innerHTML = `
@@ -793,6 +872,14 @@ async function openInfo() {
             </div>
           </div>
           `;
+        }
+
+        // Close mobile menu if open
+        if (window.innerWidth <= 992) {
+            $('#hamburgerMenu').removeClass('active');
+            $('#navLinksBox').removeClass('active');
+            $('.nav-overlay').removeClass('active');
+            $('#sideBySide').removeClass('menu-open');
         }
 
         history.pushState({page: 'about'}, 'About - Ambar Velasco', '/about');
@@ -1123,3 +1210,10 @@ window.openInfo = openInfo;
 window.openCurrentProject = openCurrentProject;
 window.loadShop = loadShop;
 window.loadProjectSection = loadProjectSection;
+window.ensureDropdownOpen = function(sublinksId) {
+    var sublinks = $("#" + sublinksId);
+    if (!sublinks.is(":visible")) {
+        sublinks.show();
+        $("#breaksForTitles").show();
+    }
+};
