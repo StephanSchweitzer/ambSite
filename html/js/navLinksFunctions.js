@@ -1,8 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
-    loadAndInsertNavBarLinks();
-});
-
-// Execute immediately if document is already loaded
+// Single initialization approach using IIFE
 (function() {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', loadAndInsertNavBarLinks);
@@ -11,7 +7,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 })();
 
+// Flag to prevent multiple initializations
+let newsletterSubmissionInProgress = false;
+
 function loadAndInsertNavBarLinks() {
+    // Prevent multiple initializations
+    if (window.navLinksInitialized) return;
+    window.navLinksInitialized = true;
+
     $.ajax({
         url: '../actions/navLinksAPI.php',
         type: 'GET',
@@ -26,25 +29,40 @@ function loadAndInsertNavBarLinks() {
                     $('body').append('<div class="nav-overlay"></div>');
                 }
 
-                // Set up event listeners for newsletter form
-                $(document).on('click', '#newsletterSubmit', function(e) {
-                    e.stopPropagation(); // Prevent event from bubbling up
-                    sendEmailToDB();
-                    return false; // Prevent default action
-                });
+                // Set up event listeners for newsletter form ONLY ONCE
+                // First remove any existing handlers to be safe
+                $(document).off('click', '#newsletterSubmit');
+                $(document).off('keypress', '#newsletterEmail');
 
-                $(document).on('keypress', '#newsletterEmail', function(event) {
-                    if (event.which === 13) { // Enter key
-                        event.stopPropagation(); // Prevent event from bubbling up
-                        sendEmailToDB();
-                        return false; // Prevent default action
-                    }
-                });
+                // Then add the new ones with submission protection
+                $(document).on('click', '#newsletterSubmit', handleNewsletterSubmit);
+                $(document).on('keypress', '#newsletterEmail', handleNewsletterKeypress);
             } else {
                 console.log("Error with loading links");
             }
         }
     });
+}
+
+// Newsletter submission handlers
+function handleNewsletterSubmit(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!newsletterSubmissionInProgress) {
+        sendEmailToDB();
+    }
+    return false;
+}
+
+function handleNewsletterKeypress(event) {
+    if (event.which === 13) { // Enter key
+        event.preventDefault();
+        event.stopPropagation();
+        if (!newsletterSubmissionInProgress) {
+            sendEmailToDB();
+        }
+        return false;
+    }
 }
 
 function insertLinks(links) {
@@ -231,6 +249,12 @@ function toggleNewsLetterSignUp(event) {
 function sendEmailToDB() {
     const email = $("#newsletterEmail").val();
     if (validateEmail(email)) {
+        // Set flag to prevent duplicate submissions
+        newsletterSubmissionInProgress = true;
+
+        // Optionally disable the submit button
+        $("#newsletterSubmit").prop('disabled', true);
+
         // Make API call to save the email
         $.ajax({
             url: '../actions/newsletterAPI.php',
@@ -259,6 +283,12 @@ function sendEmailToDB() {
             error: function(xhr, status, error) {
                 console.error("Error sending email:", error);
                 alert("An error occurred. Please try again later.");
+            },
+            complete: function() {
+                // Reset flag when the AJAX call completes (success or error)
+                newsletterSubmissionInProgress = false;
+                // Re-enable the submit button
+                $("#newsletterSubmit").prop('disabled', false);
             }
         });
     } else {
