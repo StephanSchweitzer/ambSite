@@ -560,7 +560,7 @@ img.lazy-image.loaded {
 
 .ambarNamePicMobile {
   margin-top: 17px;
-  margin-left: 15px;
+  margin-left: 3vw !important;
   width: 60vw;
   max-width: 200px;
 }
