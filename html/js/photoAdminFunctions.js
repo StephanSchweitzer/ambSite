@@ -678,6 +678,15 @@ function getAllWorks(theYear) {
   });
 }
 
+// Refresh the grid while respecting the active project filter
+function refreshCurrentView() {
+  if (currentFilters.project && currentFilters.project !== null) {
+    getProjectWorks(currentFilters.project);
+  } else {
+    getAllWorks(pageNumber);
+  }
+}
+
 // Load project titles for dropdown
 function loadAndDisplayProjectTitles() {
   $.ajax({
@@ -1317,7 +1326,7 @@ function finishWorkCreation() {
   }
 
   // Refresh the current view
-  getAllWorks(pageNumber);
+  refreshCurrentView();
 
   // Update statistics
   countWorksStatistics();
@@ -1430,7 +1439,7 @@ function updateWork() {
       }
 
       // Refresh the current view
-      getAllWorks(pageNumber);
+      refreshCurrentView();
 
       // Show success message
       showToast('Your work has been successfully updated!', 'success');
@@ -1490,7 +1499,7 @@ function deleteWork() {
       }
 
       // Refresh the current view
-      getAllWorks(pageNumber);
+      refreshCurrentView();
 
       // Show success message
       showToast('Your work has been successfully deleted!', 'success');
@@ -1547,7 +1556,7 @@ function restoreWork() {
       }
 
       // Refresh the current view
-      getAllWorks('invisible');
+      refreshCurrentView();
 
       // Show success message
       showToast('Your work has been successfully restored!', 'success');
@@ -1596,7 +1605,7 @@ function batchUpdateWorks(field, value) {
       updateSelectedCount();
 
       // Refresh the current view
-      getAllWorks(pageNumber);
+      refreshCurrentView();
 
       // Show success message
       const operation = field === 'selectWork' ? 'Select Works' : 'Carousel';
@@ -1642,7 +1651,7 @@ function batchDeleteWorks() {
       updateSelectedCount();
 
       // Refresh the current view
-      getAllWorks(pageNumber);
+      refreshCurrentView();
 
       // Show success message
       showToast(`${selectedWorks.length} works have been deleted!`, 'success');
@@ -1745,6 +1754,7 @@ function showConfirmationModal(title, message, confirmCallback) {
     console.error("Error showing confirmation modal:", e);
     if (confirm(message)) {
       confirmCallback();
+
     }
   }
 }
