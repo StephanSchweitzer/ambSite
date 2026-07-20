@@ -2,11 +2,6 @@
 
 session_start();
 
-error_reporting(E_ALL);
-
-// Display errors on the page
-ini_set('display_errors', 1);
-
 include '../database/pdo.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')

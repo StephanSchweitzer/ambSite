@@ -1,10 +1,5 @@
 <?php
 
-error_reporting(E_ALL);
-
-// Display errors on the page
-ini_set('display_errors', 1);
-
 include '../database/pdo.php';
 
 // Function to record a failed login attempt

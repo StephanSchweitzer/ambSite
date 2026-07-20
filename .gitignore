@@ -1,3 +1,11 @@
 ambOldSite/
 .idea/*
 html/.idea/*
+
+# Secrets — never commit
+.env
+
+# TLS material is managed on the server (Let's Encrypt), never in the repo
+html/sslStuff/
+*.key
+*.pem
