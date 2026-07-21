@@ -1,0 +1,87 @@
+name: Deploy to production
+
+# Deploys html/ (and the project root, minus secrets and uploads) to the VPS
+# over SSH whenever main is updated. A PHP syntax-check gate runs first, since
+# the project has no automated tests — this is the last line of defence before
+# code reaches production.
+
+on:
+  push:
+    branches: [main]
+  # Lets you trigger a deploy by hand from the Actions tab (useful for the
+  # first run, or to re-deploy without a new commit).
+  workflow_dispatch:
+
+# Never let two deploys run at once; queue them instead of racing on the server.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    name: PHP syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint every PHP file
+        # `php -l` is a syntax check only — it won't catch logic bugs, but it
+        # stops a stray typo from taking the whole site down.
+        run: |
+          find . -name '*.php' -not -path './ambOldSite/*' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+  deploy:
+    name: Rsync to server
+    needs: lint          # deploy only runs if the lint job passed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard against a missing deploy path
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          if [ -z "$DEPLOY_PATH" ]; then
+            echo "::error::DEPLOY_PATH secret is empty — refusing to deploy (rsync --delete into the wrong dir is destructive)."
+            exit 1
+          fi
+
+      - name: Set up the SSH deploy key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pin the server's host key so we don't blindly trust whatever answers.
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy with rsync
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='.idea/' \
+            --exclude='ambOldSite/' \
+            --exclude='CLAUDE.md' \
+            --exclude='.env' \
+            --exclude='.env.example' \
+            --exclude='html/img/' \
+            --exclude='html/imgMid/' \
+            --exclude='html/thumbnails/' \
+            --exclude='html/baseImages/' \
+            --exclude='html/sslStuff/' \
+            --exclude='*.key' \
+            --exclude='*.pem' \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH"

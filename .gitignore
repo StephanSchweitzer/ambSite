@@ -9,3 +9,9 @@ html/.idea/*
 html/sslStuff/
 *.key
 *.pem
+
+# SSH deploy keys — private key lives in GitHub secrets, public key on the server
+amb_deploy_key
+amb_deploy_key.pub
+*_deploy_key
+*_deploy_key.pub
