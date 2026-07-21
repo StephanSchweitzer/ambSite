@@ -21,8 +21,7 @@ function makeNewCurrentProject($id)
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
-  $activity = "";
-  $activity = $_GET['activity'];
+  $activity = isset($_GET['activity']) ? $_GET['activity'] : "";
   
   $activityCondition = "WHERE active = 1 ";
 

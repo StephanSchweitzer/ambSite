@@ -17,6 +17,7 @@ header('Content-Type: text/html; charset=UTF-8');
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="Cache-Control" content="no-cache">
+    <meta name="theme-color" content="#ffffff">
 
     <title>Ambar Velasco Portfolio</title>
     <meta name="description" content="Professional Website, Artistic Portfolio, and E-Shop of Ambar Velasco. Explore a collection of unique artworks, projects, and creative expressions.">
@@ -32,12 +33,12 @@ header('Content-Type: text/html; charset=UTF-8');
     <link rel="preconnect" href="https://ajax.googleapis.com">
     <link rel="preconnect" href="https://maxcdn.bootstrapcdn.com">
 
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+    <!-- Fonts: Lato for UI/body, Cormorant Garamond for display headings -->
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 
     <!-- CSS Libraries -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="ambar.css">
+    <link rel="stylesheet" href="ambar.css?v=<?php echo filemtime(__DIR__ . '/ambar.css'); ?>">
 
     <!-- Scripts that don't need to be loaded immediately -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
@@ -83,6 +84,11 @@ header('Content-Type: text/html; charset=UTF-8');
     <div class="modal fade bd-example-modal-sm" id="bigPicModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
+                <button type="button" class="modal-close" data-dismiss="modal" aria-label="Close image view">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
                 <div class="centerLargePhoto">
                     <img id="popUpImage" class="popUpImage" alt="Artwork in large view">
                     <div id="spinner" class="spinner-border text-primary position-absolute" role="status" style="display: none;">
@@ -115,8 +121,8 @@ header('Content-Type: text/html; charset=UTF-8');
 </div>
 
 <!-- Scripts -->
-<script src="js/photoFunctions.js"></script>
-<script src="js/navLinksFunctions.js"></script>
+<script src="js/photoFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/photoFunctions.js'); ?>"></script>
+<script src="js/navLinksFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/navLinksFunctions.js'); ?>"></script>
 
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
 </body>

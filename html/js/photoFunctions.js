@@ -617,8 +617,9 @@ function createWorkCardElement(information) {
         .attr({
             'data-src': thumbnailURL,
             'src': 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', // Tiny placeholder
-            'alt': 'Image of ' + title,
-            'title': title
+            'alt': title,
+            'title': title,
+            'decoding': 'async'
         });
 
     imageContainer.append(imgElement);
@@ -697,7 +698,7 @@ function createCarousel(informations) {
         };
 
         let thisImage = `<div id="${information.name}" class="carousel-item ${active}" >
-            <img class="d-block carousel-pic" src="${thumbnailURL}" onclick="makeBigPic('${imageURL}')">
+            <img class="d-block carousel-pic" src="${thumbnailURL}" alt="${title}" decoding="async" onclick="makeBigPic('${imageURL}')">
             </div>`;
 
         carouselHtml += thisImage;
@@ -824,51 +825,26 @@ async function openInfo() {
         let description = aboutMe.description ? aboutMe.description.replace(/\n/g, "<br>") : '';
         let imageLocation = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
 
-        let infoflex = 'infoflex';
-
         // Use window.innerWidth instead of user-agent detection for responsive layout
-        if (window.innerWidth <= 768) {
-            infoflex = 'infoflexMobile';
-
+        if (window.innerWidth <= 1206) {
             document.getElementById('imagesAndContent').innerHTML = `
-          <div class="${infoflex}">
-            <img src="${imageLocation}" id="ambarPersoPic" alt="ambarPersoPic" style="max-width:80%;">
-            <div class="iconsRow" style="width:100%"></div>
-            <p style="">${description}</p>
-            <br>
-          </div>
-          `;
-
-        } else if (window.innerWidth <= 1206) {
-            infoflex = 'infoflexMobile';
-
-            document.getElementById('imagesAndContent').innerHTML = `
-          <div class="${infoflex}">
-            <div class="size2">
-              <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-                <img src="${imageLocation}" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-height:55vh; margin-top:7vh">
-              </div>
+          <div class="infoflexMobile">
+            <div class="ambPicDiv">
+              <img src="${imageLocation}" id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async">
             </div>
-            <div class="iconsRow" style="width:100%"></div>
-            <p style="">${description}</p>
-            <br>
+            <p>${description}</p>
           </div>
           `;
         } else {
             document.getElementById('imagesAndContent').innerHTML = `
-          <div class="${infoflex}">
+          <div class="infoflex">
             <div class="size1" id="aboutMeInfo">
-              <br>
               <p>${description}</p>
             </div>
             <div class="size2">
-              <div class="ambPicDiv" style="display:flex; align-items:center; justify-content:center;">
-                <img src="${imageLocation}" id="ambarPersoPic" alt="ambarPersoPic" style="display: block; max-width:28vw; margin-left: -5vw; margin-top:4vh">
+              <div class="ambPicDiv">
+                <img src="${imageLocation}" id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async">
               </div>
-              <div class="iconsRow">
-                <!-- <p>ornament here</p> -->
-              </div>
-              <div class="iconsRow" style="padding-right:30px;"></div>
             </div>
           </div>
           `;
@@ -961,8 +937,8 @@ async function createCurrentProjectWorkCardElement(information) {
         const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
 
         let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-        let imageButton = $('<span>').text('Image').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
-        let textButton = $('<span>').text('Description').css({color: 'black', cursor: 'pointer', margin: '0 10px'});
+        let imageButton = $('<span>').text('Image');
+        let textButton = $('<span>').text('Description');
         let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
 
         if (isMobile) {
@@ -1173,32 +1149,12 @@ function loadShop() {
 }
 
 function createShopItem(item) {
+    // The shop API returns a Shopify buy-button embed (buttonCode) per item;
+    // the embed renders the product image, price and purchase button itself.
     let shopItem = $('<div>').addClass('shopItem');
+    let buyButtonDiv = $('<div>').addClass('buy-button-embed').html(item.buttonCode);
 
-    // Create image
-    let image = $('<img>')
-        .attr('src', item.image_url)
-        .attr('alt', item.name);
-
-    // Create item details
-    let detailsDiv = $('<div>').addClass('item-details');
-    let title = $('<h3>').text(item.name);
-    let price = $('<p>').text('$' + parseFloat(item.price).toFixed(2));
-    let description = $('<p>').text(item.description);
-
-    detailsDiv.append(title, price, description);
-
-    // Create buy button with link to the item URL
-    let buyButton = $('<a>')
-        .attr({
-            'href': item.url,
-            'target': '_blank',
-            'class': 'buy-button shopify-buy-button'
-        })
-        .text('Buy Now');
-
-    // Assemble the shop item
-    shopItem.append(image, detailsDiv, buyButton);
+    shopItem.append(buyButtonDiv);
 
     return shopItem;
 }

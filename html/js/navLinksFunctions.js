@@ -179,11 +179,11 @@ function loadAndDisplayProjectTitles() {
     $.ajax({
         url: '../actions/projectsAPI.php',
         type: 'GET',
+        data: {'activity': 'active'},
         dataType: 'json',
         success: function(projects) {
             let container = $('#selectProjectCategories');
             container.empty();
-            container.append('<br>');
             projects.forEach(function(project) {
                 let title = project.title;
                 let sectionId = 'projectSection' + project.title.trim();
@@ -212,7 +212,7 @@ function loadAndDisplayProjectTitles() {
                     return false; // Prevent event propagation
                 });
 
-                container.append(link, '<br><br>');
+                container.append(link);
             });
         },
         error: function() {
@@ -246,6 +246,20 @@ function toggleNewsLetterSignUp(event) {
     return false; // Prevent default action and bubbling
 }
 
+// Inline feedback under the newsletter form (replaces alert popups)
+function showNewsletterMessage(text, type) {
+    let container = $(".newsletter-container");
+    let msg = container.find(".newsletter-message");
+    if (msg.length === 0) {
+        msg = $('<p>').addClass('newsletter-message');
+        container.append(msg);
+    }
+    msg.removeClass('success error').addClass(type).text(text).stop(true, true).show();
+    if (type === 'success') {
+        msg.delay(4000).fadeOut(400);
+    }
+}
+
 function sendEmailToDB() {
     const email = $("#newsletterEmail").val();
     if (validateEmail(email)) {
@@ -265,10 +279,7 @@ function sendEmailToDB() {
                 if (response.status === 'success') {
                     // Clear the input field after submission
                     $("#newsletterEmail").val("");
-                    // Show a thank you message
-                    alert("Thank you for subscribing!");
-                    // Hide the form after successful submission
-                    $("#newsletterSignUp").slideUp();
+                    showNewsletterMessage("Thank you for subscribing!", "success");
 
                     // Keep mobile menu open
                     if (window.innerWidth <= 992) {
@@ -277,12 +288,12 @@ function sendEmailToDB() {
                         }, 100);
                     }
                 } else {
-                    alert("Error: " + response.message);
+                    showNewsletterMessage(response.message || "Something went wrong. Please try again.", "error");
                 }
             },
             error: function(xhr, status, error) {
                 console.error("Error sending email:", error);
-                alert("An error occurred. Please try again later.");
+                showNewsletterMessage("An error occurred. Please try again later.", "error");
             },
             complete: function() {
                 // Reset flag when the AJAX call completes (success or error)
@@ -292,7 +303,7 @@ function sendEmailToDB() {
             }
         });
     } else {
-        alert("Please enter a valid email address");
+        showNewsletterMessage("Please enter a valid email address.", "error");
     }
 }
 
