@@ -196,6 +196,14 @@ function loadAndDisplayProjectTitles() {
                     e.preventDefault(); // Prevent default jump behavior
                     e.stopPropagation(); // Prevent bubbling up to close dropdown
 
+                    // On mobile, close the drawer so the selected works are visible
+                    if (window.innerWidth <= 992) {
+                        $('#hamburgerMenu').removeClass('active');
+                        $('#navLinksBox').removeClass('active');
+                        $('.nav-overlay').removeClass('active');
+                        $('#sideBySide').removeClass('menu-open');
+                    }
+
                     // Load the specific section with proper loading indicator
                     if (typeof window.loadProjectSection === 'function') {
                         window.loadProjectSection(sectionId);
@@ -328,6 +336,19 @@ function toggleSublinks(event, sublinksId) {
     }
 
     return false; // Prevent default action and bubbling
+}
+
+// Open (rather than toggle) the newsletter form and focus the email field —
+// used by the floating newsletter nudge on the landing page
+function ensureNewsletterOpen() {
+    var newsletterForm = $("#newsletterSignUp");
+    if (newsletterForm.is(":visible")) {
+        $("#newsletterEmail").focus();
+    } else {
+        newsletterForm.slideDown(300, function() {
+            $("#newsletterEmail").focus();
+        });
+    }
 }
 
 function ensureDropdownOpen(sublinksId) {

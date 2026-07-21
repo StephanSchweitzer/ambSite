@@ -49,7 +49,11 @@ html {
 body {
   font-family: var(--font-primary);
   color: var(--color-text);
-  background-color: var(--color-background);
+  /* Warm paper with a faint dot grid — distinguishes the nav column from
+     the white "sheet" the works sit on (#imagesAndContent) */
+  background-color: var(--color-paper);
+  background-image: radial-gradient(rgba(29, 29, 27, 0.055) 1px, transparent 1.4px);
+  background-size: 22px 22px;
   line-height: 1.65;
   margin: 0;
   padding: 0;
@@ -456,6 +460,10 @@ a:hover .ambarNamePic {
   justify-content: center;
   min-height: 100vh;
   box-sizing: border-box;
+  /* White sheet the works sit on, lifted off the dotted paper background */
+  background: var(--color-background);
+  border-left: 1px solid var(--color-line);
+  box-shadow: -14px 0 40px rgba(29, 29, 27, 0.04);
 }
 
 /* Styled at all widths — JS applies this class from 992px down */
@@ -464,12 +472,16 @@ a:hover .ambarNamePic {
   margin-top: 10vh;
   margin-left: 4vw;
   margin-right: 4vw;
-  padding: 4vw 0;
+  padding: 4vw 3vw;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
   box-sizing: border-box;
+  background: var(--color-background);
+  border: 1px solid var(--color-line);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
 }
 
 .imagesAndContentMobile p { font-size: 1em; }
@@ -638,6 +650,17 @@ a:hover .ambarNamePic {
   margin: auto;
   display: block;
   transition: transform 0.7s var(--ease-out-soft);
+}
+
+/* In the works galleries every image fills the column width so pieces read
+   at a consistent size without white space around narrower files */
+.projectWorks .img-container {
+  width: 100%;
+}
+
+.projectWorks .img-container img {
+  width: 100%;
+  max-height: none;
 }
 
 .img-container:hover img {
@@ -1266,6 +1289,119 @@ img.loaded {
   width: 100%;
   text-align: left;
   overflow: hidden;
+}
+
+/* ==========================================================================
+   Floating newsletter nudge (landing view only)
+   ========================================================================== */
+.newsletter-float {
+  position: fixed;
+  left: 22vw; /* keep the drift over the content sheet, off the nav column */
+  top: 58vh;
+  z-index: 900;
+  cursor: pointer;
+  animation: floatDriftX 30s ease-in-out infinite alternate;
+}
+
+.newsletter-float-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 8px 16px 8px 10px;
+  box-shadow: var(--shadow-medium);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: floatDriftY 21s ease-in-out infinite alternate;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Freeze the drift while the visitor is aiming at it */
+.newsletter-float:hover,
+.newsletter-float:focus-visible {
+  animation-play-state: paused;
+}
+
+.newsletter-float:hover .newsletter-float-inner,
+.newsletter-float:focus-visible .newsletter-float-inner {
+  animation-play-state: paused;
+  box-shadow: var(--shadow-lifted);
+  border-color: var(--amb-pink);
+}
+
+.newsletter-float-leaf {
+  height: 26px;
+  width: auto;
+  animation: floatWobble 7s ease-in-out infinite;
+}
+
+.newsletter-float-text {
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.newsletter-float-close {
+  background: transparent;
+  border: none;
+  color: var(--color-faint);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 2px 2px 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.25s ease, color 0.25s ease;
+}
+
+.newsletter-float:hover .newsletter-float-close,
+.newsletter-float:focus-within .newsletter-float-close {
+  opacity: 1;
+}
+
+.newsletter-float-close:hover {
+  color: var(--color-ink);
+}
+
+@keyframes floatDriftX {
+  from { transform: translateX(0); }
+  to { transform: translateX(56vw); }
+}
+
+@keyframes floatDriftY {
+  from { transform: translateY(-22vh); }
+  to { transform: translateY(14vh); }
+}
+
+@keyframes floatWobble {
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(8deg); }
+}
+
+@media (max-width: 992px) {
+  .newsletter-float {
+    left: 5vw;
+    top: 64vh;
+    animation-duration: 24s;
+  }
+
+  .newsletter-float-close {
+    opacity: 1; /* no hover on touch — keep the dismiss visible */
+  }
+
+  @keyframes floatDriftX {
+    from { transform: translateX(0); }
+    to { transform: translateX(38vw); }
+  }
+
+  @keyframes floatDriftY {
+    from { transform: translateY(-14vh); }
+    to { transform: translateY(10vh); }
+  }
 }
 
 /* ==========================================================================

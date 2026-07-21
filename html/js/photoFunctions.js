@@ -273,9 +273,19 @@ $(document).ready(function() {
         openInfo();
     } else if (path === '/current-project') {
         openCurrentProject();
+    } else if (window.innerWidth <= 992) {
+        // On mobile, land directly on the works instead of the carousel
+        getProjectsAndWorks();
+        spawnNewsletterFloat();
     } else {
         getCarousel();
     }
+
+    // The newsletter float only lives on the landing view — remove it as
+    // soon as the visitor navigates anywhere via the nav
+    $(document).on('click', '#navLinksBox a', function() {
+        $('#newsletterFloat').fadeOut(300, function() { $(this).remove(); });
+    });
 });
 
 function createAndShowSideBarLinks() {
@@ -668,9 +678,46 @@ function getCarousel() {
         dataType: 'json',
         success: function(response) {
             createCarousel(response);
+            spawnNewsletterFloat();
         },
         error: function(xhr, status, error) {
             console.log('Error:', error);
+        }
+    });
+}
+
+// Floating newsletter nudge shown on the landing view. Drifts gently around
+// the page, pauses on hover, can be dismissed for the rest of the session,
+// and opens the newsletter sign-up when clicked.
+function spawnNewsletterFloat() {
+    if (sessionStorage.getItem('newsletterFloatDismissed')) return;
+    if (document.getElementById('newsletterFloat')) return;
+
+    let float = $(`
+        <div id="newsletterFloat" class="newsletter-float" role="button" tabindex="0" aria-label="Sign up for the newsletter">
+          <div class="newsletter-float-inner">
+            <img src="imgMid/transparentHomeLeafFinal.png" alt="" class="newsletter-float-leaf">
+            <span class="newsletter-float-text">Newsletter</span>
+            <button type="button" class="newsletter-float-close" aria-label="Dismiss newsletter reminder">&times;</button>
+          </div>
+        </div>`);
+
+    $('body').append(float);
+
+    float.find('.newsletter-float-close').on('click', function(e) {
+        e.stopPropagation();
+        sessionStorage.setItem('newsletterFloatDismissed', '1');
+        float.fadeOut(250, function() { float.remove(); });
+    });
+
+    float.on('click keydown', function(e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        if (window.innerWidth <= 992 && !$('#navLinksBox').hasClass('active')) {
+            $('#hamburgerMenu').trigger('click'); // open the drawer so the form is visible
+        }
+        if (typeof ensureNewsletterOpen === 'function') {
+            ensureNewsletterOpen();
         }
     });
 }

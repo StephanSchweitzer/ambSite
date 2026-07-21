@@ -597,14 +597,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         die;
     }
 
+    // Hard delete: removes the image files (base image + thumbnail) from the
+    // server and the row from the database. Used by the admin trash view's
+    // "Delete Permanently" button — regular delete below stays reversible.
+    if (isset($_DELETE['mode']) && $_DELETE['mode'] === 'hard') {
+        $id = $_DELETE['id'];
+
+        $fetchQuery = $conn->prepare("SELECT fileLocation FROM allWorks WHERE workID = ?");
+        $fetchQuery->execute(array($id));
+        $work = $fetchQuery->fetch(PDO::FETCH_ASSOC);
+
+        if (!$work) {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "Work not found"));
+            die;
+        }
+
+        // basename() so a tampered fileLocation can never reach outside the image dirs
+        $fileName = basename($work['fileLocation']);
+
+        // Another row may reference the same file (re-uploads with the same
+        // name) — only remove the files when this row is the last reference
+        $sharedQuery = $conn->prepare("SELECT COUNT(*) FROM allWorks WHERE fileLocation = ? AND workID != ?");
+        $sharedQuery->execute(array($work['fileLocation'], $id));
+        $isShared = $sharedQuery->fetchColumn() > 0;
+
+        try {
+            $conn->prepare("DELETE FROM worksInProjects WHERE workId = ?")->execute(array($id));
+            $conn->prepare("DELETE FROM allWorks WHERE workID = ?")->execute(array($id));
+        } catch (PDOException $e) {
+            header('Content-Type: application/json');
+            echo json_encode(array("success" => false, "message" => "Database error", "error" => $e->getMessage()));
+            die;
+        }
+
+        $deletedFiles = array();
+        if (!$isShared && $fileName !== '') {
+            foreach (array('../baseImages/', '../thumbnails/') as $dir) {
+                $path = $dir . $fileName;
+                if (is_file($path) && unlink($path)) {
+                    $deletedFiles[] = $path;
+                }
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            "success" => true,
+            "message" => "Work permanently deleted",
+            "filesDeleted" => count($deletedFiles),
+            "fileKept" => $isShared
+        ));
+        die;
+    }
+
     // Regular single-item delete starts here...
     $id = $_DELETE['id'];
 
-    $theQuery = "UPDATE allWorks 
-                SET visible = 0, 
-                    carousel = 0, 
-                    isSelectWork = 0, 
-                    isAvailable = 0 
+    $theQuery = "UPDATE allWorks
+                SET visible = 0,
+                    carousel = 0,
+                    isSelectWork = 0,
+                    isAvailable = 0
                 WHERE workID = ?";
 
     $theArray = array($id);

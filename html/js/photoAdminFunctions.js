@@ -1072,13 +1072,24 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
 
   // Set delete/restore button based on visibility
   document.getElementById('deleteOrRestore').innerHTML = visible == 0
-      ? '<button type="button" class="btn btn-info" id="restoreWorkBtn"><i class="fas fa-trash-restore me-1"></i> Restore</button>'
+      ? '<button type="button" class="btn btn-info" id="restoreWorkBtn"><i class="fas fa-trash-restore me-1"></i> Restore</button> '
+        + '<button type="button" class="btn btn-danger" id="hardDeleteWorkBtn"><i class="fas fa-times-circle me-1"></i> Delete Permanently</button>'
       : '<button type="button" class="btn btn-danger" id="deleteWorkBtn"><i class="fas fa-trash me-1"></i> Delete</button>';
 
   // Set event listener for restore button if visible
   if (visible == 0) {
     $('#restoreWorkBtn').click(function() {
       restoreWork();
+    });
+
+    $('#hardDeleteWorkBtn').click(function() {
+      showConfirmationModal(
+          'Delete Permanently',
+          'This will permanently delete the image file, its thumbnail, and its database entry. This cannot be undone. Are you sure?',
+          function() {
+            hardDeleteWork();
+          }
+      );
     });
   } else {
     // Add event listener for delete button - THIS FIXES THE DELETE ISSUE
@@ -1517,6 +1528,67 @@ function deleteWork() {
 
       // Show error message
       showToast('There has been a problem deleting your work', 'error');
+    }
+  });
+}
+
+// Permanently delete a work: removes the image + thumbnail from the server
+// and the row from the database (picturesAPI DELETE with mode=hard)
+function hardDeleteWork() {
+  console.log("Starting hard delete operation...");
+
+  $('#loadingSpinner').show();
+
+  var workId = $('#photoId').val();
+  console.log("Permanently deleting work ID:", workId);
+
+  $.ajax({
+    url: '../actions/picturesAPI.php',
+    type: 'DELETE',
+    data: "id=" + workId + "&mode=hard",
+    contentType: 'application/x-www-form-urlencoded',
+    dataType: 'json',
+    success: function(response) {
+      console.log("Hard delete response:", response);
+
+      $('#loadingSpinner').hide();
+
+      if (!response.success) {
+        showToast('Could not permanently delete: ' + (response.message || 'unknown error'), 'error');
+        return;
+      }
+
+      // Close modal
+      try {
+        var modal = bootstrap.Modal.getInstance(document.getElementById('photoUpdateModal'));
+        if (modal) {
+          modal.hide();
+        } else {
+          $('#photoUpdateModal').modal('hide');
+        }
+      } catch(e) {
+        console.error("Error closing modal:", e);
+        $('#photoUpdateModal').modal('hide');
+      }
+
+      // Refresh the current view
+      refreshCurrentView();
+
+      var detail = response.fileKept
+          ? ' (image file kept — still used by another work)'
+          : '';
+      showToast('The work has been permanently deleted!' + detail, 'success');
+
+      // Update statistics
+      countWorksStatistics();
+    },
+    error: function(xhr, status, error) {
+      console.error("Hard delete failed. Status:", status);
+      console.error("Error:", error);
+      console.error("Response:", xhr.responseText);
+
+      $('#loadingSpinner').hide();
+      showToast('There has been a problem permanently deleting this work', 'error');
     }
   });
 }
