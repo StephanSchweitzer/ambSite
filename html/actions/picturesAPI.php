@@ -9,6 +9,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $theYear = "";
     $theYear = $_GET['theYear'];
 
+    // One canonical column list for every allWorks query below. Keeping it in a
+    // single place means no branch can silently omit a column — the mismatch
+    // that made $result[$i][13] undefined. Read back by name (FETCH_ASSOC), so
+    // reordering the SELECT can't break the JSON either.
+    $allWorksCols = "workId, fileLocation, name, desc2, desc3, medium, "
+                  . "color, isAvailable, year, orderOfDisplay, carousel, "
+                  . "isSelectWork, visible, long_description";
+
     // New statistics endpoint
     if ($theYear == 'stats') {
         try {
@@ -44,36 +52,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     if ($theYear == 'everything') {
-        $query = "SELECT workId, fileLocation, name,
-                      desc2, desc3, medium,
-                      color, isAvailable, year,
-                      orderOfDisplay, carousel,
-                      isSelectWork, visible, long_description
-               FROM allWorks
+        $query = "SELECT $allWorksCols FROM allWorks
                ORDER BY orderOfDisplay DESC";
 
         $pictureQuery = $conn->prepare($query);
         $pictureQuery->execute();
-        $result = $pictureQuery->fetchAll();
+        $result = $pictureQuery->fetchAll(PDO::FETCH_ASSOC);
 
         $data = array();
 
         for ($i = 0; $i < count($result); $i++) {
             $singleEntry = array(
-                'id' => $result[$i][0],
-                'location' => $result[$i][1],
-                'name' => $result[$i][2],
-                'firstDescription' => $result[$i][3],
-                'secondDescription' => $result[$i][4],
-                'medium' => $result[$i][5],
-                'isColor' => $result[$i][6],
-                'availability' => $result[$i][7],
-                'creationYear' => $result[$i][8],
-                'orderOfDisplay' => $result[$i][9],
-                'carousel' => $result[$i][10],
-                'isSelectWork' => $result[$i][11],
-                'visible' => $result[$i][12],
-                'long_description' => $result[$i][13]
+                'id' => $result[$i]['workId'],
+                'location' => $result[$i]['fileLocation'],
+                'name' => $result[$i]['name'],
+                'firstDescription' => $result[$i]['desc2'],
+                'secondDescription' => $result[$i]['desc3'],
+                'medium' => $result[$i]['medium'],
+                'isColor' => $result[$i]['color'],
+                'availability' => $result[$i]['isAvailable'],
+                'creationYear' => $result[$i]['year'],
+                'orderOfDisplay' => $result[$i]['orderOfDisplay'],
+                'carousel' => $result[$i]['carousel'],
+                'isSelectWork' => $result[$i]['isSelectWork'],
+                'visible' => $result[$i]['visible'],
+                'long_description' => $result[$i]['long_description']
             );
 
             array_push($data, $singleEntry);
@@ -170,60 +173,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $yearCondition = "WHERE visible = 1 AND medium = 'CV'";
     }
 
-    $query = "SELECT workId, fileLocation, name,
-                    desc2, desc3, medium,
-                    color, isAvailable, year,
-                    orderOfDisplay, carousel,
-                    isSelectWork, visible, long_description
-            FROM    allWorks $yearCondition
+    $query = "SELECT $allWorksCols FROM allWorks $yearCondition
             ORDER BY orderOfDisplay DESC";
 
     if ($theYear == 'carousel') {
-        $query = "SELECT
-                      workId, fileLocation, name,
-                      desc2, desc3, medium,
-                      color, isAvailable, year,
-                      orderOfDisplay, isSelectWork, visible,
-                      long_description
-              FROM    allWorks
+        $query = "SELECT $allWorksCols FROM allWorks
               WHERE carousel = 1 AND visible = 1
               ORDER BY orderOfDisplay DESC";
     }
 
     if ($theYear == 'projectsAPI') {
-        $query = "SELECT
-                      workId, fileLocation, name,
-                      desc2, desc3, medium,
-                      color, isAvailable, year,
-                      orderOfDisplay, isSelectWork, visible, long_description
-              FROM    allWorks
+        $query = "SELECT $allWorksCols FROM allWorks
               WHERE isSelectWork = 1
               ORDER BY name ASC";
     }
 
     $pictureQuery = $conn->prepare($query);
     $pictureQuery->execute();
-    $result = $pictureQuery->fetchAll();
+    $result = $pictureQuery->fetchAll(PDO::FETCH_ASSOC);
 
     $data = array();
 
     for ($i = 0; $i < count($result); $i++) {
 
         $singleEntry = array(
-            'id' => $result[$i][0],
-            'location' => $result[$i][1],
-            'name' => $result[$i][2],
-            'firstDescription' => $result[$i][3],
-            'secondDescription' => $result[$i][4],
-            'medium' => $result[$i][5],
-            'isColor' => $result[$i][6],
-            'availability' => $result[$i][7],
-            'creationYear' => $result[$i][8],
-            'orderOfDisplay' => $result[$i][9],
-            'carousel' => $result[$i][10],
-            'isSelectWork' => $result[$i][11],
-            'visible' => $result[$i][12],
-            'long_description' => $result[$i][13]
+            'id' => $result[$i]['workId'],
+            'location' => $result[$i]['fileLocation'],
+            'name' => $result[$i]['name'],
+            'firstDescription' => $result[$i]['desc2'],
+            'secondDescription' => $result[$i]['desc3'],
+            'medium' => $result[$i]['medium'],
+            'isColor' => $result[$i]['color'],
+            'availability' => $result[$i]['isAvailable'],
+            'creationYear' => $result[$i]['year'],
+            'orderOfDisplay' => $result[$i]['orderOfDisplay'],
+            'carousel' => $result[$i]['carousel'],
+            'isSelectWork' => $result[$i]['isSelectWork'],
+            'visible' => $result[$i]['visible'],
+            'long_description' => $result[$i]['long_description']
         );
 
         array_push($data, $singleEntry);

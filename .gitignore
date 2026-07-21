@@ -1,6 +1,8 @@
 ambOldSite/
 .idea/*
 html/.idea/*
+html/baseImages
+html/thumbnails
 
 # Secrets — never commit
 .env
@@ -15,3 +17,6 @@ amb_deploy_key
 amb_deploy_key.pub
 *_deploy_key
 *_deploy_key.pub
+
+# Local dev stack — machine-specific, never committed or deployed
+dev/
