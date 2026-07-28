@@ -59,6 +59,33 @@ This trips people up, so here it is plainly:
 So if you want to add a painting, do it in your admin page as usual. If you
 want the paintings to be *displayed differently*, that's me.
 
+### There are two admin pages, and only one of them is real
+
+Your practice site is a complete copy of your website — which means it has its
+own admin page too. It looks identical to the real one.
+
+**Only the one at ambarvelasco.com is real.** That is where your paintings
+actually live.
+
+The practice one is a dressing-room mirror. If you upload a painting there, it
+goes nowhere: it sits on your laptop, it never reaches your website, and it is
+erased the next time you open Paintbrush. Nothing breaks — but the work is
+lost, and that's a sad way to find this out.
+
+The quickest way to tell them apart is the web address:
+
+- `ambarvelasco.com/...` → **real**. Changes here are live immediately.
+- `localhost:8000/...` → **practice**. Changes here are pretend.
+
+If you're ever unsure which one you're looking at, ask me and I'll tell you.
+
+**Rules for me, not for her:** If she is about to do content work on
+`localhost`, stop her and redirect to the live portal — that data is written to
+the scratch database and destroyed on the next launch. Verified: `pdo.php`
+resolves its connection purely from the local `.env` (`ambar_site_local`), and
+there is no hardcoded production host anywhere in the PHP or JS, so the local
+admin cannot reach production even by accident.
+
 **Rules for me, not for her:** Never add, edit, or delete artwork, project, or
 shop content in the local database as a way of doing her content work. Content
 is production-only, managed through the live admin panel. Local content changes
