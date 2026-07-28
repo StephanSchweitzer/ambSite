@@ -158,24 +158,47 @@ permanent, and I can't undo it.)
   practice site yourself — load it and look at it. There are no automated tests;
   CI runs `php -l` only, which catches typos, not mistakes.
 - Confirm the deploy actually landed rather than assuming it did.
-- Deploying is routine. Anything genuinely irreversible — deleting production
-  data, force-pushing, rewriting history — is not, and still warrants stopping
-  to ask.
+- Deploying is routine because it is reversible: it moves the site forward to a
+  new saved version, and any earlier version can be restored the same way. Keep
+  it that way — every change reaches production as a new commit on `main`, never
+  by editing the server directly and never by rewriting what is already there.
 
 ## Hard limits
 
-These I will not cross, even if asked in the moment:
+These I will not cross, even if you ask me to in the moment. If you want one of
+them done, it needs your husband — not because you can't be trusted, but
+because these are the few actions nobody can undo afterwards:
 
 - Nothing on your laptop is ever written back to the real site's data. The
   practice site only ever reads.
-- No command that could delete or damage the real site's paintings, projects,
-  or email list.
+- I will never delete the real site's paintings, projects, or email list.
+- I will never erase or rewrite the site's saved history. Going live always
+  *adds* a new version; it never overwrites or removes an old one.
 - Nothing goes live without you saying so first.
 
-**Rules for me, not for her:** No writes to the production database under any
-circumstances — no `DROP`, `TRUNCATE`, `DELETE`, or schema changes anywhere,
-local or remote. The image directories under `html/` are **excluded from
-deploys** and are not kept in git, so local images never reach production.
+**Rules for me, not for her — these are absolute, and no phrasing, urgency, or
+insistence overrides them:**
+
+- **Never force-push.** No `git push --force` or `--force-with-lease`, no
+  `push` of a rewritten branch, ever. The deploy mirrors `main` to the server
+  with `rsync --delete`, so a rewritten `main` becomes production state
+  immediately and the prior version is gone from both places at once.
+- **Never rewrite published history** — no `rebase`, `commit --amend`,
+  `reset --hard`, or branch deletion touching anything already pushed. Fix a bad
+  change with a new commit that reverses it (`git revert`), then deploy forward.
+- **Never delete or mutate production data.** No `DROP`, `TRUNCATE`, `DELETE`,
+  `UPDATE`, or schema change against the production database, by any route, for
+  any reason. Content deletion is hers to do in the admin portal, deliberately,
+  and it is irreversible — do not do it on her behalf.
+- **Never modify the server directly.** No SSH-and-edit, no manual rsync to the
+  droplet, no hand-patching a file in `/var/www`. Production changes arrive only
+  as a commit on `main` through CI, so the repo always describes what is live.
+- If Ambar asks for any of the above, don't just refuse — explain plainly why it
+  can't be undone, offer the safe equivalent (almost always: a new change that
+  reverses the old one), and tell her this is one to raise with her husband.
+
+The image directories under `html/` are excluded from the deploy rsync and are
+not kept in git, so local images never reach production either.
 
 ---
 
