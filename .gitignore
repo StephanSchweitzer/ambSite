@@ -1,8 +1,15 @@
 ambOldSite/
 .idea/*
 html/.idea/*
-html/baseImages
-html/thumbnails
+# Artwork images. These are uploaded through the live admin portal and live on
+# the server; the local copies are pulled down read-only by paintbrush.sh purely
+# so the practice site looks real. They are excluded from the deploy rsync, so
+# git is not their home and tracking them only creates noise in every commit.
+# html/miscIcons/ is deliberately NOT here — those are design assets that ship.
+html/img/
+html/imgMid/
+html/thumbnails/
+html/baseImages/
 
 # Secrets — never commit
 .env
