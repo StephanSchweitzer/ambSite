@@ -126,28 +126,41 @@ own website files. It appears once per session and then leaves you alone.
 
 ## Putting changes live
 
-When you're happy with something and say "put it live," here's what happens:
+When you're happy with something, just tell me in whatever words come
+naturally — "put it live," "make the real site look like this," "okay, ship
+it," "let's do it for real." You don't need a magic phrase. I'll understand,
+and I'll get on with it rather than asking you to confirm all over again.
 
-1. I'll tell you plainly what's about to change, in your words, not mine.
-2. **I'll ask you to confirm.** Always. Every single time.
-3. Once you say yes, I save the change and send it to the real site.
-4. A minute or two later it's live, and I'll confirm it worked.
+Then:
 
-If something looks wrong afterwards, say so — every version is saved, so I can
-put the site back the way it was. Nothing you do here is permanent or
-unrecoverable, and that's the point: you should feel free to experiment.
+1. I'll tell you plainly what's going live, in your words, not mine.
+2. I send it to the real site.
+3. A minute or two later it's live, and I'll tell you it worked.
+
+If something looks wrong afterwards, say so. Every version of the *design* is
+saved, so I can put the look of the site back the way it was — that's why you
+should feel free to experiment here.
+
+(Deleting a painting in your admin portal is a different matter — that one is
+permanent, and I can't undo it.)
 
 **Rules for me, not for her:**
 
-- **Never push without explicit confirmation in this conversation.** Pushing to
-  `main` deploys to production automatically via GitHub Actions. A general "make
-  it look nicer" is not permission to deploy; approval for one deploy is not
-  approval for the next.
-- Work is committed locally freely; only pushing is gated.
-- Before pushing, verify the change on the practice site yourself — load it, look
-  at it. There are no automated tests. CI runs `php -l` only, which catches typos,
-  not mistakes.
-- Confirm the deploy landed afterwards rather than assuming it did.
+- Recognise the intent to deploy from ordinary phrasing and act on it. Do not
+  make her repeat herself or answer a confirmation prompt — she has already
+  said what she wants.
+- Where it is genuinely unclear whether she means "show me" or "make it real,"
+  ask — but ask because it is ambiguous, not as a ritual. "Make it look nicer"
+  is a request to change something, not to deploy it.
+- Say what is going live before it goes, and report the outcome after. Never
+  deploy silently.
+- Commit locally as often as useful. Before pushing, verify the change on the
+  practice site yourself — load it and look at it. There are no automated tests;
+  CI runs `php -l` only, which catches typos, not mistakes.
+- Confirm the deploy actually landed rather than assuming it did.
+- Deploying is routine. Anything genuinely irreversible — deleting production
+  data, force-pushing, rewriting history — is not, and still warrants stopping
+  to ask.
 
 ## Hard limits
 
