@@ -3,7 +3,8 @@
 A one-click launcher that spins up a **local practice copy** of a PHP/MySQL
 site, so you can experiment freely without ever touching production.
 
-Double-clicking `Paintbrush.app`:
+Double-clicking `Paintbrush.app` opens a Terminal window showing a progress
+bar, a tick per finished step, and the live log, then:
 
 1. Starts local MySQL (no-op if it is already running).
 2. Pulls a fresh **read-only** dump of the production database and loads it
@@ -15,7 +16,47 @@ Double-clicking `Paintbrush.app`:
 5. Opens the practice site in the browser.
 6. Opens Claude Code on the project folder, last, so it lands in front.
 
-The server is started detached, so it keeps running after the app exits.
+The server is started detached, so it keeps running after the app exits — and
+after the progress window is closed.
+
+## The progress window
+
+The launch takes around twenty seconds, nearly all of it network: the database
+dump and the four image syncs. The app used to run with no interface at all, so
+that was twenty seconds of nothing happening, which looks exactly like a
+launcher that does not work — and invites a second double-click.
+
+So the `.app` hands the script to Terminal instead of running it headless:
+
+```
+  Paintbrush — starting your practice site
+
+  [███████████░░░░░░░░░░░]  3/6
+
+  ✓ MySQL is up
+  ✓ Data refreshed (10 tables)
+  ✓ Images up to date (619 files)
+  ⟳ Starting the web server...
+
+  21:34:57    imgMid: up to date (67 files)
+  21:35:00    thumbnails: up to date (247 files)
+  21:35:05    baseImages: up to date (251 files)
+```
+
+Every noisy sub-command already redirects to the log file, so stdout carries
+nothing but `log()` output and the screen can be redrawn on each update.
+
+The window is safe to close as soon as the site opens; the PHP server is
+detached and keeps serving. It stays open rather than closing itself, so a
+failure is still on screen afterwards.
+
+The dashboard only appears when stdout is a terminal. Piped, scripted, or run
+with `PAINTBRUSH_PLAIN=1`, the script falls back to the plain timestamped lines
+that the log file gets either way:
+
+```bash
+PAINTBRUSH_PLAIN=1 ./paintbrush.sh
+```
 
 ## Security model
 
@@ -34,15 +75,58 @@ The server is started detached, so it keeps running after the app exits.
 cp paintbrush.env.example .paintbrush.env
 chmod 600 .paintbrush.env
 # edit .paintbrush.env with the real values
-./build_app.sh
+./build_app.sh ~/Applications
 ```
 
 `.paintbrush.env` sits next to the script and is gitignored. The script falls
 back to `~/.paintbrush.env` if there is no local one.
 
-Run `./paintbrush.sh` directly to see the output in a terminal. When launched
-from the `.app`, everything is logged to `~/Library/Logs/paintbrush.log` and
-fatal errors are surfaced as a dialog.
+`build_app.sh` takes the output directory as its argument and defaults to this
+repo. Pass `~/Applications` as above: the bundle belongs there rather than in
+`/Applications`, since it is unsigned and hardcodes a path inside this user's
+home directory, and rather than in the repo, where it is gitignored build
+output. Keep exactly one bundle — every copy declares the same
+`CFBundleIdentifier`, so duplicates leave LaunchServices to pick a winner and
+you cannot tell which one you launched. For Desktop or Dock access, make an
+alias to the single bundle instead of copying it.
+
+Run `./paintbrush.sh` directly for the same progress window in the terminal you
+are already in. Either way everything is appended to
+`~/Library/Logs/paintbrush.log`, and fatal errors are surfaced both on screen
+and as a dialog — the dialog stays because the window can end up behind others.
+
+## What a launch resets, and what it never touches
+
+|              | On every launch                                       | Recoverable                |
+| ------------ | ----------------------------------------------------- | -------------------------- |
+| **Database** | every table dropped and rebuilt from production        | yes — backed up first      |
+| **Images**   | production copies written over local ones, none deleted | local-only files always kept |
+| **Code**     | **never touched**                                     | git                         |
+
+The launcher syncs four image directories and nothing else. No PHP, HTML, CSS
+or JavaScript is ever transferred, so the site's code is whatever is on disk
+and in git — the practice site cannot overwrite it.
+
+The database is the destructive part. The production dump opens with
+`DROP TABLE IF EXISTS` for every table, so a launch wipes anything done in the
+local database, including work through the practice site's own admin page. That
+reset is the point of a practice copy, but it is not allowed to be permanent:
+before loading, the current database is dumped to
+
+```
+~/Library/Application Support/Paintbrush/db-backups/
+```
+
+as `<database>-YYYYMMDD-HHMMSS.sql`. The five most recent are kept (about 2 MB
+in total) and older ones are pruned. To restore one:
+
+```bash
+mysql ambar_site_local < ~/Library/Application\ Support/Paintbrush/db-backups/ambar_site_local-20260727-220119.sql
+```
+
+The backup is non-fatal at every step: there is nothing to save on a first run,
+and a backup that fails logs a warning and lets the site start anyway. A dump
+that fails halfway is deleted rather than left looking like a usable backup.
 
 ## Image sync: required server-side setup
 
@@ -109,9 +193,35 @@ without `--delete`, so a misconfigured remote path can never wipe local images.
 ## Notes
 
 - The local database is **overwritten on every run**. Point `LOCAL_DB` at a
-  scratch database, never at anything you care about.
+  scratch database, never at anything you care about. It is backed up first —
+  see below — but that is a safety net, not a reason to keep anything valuable
+  there.
 - `WEB_ROOT` defaults to `$SITE_PATH/html`. Set it explicitly if your web root
   is the project root or is named something else.
+- The `.app` lives in `~/Applications`, with a Finder alias on the Desktop
+  pointing at it. The alias tracks the bundle by file reference, so moving or
+  renaming the app does not break it.
+- The dump runs over `ssh -T`, and that flag matters. No remote command is
+  passed (the forced command supplies it), so ssh treats the session as
+  interactive and asks for a PTY the moment stdin is a terminal — which it is
+  now that the launcher runs in a Terminal window. A PTY applies ONLCR
+  translation, rewriting every `\n` in the dump as `\r\n` and piping corrupted
+  SQL into `mysql`. This server refuses the PTY, so it survived on luck before
+  `-T` was added. Both ssh calls also run under `LC_ALL=C`, so macOS stops
+  forwarding `LC_CTYPE="UTF-8"` to a server whose perl lacks that locale.
+- The `.app` stub drives Terminal over Apple Events, so the window gets a real
+  title and a size that fits the dashboard. This costs a one-time **"Paintbrush
+  wants to control Terminal"** prompt on the very first launch. Approving it is
+  permanent — it is not per session or per day — though a rebuild that changes
+  the stub (moving the repo rewrites the baked-in path) can make macOS ask
+  again. If the Apple Event fails or is declined, the stub falls back to
+  `open -a Terminal`, so a mis-click can never leave a launcher that appears to
+  do nothing.
+- The script also titles and sizes its own window with escape codes, which is
+  what takes effect when you run `./paintbrush.sh` directly in an existing
+  terminal.
 - The `.app` is a thin stub that calls `paintbrush.sh` by absolute path, so
   edits to the script take effect immediately — no rebuild needed. Rebuild
-  only if you move the repo or change the icon.
+  only if you move the repo or change the icon. Moving the repo is the one case
+  that silently breaks the launcher: the stub keeps pointing at the old path.
+  Rebuild with `./build_app.sh ~/Applications` after any such move.

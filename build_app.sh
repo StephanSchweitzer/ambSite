@@ -54,10 +54,38 @@ PLIST
 #
 # Points at paintbrush.sh in this repo by absolute path, so the script stays
 # the single source of truth and the .app never holds a stale copy.
+#
+# Handed to Terminal rather than run directly: the launch takes ~20 seconds,
+# and a window showing the progress bar and live output is the difference
+# between "it's working" and "nothing happened, click it again".
+#
+# Driven over Apple Events so the window gets a real title and a size that
+# fits the dashboard, rather than inheriting whatever the default profile is.
+# This costs a one-time "Paintbrush wants to control Terminal" prompt on first
+# launch; the grant is permanent, though a rebuild that changes this stub can
+# make macOS ask again.
+#
+# Falls back to `open -a Terminal` if the Apple Event fails — declining the
+# prompt must not leave a launcher that does nothing at all, which is the exact
+# problem the window was added to solve.
 
 cat > "$APP/Contents/MacOS/$APP_NAME" <<STUB
 #!/bin/bash
-exec "$REPO_DIR/paintbrush.sh"
+
+if ! osascript >/dev/null 2>&1 <<'OSA'
+tell application "Terminal"
+    activate
+    set paintbrushTab to do script "'$REPO_DIR/paintbrush.sh'"
+    try
+        set custom title of paintbrushTab to "Paintbrush"
+        set number of columns of paintbrushTab to 84
+        set number of rows of paintbrushTab to 22
+    end try
+end tell
+OSA
+then
+    exec open -a Terminal "$REPO_DIR/paintbrush.sh"
+fi
 STUB
 
 chmod +x "$APP/Contents/MacOS/$APP_NAME"
