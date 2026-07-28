@@ -244,20 +244,30 @@ across all PHP files, then `rsync --delete` to the droplet. The rsync excludes
 images and local config can never overwrite production. `--delete` means an
 empty `DEPLOY_PATH` would be destructive; the workflow guards against that.
 
-## Artwork images are not in git
+## What git owns, and what production owns
 
-`html/img/`, `imgMid/`, `thumbnails/`, and `baseImages/` are gitignored and
-untracked. Artwork is uploaded through the live admin portal and lives on the
-server; `paintbrush.sh` pulls read-only copies down purely so the practice site
-looks real. Refreshing therefore no longer dirties `git status`.
+The dividing line is **code vs. content**. File type has nothing to do with it.
 
-`html/miscIcons/` **is** tracked — those are design assets that ship with the
-code, and it is the one image directory the deploy rsync does not exclude.
+- **Git is the source of truth for code** — PHP, JS, CSS, and the design assets
+  that ship alongside it, including `html/miscIcons/`. Production is a copy of
+  whatever `main` says, so the deploy mirrors these and prunes what git dropped.
+- **Production is the source of truth for content** — everything in the
+  database, and the artwork files in `html/img/`, `imgMid/`, `thumbnails/`, and
+  `baseImages/`. Content is created through the live admin portal. Git holds no
+  opinion about it and never will.
 
-Consequences worth remembering: git holds no backup of artwork images (the
-server and Ambar's originals are the only copies), and a new image needed for
-the *design* rather than the catalogue must go in `miscIcons/` or it will never
-reach production.
+Those four artwork directories are gitignored, untracked, and excluded from the
+deploy rsync, so refreshing no longer dirties `git status` and local images can
+never reach the server. `paintbrush.sh` pulls read-only copies down purely so
+the practice site looks real.
+
+`miscIcons/` is not an exception to any of this — it sits on the code side of
+the line and merely happens to contain PNGs. An image belonging to the *design*
+goes there, through git. An image belonging to the *catalogue* goes through the
+portal. Nothing should ever be placed in a production directory by hand.
+
+Consequence worth remembering: git holds no backup of artwork. The server and
+Ambar's own originals are the only copies.
 
 ## How the site works
 
