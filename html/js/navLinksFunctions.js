@@ -1,14 +1,6 @@
 // Builds the menu from the links Ambar manages in the admin (navLinks table)
 // and runs the newsletter sign-up form inside it.
 
-(function () {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadAndInsertNavBarLinks);
-    } else {
-        loadAndInsertNavBarLinks();
-    }
-})();
-
 // Prevents double submissions of the newsletter form
 let newsletterSubmissionInProgress = false;
 
@@ -16,31 +8,32 @@ function loadAndInsertNavBarLinks() {
     if (window.navLinksInitialized) return;
     window.navLinksInitialized = true;
 
-    $.ajax({
-        url: '/actions/navLinksAPI.php',
-        type: 'GET',
-        dataType: 'json',
-        success: function (response) {
-            if (response.status === 'success') {
-                insertLinks(response.data);
-                loadAndDisplayProjectTitles();
+    // index.php sends the links with the page; only ask for them if it couldn't
+    const sentWithPage = window.AMB_PAGE_DATA && window.AMB_PAGE_DATA.navLinks;
+    const request = sentWithPage
+        ? $.Deferred().resolve({ status: 'success', data: sentWithPage }).promise()
+        : $.ajax({ url: '/actions/navLinksAPI.php', type: 'GET', dataType: 'json' });
 
-                if ($('.nav-overlay').length === 0) {
-                    $('body').append('<div class="nav-overlay"></div>');
-                }
+    request.done(function (response) {
+        if (response.status === 'success') {
+            insertLinks(response.data);
+            loadAndDisplayProjectTitles();
 
-                $(document).off('click', '#newsletterSubmit');
-                $(document).off('keypress', '#newsletterEmail');
-                $(document).on('click', '#newsletterSubmit', handleNewsletterSubmit);
-                $(document).on('keypress', '#newsletterEmail', handleNewsletterKeypress);
-
-                // Apply the phone/desktop menu classes to the new links
-                if (typeof setupResponsiveLayout === 'function') {
-                    setupResponsiveLayout();
-                }
-            } else {
-                console.log("Error with loading links");
+            if ($('.nav-overlay').length === 0) {
+                $('body').append('<div class="nav-overlay"></div>');
             }
+
+            $(document).off('click', '#newsletterSubmit');
+            $(document).off('keypress', '#newsletterEmail');
+            $(document).on('click', '#newsletterSubmit', handleNewsletterSubmit);
+            $(document).on('keypress', '#newsletterEmail', handleNewsletterKeypress);
+
+            // Apply the phone/desktop menu classes to the new links
+            if (typeof setupResponsiveLayout === 'function') {
+                setupResponsiveLayout();
+            }
+        } else {
+            console.log("Error with loading links");
         }
     });
 }
@@ -298,3 +291,13 @@ function ensureDropdownOpen(sublinksId) {
         sublinks.show();
     }
 }
+
+// Start-up. Kept at the end of the file: with the links sent along with the
+// page this runs straight away, so everything above must be defined first.
+(function () {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadAndInsertNavBarLinks);
+    } else {
+        loadAndInsertNavBarLinks();
+    }
+})();

@@ -66,6 +66,6 @@ if (!is_file($serve)) {
 $info = @getimagesize($serve);
 header('Content-Type: ' . ($info ? $info['mime'] : 'application/octet-stream'));
 header('Content-Length: ' . filesize($serve));
-header('Cache-Control: public, max-age=' . ($isFallback ? 3600 : 2592000));
+header('Cache-Control: public, max-age=' . ($isFallback ? 3600 : 604800));
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($serve)) . ' GMT');
 readfile($serve);

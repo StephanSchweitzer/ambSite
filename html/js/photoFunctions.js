@@ -31,6 +31,11 @@ var cachedRequests = {};     // API responses, fetched once per visit
 var aboutLayout = null;
 var zIndexCounter = 22;
 
+// index.php sends each page already drawn, along with the data it drew it
+// from (AMB_PAGE_DATA), so the first page of a visit needs no requests
+var pageData = window.AMB_PAGE_DATA || {};
+var pageIsServerDrawn = false; // the page being shown is the one index.php drew
+
 // The artwork viewer (the full-screen modal)
 var viewer = {
     items: [],
@@ -105,8 +110,29 @@ function errorHtml(message) {
     return '<div class="error-message"><p>' + message + '</p></div>';
 }
 
+// Runs draw(data) once the request has its data: straight away if it's
+// already here (no spinner, no flicker), otherwise when it arrives
+function whenLoaded(request, draw, failed) {
+    var drawn = $.Deferred();
+    request.done(function (data) {
+        draw(data);
+        drawn.resolve();
+    }).fail(function () {
+        failed();
+        drawn.reject();
+    });
+    return drawn.promise();
+}
+
+function isLoaded(request) {
+    return request.state() === 'resolved';
+}
+
 // One request per kind of data per visit; a failed request is retried next time
 function fetchPublicWorks(view) {
+    if (!cachedRequests[view] && pageData[view]) {
+        cachedRequests[view] = $.Deferred().resolve(pageData[view]).promise();
+    }
     if (!cachedRequests[view]) {
         cachedRequests[view] = $.ajax({
             url: '/actions/publicWorksAPI.php',
@@ -302,6 +328,9 @@ window.addEventListener('popstate', function (event) {
 });
 
 function setView(view) {
+    var main = document.getElementById('imagesAndContent');
+    pageIsServerDrawn = main.getAttribute('data-server-view') === view;
+    main.removeAttribute('data-server-view');
     currentView = view;
     viewReady = false;
     document.title = PAGE_TITLES[view] || PAGE_TITLES.home;
@@ -315,10 +344,19 @@ function setView(view) {
 function renderWorks() {
     setView('works');
     var content = $('#imagesAndContent').css('padding-top', '50px');
-    content.html(loadingHtml('Loading works...'));
+    var request = fetchPublicWorks('projects');
+    var keepServerDrawn = pageIsServerDrawn;
+    if (!isLoaded(request)) {
+        content.html(loadingHtml('Loading works...'));
+    }
 
-    return fetchPublicWorks('projects').then(function (projects) {
+    return whenLoaded(request, function (projects) {
         if (currentView !== 'works') {
+            return;
+        }
+        if (keepServerDrawn) {
+            galleryItems = [].concat.apply([], projects.map(function (project) { return project.works; }));
+            viewReady = true;
             return;
         }
         content.empty();
@@ -425,6 +463,11 @@ function openSharedWork(workId, options) {
             scrollWorkIntoView(index);
         }
         openViewer(galleryItems, index, { addressIsSet: true });
+        return;
+    }
+
+    if (pageData.work && pageData.work.id === workId) {
+        openViewer([pageData.work], 0, { addressIsSet: true });
         return;
     }
 
@@ -661,13 +704,24 @@ function setupViewer() {
 function renderHome() {
     setView('home');
     var content = $('#imagesAndContent').css('padding-top', '');
-    content.html('<div class="initial-loading"><div class="loading-spinner"></div></div>');
+    var request = fetchPublicWorks('carousel');
+    var keepServerDrawn = pageIsServerDrawn;
+    if (!isLoaded(request)) {
+        content.html('<div class="initial-loading"><div class="loading-spinner"></div></div>');
+    }
 
-    return fetchPublicWorks('carousel').then(function (works) {
+    return whenLoaded(request, function (works) {
         if (currentView !== 'home') {
             return;
         }
-        createCarousel(works);
+        if (keepServerDrawn) {
+            galleryItems = works;
+            if (works.length > 1) {
+                $('#homePageCarousel').carousel({ interval: 3000, ride: 'carousel' });
+            }
+        } else {
+            createCarousel(works);
+        }
         viewReady = true;
     }, function () {
         if (currentView === 'home') {
@@ -703,7 +757,7 @@ function createCarousel(works) {
     galleryItems = works;
 
     if (works.length > 1) {
-        carousel.carousel({ interval: 3000 });
+        carousel.carousel({ interval: 3000, ride: 'carousel' });
     }
 }
 
@@ -720,6 +774,9 @@ $(document).on('click', '.carousel-link', function (event) {
 // --------------------------------------------------------------------------
 
 function fetchAboutMe() {
+    if (!cachedRequests.about && pageData.about) {
+        cachedRequests.about = $.Deferred().resolve(pageData.about).promise();
+    }
     if (!cachedRequests.about) {
         cachedRequests.about = $.ajax({ url: '/actions/aboutMeAPI.php', dataType: 'json' });
         cachedRequests.about.fail(function () {
@@ -763,13 +820,25 @@ function linkEmailAddresses(root) {
 }
 
 function renderAbout(keepScroll) {
+    var request = fetchAboutMe();
+    var keepServerDrawn = false;
     if (!keepScroll) {
         setView('about');
-        $('#imagesAndContent').css('padding-top', '50px').html(loadingHtml(''));
+        // index.php draws the side-by-side layout
+        keepServerDrawn = pageIsServerDrawn && window.innerWidth > 1206;
+        var content = $('#imagesAndContent').css('padding-top', '50px');
+        if (!isLoaded(request)) {
+            content.html(loadingHtml(''));
+        }
     }
 
-    return fetchAboutMe().then(function (aboutMe) {
+    return whenLoaded(request, function (aboutMe) {
         if (currentView !== 'about') {
+            return;
+        }
+        if (keepServerDrawn) {
+            aboutLayout = 'side';
+            viewReady = true;
             return;
         }
         var description = multiline(aboutMe.description);
@@ -802,9 +871,13 @@ function renderAbout(keepScroll) {
 function renderCurrentProject() {
     setView('current-project');
     var content = $('#imagesAndContent').css('padding-top', '50px');
-    content.html(loadingHtml('Loading...'));
+    var request = fetchPublicWorks('currentProject');
+    if (!isLoaded(request)) {
+        content.html(loadingHtml('Loading...'));
+    }
 
-    return fetchPublicWorks('currentProject').then(function (projects) {
+    // Always drawn here (even when index.php drew it) so the flip cards work
+    return whenLoaded(request, function (projects) {
         if (currentView !== 'current-project') {
             return;
         }

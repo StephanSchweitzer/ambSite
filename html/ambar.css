@@ -896,6 +896,13 @@ a:hover .ambarNamePic {
   width: 100%;
 }
 
+/* Phones and tablets skip the home slideshow and go to the works
+   (resolveView in photoFunctions.js), so the slideshow index.php draws for
+   "/" stays hidden there until the works replace it */
+@media (max-width: 992px) and (hover: none) and (pointer: coarse) {
+  main[data-server-view="home"] { visibility: hidden; }
+}
+
 
 /* ==========================================================================
    Current project (image / description flip cards)

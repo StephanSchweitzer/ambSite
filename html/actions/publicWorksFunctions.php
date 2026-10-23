@@ -11,10 +11,18 @@ if (!defined('AMB_SITE_URL')) {
 
 // "Work in Progress" -> "work-in-progress". Only decorates the link; the
 // number in /work/<id>/... is what actually finds the painting, so renaming
-// a work never breaks links that were already shared.
+// a work never breaks links that were already shared (index.php sends an old
+// name on to the current one).
 function ambSlug($text)
 {
     $text = trim((string) $text);
+    if (function_exists('transliterator_transliterate')) {
+        // "Água" -> "Agua" (iconv below can turn accents into stray marks)
+        $latin = transliterator_transliterate('Any-Latin; Latin-ASCII', $text);
+        if ($latin !== false) {
+            $text = $latin;
+        }
+    }
     if (function_exists('iconv')) {
         $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
         if ($ascii !== false) {

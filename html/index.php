@@ -11,45 +11,67 @@ header('Content-Type: text/html; charset=UTF-8');
 global $conn;
 $pdoSoftFail = true; // the page still loads if the database is unreachable
 include __DIR__ . '/database/pdo.php';
-include_once __DIR__ . '/actions/publicWorksFunctions.php';
+include_once __DIR__ . '/actions/publicPageFunctions.php';
 
 function e($text)
 {
     return htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
 }
 
-$pageTitles = array(
-    '/' => 'Ambar Velasco Portfolio',
-    '/select-works' => 'Select Works - Ambar Velasco',
-    '/about' => 'About - Ambar Velasco',
-    '/shop' => 'Shop - Ambar Velasco',
-    '/current-project' => 'Current Project - Ambar Velasco',
-);
-
-$path = '/' . trim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
-if ($path === '/index.php') {
-    $path = '/';
+// One address per page: /about/ and /index.php are sent on to /about and /,
+// and an old or shortened painting link (/work/12) to its full address, so
+// search engines never see the same page under two addresses
+function redirectTo($path)
+{
+    $query = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY);
+    header('Location: ' . $path . ($query ? '?' . $query : ''), true, 301);
+    die;
 }
 
+$requestPath = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+if ($requestPath === '/index.php') {
+    redirectTo('/');
+}
+if (strlen($requestPath) > 1 && substr($requestPath, -1) === '/') {
+    redirectTo(rtrim($requestPath, '/') ?: '/');
+}
+
+$pages = array(
+    '/' => array('view' => 'home', 'title' => 'Ambar Velasco Portfolio'),
+    '/select-works' => array('view' => 'works', 'title' => 'Select Works - Ambar Velasco'),
+    '/about' => array('view' => 'about', 'title' => 'About - Ambar Velasco'),
+    '/shop' => array('view' => 'shop', 'title' => 'Shop - Ambar Velasco'),
+    '/current-project' => array('view' => 'current-project', 'title' => 'Current Project - Ambar Velasco'),
+);
+
+$path = '/' . trim($requestPath, '/');
+
 $status = 200;
+$view = 'notfound';
 $title = 'Ambar Velasco Portfolio';
 $description = 'Professional Website, Artistic Portfolio, and E-Shop of Ambar Velasco. Explore a collection of unique artworks, projects, and creative expressions.';
 $canonicalPath = $path;
 $shareWork = null;
 $work = null;
+$workText = '';
 
-if (isset($pageTitles[$path])) {
-    $title = $pageTitles[$path];
+if (isset($pages[$path])) {
+    $view = $pages[$path]['view'];
+    $title = $pages[$path]['title'];
 } elseif (preg_match('#^/work/(\d+)(?:/[^/]*)?$#', $path, $match)) {
+    $view = 'works';
     $work = $conn ? ambGetPublicWork($conn, $match[1]) : null;
     if ($work) {
+        if ($requestPath !== $work['path']) {
+            redirectTo($work['path']);
+        }
         $title = $work['name'] . ' - Ambar Velasco';
-        $workText = trim(preg_replace('/\s+/', ' ', strip_tags((string) $work['firstDescription'])));
-        $description = $workText !== '' ? $workText . ' — by Ambar Velasco' : 'Artwork by Ambar Velasco';
-        $canonicalPath = $work['path'];
+        $workText = ambExcerpt($work['firstDescription'], 100000);
+        $description = $workText !== '' ? ambExcerpt($workText, 140) . ' — by Ambar Velasco' : 'Artwork by Ambar Velasco';
         $shareWork = $work;
     } elseif ($conn) {
         $status = 404; // only claim "not found" when the database was asked
+        $view = 'notfound';
     }
 } else {
     $status = 404;
@@ -60,25 +82,83 @@ if ($status === 404) {
     $title = 'Page not found - Ambar Velasco';
 }
 
+// What the page shows, fetched here so it can be written straight into the
+// page (for search engines, and so visitors don't wait on a second request).
+// The script picks the same data up from AMB_PAGE_DATA instead of asking again.
+$pageData = array();
+$content = null;   // the page's HTML, or null to let the script draw it
+$navHtml = '';
 $instagramUrl = null;
 if ($conn) {
     try {
+        $projects = ambGetProjectsWithWorks($conn, 'active');
+        $navLinks = ambGetNavLinks($conn);
+        $pageData['projects'] = $projects;
+        $pageData['navLinks'] = $navLinks;
+        $navHtml = ambRenderNav($navLinks, $projects);
+
+        foreach ($navLinks as $link) {
+            if (stripos((string) $link['linkRedirection'], 'instagram.com') !== false) {
+                $instagramUrl = $link['linkRedirection'];
+                break;
+            }
+        }
+
+        if ($status === 404) {
+            $content = ambRenderNotFound();
+        } elseif ($view === 'works') {
+            $content = ambRenderWorks($projects);
+            if ($work) {
+                $pageData['work'] = $work;
+            } else {
+                $titles = array_map(function ($project) { return $project['title']; }, $projects);
+                if ($titles) {
+                    $description = 'Works by Ambar Velasco: ' . implode(', ', $titles) . '.';
+                }
+            }
+        } elseif ($view === 'home') {
+            $carousel = ambGetCarouselWorks($conn);
+            $pageData['carousel'] = $carousel;
+            $content = ambRenderCarousel($carousel);
+            $shareWork = $carousel ? $carousel[0] : null;
+        } elseif ($view === 'about') {
+            $about = $conn->query('SELECT * FROM aboutMe ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+            if ($about) {
+                $pageData['about'] = $about;
+                $content = ambRenderAbout($about);
+                $aboutText = ambExcerpt($about['description']);
+                if ($aboutText !== '') {
+                    $description = $aboutText;
+                }
+            }
+        } elseif ($view === 'current-project') {
+            $currentProjects = ambGetProjectsWithWorks($conn, 'currentProject');
+            $pageData['currentProject'] = $currentProjects;
+            $content = ambRenderCurrentProject($currentProjects);
+            if ($currentProjects && $currentProjects[0]['description']) {
+                $description = ambExcerpt($currentProjects[0]['description']);
+            }
+        }
+
         // Default preview picture: the first work in the home page slideshow
         if (!$shareWork && $status === 200) {
-            $carousel = ambGetCarouselWorks($conn);
+            $carousel = isset($carousel) ? $carousel : ambGetCarouselWorks($conn);
             $shareWork = $carousel ? $carousel[0] : null;
         }
-        $instagram = $conn->query("SELECT linkRedirection FROM navLinks WHERE linkRedirection LIKE '%instagram.com%' LIMIT 1");
-        $instagramUrl = $instagram ? $instagram->fetchColumn() : null;
-    } catch (Exception $ex) {
-        error_log('index.php preview data: ' . $ex->getMessage());
+    } catch (Throwable $ex) {
+        error_log('index.php page data: ' . $ex->getMessage());
+        $pageData = array();
+        $content = null;
+        $navHtml = '';
     }
+} elseif ($status === 404) {
+    $content = ambRenderNotFound();
 }
 
-$canonicalUrl = AMB_SITE_URL . $canonicalPath;
+$canonicalUrl = AMB_SITE_URL . ($work ? $work['path'] : $canonicalPath);
 $shareImage = $shareWork ? AMB_SITE_URL . ambWebImageUrl($shareWork['location']) : AMB_SITE_URL . '/miscIcons/logo.png';
 
-$person = array('@type' => 'Person', 'name' => 'Ambar Velasco', 'url' => AMB_SITE_URL . '/', 'jobTitle' => 'Artist');
+$person = array('@type' => 'Person', '@id' => AMB_SITE_URL . '/#ambar', 'name' => 'Ambar Velasco', 'url' => AMB_SITE_URL . '/', 'jobTitle' => 'Artist');
 if ($instagramUrl) {
     $person['sameAs'] = array($instagramUrl);
 }
@@ -94,12 +174,23 @@ if ($work) {
     if (!empty($work['creationYear'])) {
         $structuredData['dateCreated'] = (string) $work['creationYear'];
     }
-    if (!empty($workText)) {
+    if (!empty($work['medium'])) {
+        $structuredData['artMedium'] = (string) $work['medium'];
+    }
+    if ($workText !== '') {
         $structuredData['description'] = $workText;
     }
+} elseif ($view === 'home') {
+    // The site's name in search results comes from the WebSite entry
+    $structuredData = array('@context' => 'https://schema.org', '@graph' => array(
+        array('@type' => 'WebSite', 'name' => 'Ambar Velasco', 'url' => AMB_SITE_URL . '/', 'publisher' => array('@id' => $person['@id'])),
+        $person,
+    ));
 } else {
     $structuredData = array('@context' => 'https://schema.org') + $person;
 }
+
+$mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top: 50px;"';
 ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -189,14 +280,11 @@ if ($work) {
     <!-- Main Content Area -->
     <div id="sideBySide" class="main-content">
         <!-- Navigation -->
-        <nav id="navLinksBox" class="navLinksBox" aria-label="Main Navigation"></nav>
+        <nav id="navLinksBox" class="navLinksBox" aria-label="Main Navigation"><?= $navHtml ?></nav>
 
         <!-- Content Area -->
-        <main id="imagesAndContent" class="imagesAndContent" aria-label="Main Content">
-            <!-- Content will be loaded dynamically -->
-            <div class="initial-loading">
-                <div class="loading-spinner"></div>
-            </div>
+        <main id="imagesAndContent" class="imagesAndContent" aria-label="Main Content" data-view="<?= e($view) ?>"<?= $content !== null ? ' data-server-view="' . e($view) . '"' : '' ?><?= $mainPadding ?>>
+            <?= $content !== null ? $content : ambRenderLoading() ?>
         </main>
     </div>
 
@@ -210,7 +298,7 @@ if ($work) {
                     </svg>
                 </button>
                 <div class="centerLargePhoto">
-                    <img id="popUpImage" class="popUpImage" alt="">
+                    <img id="popUpImage" class="popUpImage" alt="<?= $work ? e($work['name']) : '' ?>"<?= $work ? ' src="' . e(ambWebImageUrl($work['location'])) . '"' : '' ?>>
                     <div id="spinner" class="spinner-border text-light position-absolute" role="status" style="display: none;">
                         <span class="sr-only">Loading...</span>
                     </div>
@@ -229,8 +317,8 @@ if ($work) {
                     </div>
                 </div>
                 <div id="imageInfo" class="imageInfo">
-                    <h2 id="imageTitle"></h2>
-                    <p id="imageDescription"></p>
+                    <h2 id="imageTitle"><?= $work ? e($work['name']) : '' ?></h2>
+                    <p id="imageDescription"><?= $work ? ambMultiline($work['firstDescription']) : '' ?></p>
                     <p id="imageCounter" class="image-counter"></p>
                 </div>
             </div>
@@ -240,5 +328,8 @@ if ($work) {
     <!-- Navigation Overlay for Mobile -->
     <div class="nav-overlay"></div>
 </div>
+<?php if ($pageData): ?>
+<script>window.AMB_PAGE_DATA = <?= json_encode($pageData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?>;</script>
+<?php endif; ?>
 </body>
 </html>

@@ -289,6 +289,17 @@ link previews that painting). Because pages can be nested (`/work/1/x`),
 every asset and API URL in the public page and its JS must be root-relative
 (`/actions/...`, `/baseImages/...`).
 
+Server-drawn pages: `index.php` also writes each page's content (menu,
+gallery, slideshow, About, Current Project, 404) into the HTML using
+`actions/publicPageFunctions.php`, so search engines get real content without
+running JS. It embeds the data it used as `window.AMB_PAGE_DATA`; the JS reads
+that instead of calling the APIs, and for the first page keeps the server's
+markup (`data-server-view` on `<main>`) rather than redrawing it. **The PHP
+render functions mirror the JS ones in `photoFunctions.js` /
+`navLinksFunctions.js` — change markup in both.** The shop is still drawn only
+by JS (its Shopify embeds run scripts). `index.php` 301s `/about/`,
+`/index.php` and non-canonical `/work/<id>/<slug>` links to the canonical URL.
+
 Images on the public site: the gallery, slideshow and viewer show a web-sized
 copy (max 1600×2400, JPEG q82) at `baseImages/web/<file>`, never the
 multi-megapixel original. Copies are made at upload (`picturesAPI.php` POST)
@@ -301,13 +312,13 @@ all artwork. The size limits are in `actions/imageManipulationFunctions.php`.
 | Area | Files |
 |---|---|
 | Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
-| Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js`, `js/shopFunctions.js` |
+| Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
-| SEO | `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt` |
+| SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
 | Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages |
 | Auth | `html/signIn/` — session-based; admin pages check `$_SESSION["ambar"] === "connected"`; `login_attempts` table rate-limits |
 | DB connection | `html/database/pdo.php` — loads `.env` from project root, exposes global `$conn` (PDO) and `env()` helper. Every entry point `include`s it. |
-| Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf, arrows). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
+| Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
 
 The local `.env` points at the scratch database `ambar_site_local`; production
 credentials live in a separate `.env` on the server and are deliberately not on
@@ -338,8 +349,8 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   others `{status, data}` wrappers. Match whatever the consuming JS expects.
 - Query results are often read by numeric column index (`$result[$i][3]`), so
   reordering columns in a SELECT silently breaks the JSON output.
-- jQuery comes from the Google CDN (3.7.0) in `index.php`; the vendored
-  `js/jquery-3.6.0.js` is used by some admin pages. Bootstrap 4.5.2 via CDN.
+- jQuery comes from CDNs: 3.7.0 (Google) on the public page, 3.5.1/3.6.0
+  (code.jquery.com) on admin pages. Bootstrap 4.5.2 via CDN.
   On the public page all scripts load with `defer`, in order.
 - The menu links come from the `navLinks` table; their `onclick` column holds
   `;`-separated names that `navLinksFunctions.js` maps to functions

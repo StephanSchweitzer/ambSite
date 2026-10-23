@@ -5,7 +5,7 @@
 
 global $conn;
 include 'database/pdo.php';
-include_once 'actions/publicWorksFunctions.php';
+include_once 'actions/publicPageFunctions.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
@@ -20,10 +20,27 @@ $pages = array(
     array('loc' => '/about', 'priority' => '0.6', 'changefreq' => 'yearly'),
 );
 
+// The Current Project page, when the menu links to it and it has something
+// to show. (The shop is left out on purpose.)
+foreach (ambGetNavLinks($conn) as $link) {
+    if (ambNavLinkPage($link) === '/current-project') {
+        foreach (ambGetProjectsWithWorks($conn, 'currentProject') as $project) {
+            if ($project['works']) {
+                $pages[] = array('loc' => '/current-project', 'priority' => '0.7', 'changefreq' => 'monthly');
+                break;
+            }
+        }
+        break;
+    }
+}
+
+// Every work on the Works page, plus any that are only in the home slideshow
 $works = array();
 $seen = array();
-foreach (ambGetProjectsWithWorks($conn, 'active') as $project) {
-    foreach ($project['works'] as $work) {
+$groups = array_map(function ($project) { return $project['works']; }, ambGetProjectsWithWorks($conn, 'active'));
+$groups[] = ambGetCarouselWorks($conn);
+foreach ($groups as $group) {
+    foreach ($group as $work) {
         if (!isset($seen[$work['id']])) {
             $seen[$work['id']] = true;
             $works[] = $work;
