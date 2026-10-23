@@ -753,6 +753,16 @@ a:hover .ambarNamePic {
   opacity: 0.35;
 }
 
+/* The title and description fade while one painting gives way to the next */
+.imageInfo {
+  transition: opacity 0.28s ease;
+}
+
+.imageInfo.is-changing {
+  opacity: 0;
+  transition-duration: 0.18s;
+}
+
 .image-counter {
   font-size: 0.75rem !important;
   letter-spacing: 0.22em;

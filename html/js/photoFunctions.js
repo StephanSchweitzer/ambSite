@@ -518,22 +518,54 @@ function openViewer(items, index, options) {
     }
 }
 
-function showViewerImage() {
+// Stepping between paintings: the current one drifts away and fades, the
+// next drifts in from the other side
+var VIEWER_SLIDE_PX = 60;
+var VIEWER_LEAVE_MS = 180;
+var VIEWER_ARRIVE_MS = 320;
+
+function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// direction: -1 / 1 when stepping to the previous / next painting; leave it
+// out when opening the viewer (the modal has its own opening animation)
+function showViewerImage(direction) {
     var work = viewer.items[viewer.index];
     var img = document.getElementById('popUpImage');
     var src = webImageUrl(work.location);
     var token = ++viewer.loadToken;
+    var animate = !!direction && !prefersReducedMotion();
+    var leftAt = Date.now();
 
-    $('#imageTitle').text(work.name);
-    $('#imageDescription').html(multiline(work.firstDescription));
-    $('#imageCounter').text(viewer.items.length > 1 ? (viewer.index + 1) + ' / ' + viewer.items.length : '');
     $('.modal-nav-arrows').toggle(viewer.items.length > 1);
     document.title = work.name + ' - Ambar Velasco';
 
-    img.alt = work.name;
-    img.style.transform = '';
-    img.setAttribute('data-original', originalImageUrl(work.location));
-    img.removeAttribute('data-fell-back');
+    function showDetails() {
+        $('#imageTitle').text(work.name);
+        $('#imageDescription').html(multiline(work.firstDescription));
+        $('#imageCounter').text(viewer.items.length > 1 ? (viewer.index + 1) + ' / ' + viewer.items.length : '');
+        img.alt = work.name;
+        img.setAttribute('data-original', originalImageUrl(work.location));
+        img.removeAttribute('data-fell-back');
+    }
+
+    if (animate) {
+        // Send the current painting and its caption away; the details change
+        // once the next painting is ready to come in
+        img.style.transition = 'transform ' + VIEWER_LEAVE_MS + 'ms ease-in, opacity ' + VIEWER_LEAVE_MS + 'ms ease-in';
+        // (after a swipe, keep going from wherever the finger left it)
+        var dragged = Math.abs(parseFloat((img.style.transform.match(/translateX\((-?[\d.]+)px\)/) || [])[1]) || 0);
+        img.style.transform = 'translateX(' + (-direction * Math.max(VIEWER_SLIDE_PX, dragged + 40)) + 'px)';
+        img.style.opacity = '0';
+        $('#imageInfo').addClass('is-changing');
+    } else {
+        img.style.transition = '';
+        img.style.transform = '';
+        img.style.opacity = '';
+        $('#imageInfo').removeClass('is-changing');
+        showDetails();
+    }
 
     // Keep the previous picture up until the next one is ready (no blank
     // flash), and only show a spinner if it takes a moment
@@ -542,7 +574,31 @@ function showViewerImage() {
             $('#spinner').show();
             $(img).addClass('is-loading');
         }
-    }, 150);
+    }, animate ? VIEWER_LEAVE_MS + 150 : 150);
+
+    function arrive(finalSrc) {
+        showDetails();
+        // Start just off to the side, invisible, then glide into place
+        img.style.transition = 'none';
+        img.style.transform = 'translateX(' + (direction * VIEWER_SLIDE_PX) + 'px)';
+        img.style.opacity = '0';
+        img.src = finalSrc;
+        var reveal = function () {
+            if (token !== viewer.loadToken) {
+                return;
+            }
+            void img.offsetWidth; // let the browser take in the starting position
+            img.style.transition = 'transform ' + VIEWER_ARRIVE_MS + 'ms var(--ease-out-soft), opacity ' + VIEWER_ARRIVE_MS + 'ms ease';
+            img.style.transform = '';
+            img.style.opacity = '';
+            $('#imageInfo').removeClass('is-changing');
+        };
+        if (img.decode) {
+            img.decode().then(reveal, reveal);
+        } else {
+            reveal();
+        }
+    }
 
     var loader = new Image();
     loader.onload = loader.onerror = function (event) {
@@ -552,7 +608,17 @@ function showViewerImage() {
         clearTimeout(spinnerTimer);
         $('#spinner').hide();
         $(img).removeClass('is-loading');
-        img.src = event.type === 'error' ? img.getAttribute('data-original') : src;
+        var finalSrc = event.type === 'error' ? originalImageUrl(work.location) : src;
+        if (!animate) {
+            img.src = finalSrc;
+            return;
+        }
+        // Let the old painting finish leaving before the new one arrives
+        setTimeout(function () {
+            if (token === viewer.loadToken) {
+                arrive(finalSrc);
+            }
+        }, Math.max(0, VIEWER_LEAVE_MS - (Date.now() - leftAt)));
     };
     loader.src = src;
 
@@ -573,7 +639,7 @@ function changeImage(step) {
     var work = viewer.items[viewer.index];
     // Stepping through paintings updates the address without piling up history
     history.replaceState($.extend({}, history.state, { path: work.path }), '', work.path);
-    showViewerImage();
+    showViewerImage(step);
 }
 
 // options.fromHistory: the address bar has already moved (Back button), so
