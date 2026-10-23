@@ -1,96 +1,76 @@
 <?php
-
+session_start();
 include '../database/pdo.php';
 
-// Function to record a failed login attempt
-function recordFailedLogin($ip_address) {
-    global $conn;
-    // Check if the IP address is already in the database
-    $stmt = $conn->prepare("SELECT attempts FROM login_attempts WHERE ip_address = :ip_address");
-    $stmt->bindParam(":ip_address", $ip_address, PDO::PARAM_STR);
-    $stmt->execute();
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+// Failed sign-ins are counted per IP address. Five within an hour blocks
+// that address until the hour has passed; a successful sign-in clears it.
+const MAX_FAILED_ATTEMPTS = 5;
 
-    if ($result) {
-        // If exists, increment the attempts
-        $attempts = $result['attempts'] + 1;
-        $updateStmt = $conn->prepare("UPDATE login_attempts SET attempts = :attempts, attempt_time = NOW() WHERE ip_address = :ip_address");
-        $updateStmt->bindParam(":attempts", $attempts, PDO::PARAM_INT);
-        $updateStmt->bindParam(":ip_address", $ip_address, PDO::PARAM_STR);
-        $updateStmt->execute();
+function recordFailedLogin($ip_address)
+{
+    global $conn;
+    $stmt = $conn->prepare("SELECT attempts, attempt_time > (NOW() - INTERVAL 1 HOUR) AS recent
+                            FROM login_attempts WHERE ip_address = ?");
+    $stmt->execute(array($ip_address));
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row) {
+        // Mistakes from more than an hour ago no longer count
+        $attempts = $row['recent'] ? $row['attempts'] + 1 : 1;
+        $conn->prepare("UPDATE login_attempts SET attempts = ?, attempt_time = NOW() WHERE ip_address = ?")
+             ->execute(array($attempts, $ip_address));
     } else {
-        // Otherwise, insert a new record
-        $insertStmt = $conn->prepare("INSERT INTO login_attempts (ip_address, attempts) VALUES (:ip_address, 1)");
-        $insertStmt->bindParam(":ip_address", $ip_address, PDO::PARAM_STR);
-        $insertStmt->execute();
+        $conn->prepare("INSERT INTO login_attempts (ip_address, attempts, attempt_time) VALUES (?, 1, NOW())")
+             ->execute(array($ip_address));
     }
 }
 
-// Function to check if the IP address is blocked
-function isIpBlocked($ip_address) {
+function isIpBlocked($ip_address)
+{
     global $conn;
-    $maxAttempts = 5; // Set your threshold here
-
-    $stmt = $conn->prepare("SELECT attempts FROM login_attempts WHERE ip_address = :ip_address AND attempt_time > (NOW() - INTERVAL 1 HOUR)");
-
-    // Bind the parameter using bindValue
-    $stmt->bindValue(':ip_address', $ip_address, PDO::PARAM_STR);
-
-    $stmt->execute();
-
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($result) {
-        return $result['attempts'] >= $maxAttempts;
-    }
-
-    return false;
+    $stmt = $conn->prepare("SELECT attempts FROM login_attempts
+                            WHERE ip_address = ? AND attempt_time > (NOW() - INTERVAL 1 HOUR)");
+    $stmt->execute(array($ip_address));
+    $attempts = $stmt->fetchColumn();
+    return $attempts !== false && $attempts >= MAX_FAILED_ATTEMPTS;
 }
 
+function clearFailedLogins($ip_address)
+{
+    global $conn;
+    $conn->prepare("DELETE FROM login_attempts WHERE ip_address = ?")->execute(array($ip_address));
+}
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: signIn.php");
+    die;
+}
 
-  $user_ip = $_SERVER['REMOTE_ADDR'];
+$user_ip = $_SERVER['REMOTE_ADDR'];
 
 if (isIpBlocked($user_ip)) {
-    die("Your IP has been temporarily blocked due to too many failed login attempts.");
+    header("Location: signIn.php?status=blocked");
+    die;
 }
 
+$username = $_POST['username'] ?? '';
+$password = $_POST['password'] ?? '';
 
-$username = $_POST['username'];
-$password =  $_POST['password'];
-$login = FALSE;
+$stmt = $conn->prepare("SELECT username, password FROM users WHERE username = ?");
+$stmt->execute(array($username));
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$success = $conn->prepare("SELECT username, password
-    FROM users
-    WHERE username = ?");
-
-$success->execute([$username]);
-
-$row = $success->fetch(PDO::FETCH_ASSOC);
-
-if (is_array($row))
-{
-
-  if (password_verify($password, $row['password']))
-  {
-    $login = TRUE;
-  }
+if (!is_array($row) || !password_verify($password, $row['password'])) {
+    recordFailedLogin($user_ip);
+    header("Location: signIn.php?status=incorrect");
+    die;
 }
 
-if(!$login)
-{
+clearFailedLogins($user_ip);
 
-  recordFailedLogin($user_ip);
-  
-  header("Location: signIn.php?status=Incorrect login");
-  die;
-}
+// A fresh session ID at sign-in, so an ID picked up before signing in is useless
+session_regenerate_id(true);
+$_SESSION["ambar"] = "connected";
 
-else if ($login) {
-  //session_destroy();
-  session_start();
-  $_SESSION["ambar"] = "connected";
-  header("Location: ../admin/mainAdmin.php");
-  // die;
-}
-?>
+header("Location: ../admin/mainAdmin.php");
+die;

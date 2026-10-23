@@ -2,6 +2,7 @@
 global $conn;
 session_start();
 include '../database/pdo.php';
+include_once __DIR__ . '/adminAuth.php';
 
 // Handle GET request - no authentication required
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -17,10 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 // For POST requests, check authentication
-if (($_SESSION["ambar"] ?? null) != "connected") {
-    header("Location: ../signIn/signIn.php?status=needCredentials");
-    die;
-}
+requireAdminApi();
 
 // Handle POST request for About Me updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

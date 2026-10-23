@@ -400,5 +400,6 @@ $newSubscribersCount = count($newSubscribers);
 
 <script src="../js/newsletterAdmin.js"></script>
 
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

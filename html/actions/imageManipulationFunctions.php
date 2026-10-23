@@ -143,84 +143,86 @@ function createWebImage($sourcePath, $destPath)
 }
 
 function createAndSaveThumbnail($filePath, $targetDirectory, $fileName, $newWidth = 400) {
-    // Get the original image's dimensions and type
-    list($width, $height, $type) = getimagesize($filePath);
+    $info = @getimagesize($filePath);
+    if (!$info) {
+        throw new Exception('Not a readable image');
+    }
+    list($width, $height, $type) = $info;
 
-    // Calculate new dimensions to maintain aspect ratio
-    $ratio = $newWidth / $width;
-    $newHeight = $height * $ratio;
+    // Keep the aspect ratio. GD wants whole pixels.
+    $newHeight = max(1, (int) round($height * $newWidth / $width));
 
-    // Create image resource of the original image based on its type
     switch ($type) {
         case IMAGETYPE_JPEG:
-            $srcImage = imagecreatefromjpeg($filePath);
+            $srcImage = @imagecreatefromjpeg($filePath);
             break;
         case IMAGETYPE_PNG:
-            $srcImage = imagecreatefrompng($filePath);
+            $srcImage = @imagecreatefrompng($filePath);
             break;
         case IMAGETYPE_GIF:
-            $srcImage = imagecreatefromgif($filePath);
+            $srcImage = @imagecreatefromgif($filePath);
             break;
         default:
-            die("Unsupported file type");
+            throw new Exception('Unsupported file type');
+    }
+    if (!$srcImage) {
+        throw new Exception('Could not decode image');
     }
 
-    // Create a new true color image
     $thumbImage = imagecreatetruecolor($newWidth, $newHeight);
-
-    // Copy and resize the old image into the new image
     imagecopyresampled($thumbImage, $srcImage, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-    // Save the resized image to the target directory with the original file name
     $savePath = $targetDirectory . $fileName;
-    imagejpeg($thumbImage, $savePath, 90); // Adjust compression quality as needed
+    $ok = imagejpeg($thumbImage, $savePath, 90);
 
-    // Clear memory
     imagedestroy($srcImage);
     imagedestroy($thumbImage);
 
+    if (!$ok) {
+        throw new Exception('Could not save thumbnail');
+    }
     return "Thumbnail created at: " . $savePath;
 }
 
 function convertToProgressiveJPEGAndUpload($sourcePath, $destinationPath) {
-    // Determine the type of the source image
-    $imageInfo = getimagesize($sourcePath);
+    $imageInfo = @getimagesize($sourcePath);
+    if (!$imageInfo) {
+        throw new Exception('Not a readable image');
+    }
     $imageType = $imageInfo[2];
 
-    // Create an image resource from the source image based on its type
     switch ($imageType) {
         case IMAGETYPE_JPEG:
-            $image = imagecreatefromjpeg($sourcePath);
+            $image = @imagecreatefromjpeg($sourcePath);
             break;
         case IMAGETYPE_PNG:
-            $image = imagecreatefrompng($sourcePath);
-            // Convert PNG to JPEG
-            $bg = imagecreatetruecolor(imagesx($image), imagesy($image));
-            imagefill($bg, 0, 0, imagecolorallocate($bg, 255, 255, 255));
-            imagecopy($bg, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
-            imagedestroy($image);
-            $image = $bg;
+            $image = @imagecreatefrompng($sourcePath);
             break;
         case IMAGETYPE_GIF:
-            $image = imagecreatefromgif($sourcePath);
-            // Convert GIF to JPEG
-            $bg = imagecreatetruecolor(imagesx($image), imagesy($image));
-            imagefill($bg, 0, 0, imagecolorallocate($bg, 255, 255, 255));
-            imagecopy($bg, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
-            imagedestroy($image);
-            $image = $bg;
+            $image = @imagecreatefromgif($sourcePath);
             break;
         default:
             throw new Exception('Unsupported image type.');
     }
+    if (!$image) {
+        throw new Exception('Could not decode image');
+    }
 
-    // Enable interlacing for progressive JPEGs
+    // PNG and GIF become JPEG on a white background (JPEG has no transparency)
+    if ($imageType !== IMAGETYPE_JPEG) {
+        $bg = imagecreatetruecolor(imagesx($image), imagesy($image));
+        imagefill($bg, 0, 0, imagecolorallocate($bg, 255, 255, 255));
+        imagecopy($bg, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+        imagedestroy($image);
+        $image = $bg;
+    }
+
+    // Progressive JPEG
     imageinterlace($image, 1);
-
-    // Save the image as a progressive JPEG
-    imagejpeg($image, $destinationPath, 90); // Set quality as needed, typically between 75-90 is good for web
-
-    // Free up memory
+    $ok = imagejpeg($image, $destinationPath, 90);
     imagedestroy($image);
-}
 
+    if (!$ok) {
+        throw new Exception('Could not save image');
+    }
+}

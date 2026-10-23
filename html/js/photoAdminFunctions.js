@@ -1263,32 +1263,33 @@ function postPhoto() {
     data: postData,
     processData: false,
     contentType: false,
+    dataType: 'json',
     success: function(response) {
-      console.log("Upload successful. Response:", response);
+      if (!response || !response.success) {
+        uploadFailed(response && response.message);
+        return;
+      }
 
       // Check if we have selected projects to associate
-      if (selectedProjects.length > 0 && response && response.id) {
-        // Associate the new work with selected projects
+      if (selectedProjects.length > 0 && response.id) {
         associateNewWorkWithProjects(response.id, selectedProjects);
       } else {
+        showToast('Your work has been uploaded!', 'success');
         finishWorkCreation();
       }
     },
-    error: function(xhr, status, error) {
-      console.error("Upload failed. Status:", status);
-      console.error("Error:", error);
-      console.error("Response:", xhr.responseText);
-
-      // Hide loading spinner
-      $('#loadingSpinner').hide();
-
-      // Re-enable upload button
-      document.getElementById('uploadWorkButton').disabled = false;
-
-      // Show error message
-      showToast('There has been a problem uploading your work', 'error');
+    error: function(xhr) {
+      console.error("Upload failed:", xhr.status, xhr.responseText);
+      uploadFailed(xhr.responseJSON && xhr.responseJSON.message);
     }
   });
+}
+
+// Keeps the form open, with everything she typed, and says why
+function uploadFailed(reason) {
+  $('#loadingSpinner').hide();
+  document.getElementById('uploadWorkButton').disabled = false;
+  showToast('The work was not uploaded. ' + (reason || 'Please try again.'), 'error');
 }
 
 function associateNewWorkWithProjects(workId, projectIds) {

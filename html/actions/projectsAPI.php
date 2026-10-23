@@ -4,6 +4,7 @@ global $conn;
 session_start();
 
 include '../database/pdo.php';
+include_once __DIR__ . '/adminAuth.php';
 
 function makeNewCurrentProject($id)
 {
@@ -89,11 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
-  if (($_SESSION["ambar"] ?? null) != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+  requireAdminApi();
 
   $title = $_POST["title"];
   $description = $_POST["description"];
@@ -138,11 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 {
 
-  if (($_SESSION["ambar"] ?? null) != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+  requireAdminApi();
 
   $rawData = file_get_contents('php://input');
   parse_str($rawData, $_PATCH);
@@ -193,11 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 {
 
-  if (($_SESSION["ambar"] ?? null) != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+  requireAdminApi();
 
   $rawData = file_get_contents('php://input');
   parse_str($rawData, $_DELETE);

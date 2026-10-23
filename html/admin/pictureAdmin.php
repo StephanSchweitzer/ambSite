@@ -1205,5 +1205,6 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
         getAllWorks('Select Works');
     });
 </script>
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

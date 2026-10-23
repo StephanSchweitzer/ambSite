@@ -240,5 +240,6 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../js/navbarAdmin.js"></script>
 
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

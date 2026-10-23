@@ -212,5 +212,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
- </body>
+ <script src="../js/adminSession.js"></script>
+</body>
  </html>

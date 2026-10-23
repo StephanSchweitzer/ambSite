@@ -3,6 +3,7 @@ global $conn;
 session_start();
 
 include '../database/pdo.php';
+include_once __DIR__ . '/adminAuth.php';
 include 'imageManipulationFunctions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -231,53 +232,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     die;
 }
 
+// Upload answers. Failures carry a real HTTP error code, so the admin page
+// can never mistake one for a success.
+function uploadFail($message, $code = 400, $extra = array())
+{
+    http_response_code($code);
+    header('Content-Type: application/json');
+    echo json_encode(array_merge(array("success" => false, "message" => $message), $extra));
+    die;
+}
+
+// A file name for a new upload that no other work is using. Re-using a name
+// would silently replace that other work's image, thumbnail and web copy.
+function uniqueArtworkFileName($conn, $originalName, $dirs)
+{
+    $base = pathinfo($originalName, PATHINFO_FILENAME);
+    $base = trim(preg_replace('/[^A-Za-z0-9_-]+/', '-', $base), '-');
+    if ($base === '') {
+        $base = 'artwork';
+    }
+    $base = substr($base, 0, 80);
+
+    $inUse = $conn->prepare("SELECT COUNT(*) FROM allWorks WHERE fileLocation = ?");
+    for ($n = 1; ; $n++) {
+        $candidate = $base . ($n > 1 ? '-' . $n : '') . '.jpeg';
+        $taken = false;
+        foreach ($dirs as $dir) {
+            if (file_exists($dir . $candidate)) {
+                $taken = true;
+                break;
+            }
+        }
+        if (!$taken) {
+            $inUse->execute(array($candidate));
+            $taken = $inUse->fetchColumn() > 0;
+        }
+        if (!$taken) {
+            return $candidate;
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check session
     if (($_SESSION["ambar"] ?? null) != "connected") {
-        header('Content-Type: application/json');
-        echo json_encode(array("success" => false, "message" => "Authentication required"));
-        die;
+        uploadFail("You have been signed out. Please sign in again.", 401, array("signedOut" => true));
     }
 
-    // Check if photo was uploaded
     if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => false,
-            "message" => "File upload error",
-            "error_code" => isset($_FILES['photo']) ? $_FILES['photo']['error'] : 'No file uploaded'
-        ));
-        die;
+        $errorCode = isset($_FILES['photo']) ? $_FILES['photo']['error'] : UPLOAD_ERR_NO_FILE;
+        $tooBig = in_array($errorCode, array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true);
+        uploadFail($tooBig ? "The picture is too large for the server." : "The picture did not arrive. Please try again.",
+            $tooBig ? 413 : 400, array("error_code" => $errorCode));
     }
 
-    // Check required fields
     $requiredFields = ['name', 'medium', 'isColor', 'availability', 'creationYear', 'orderOfDisplay', 'carousel', 'selectWork'];
     $missingFields = [];
-
     foreach ($requiredFields as $field) {
         if (!isset($_POST[$field]) || $_POST[$field] === '') {
             $missingFields[] = $field;
         }
     }
-
     if (count($missingFields) > 0) {
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => false,
-            "message" => "Missing required fields",
-            "missing" => $missingFields
-        ));
-        die;
+        uploadFail("Missing required fields: " . implode(', ', $missingFields), 400, array("missing" => $missingFields));
     }
 
-    // Get photo and form data
     $photo = $_FILES['photo'];
-    $locationName = $photo['name'];
-    $fileLocation = $locationName;
 
     $name = $_POST["name"];
-    $desc2 = isset($_POST["firstDescription"]) ? $_POST["firstDescription"] : '';
-    $desc3 = isset($_POST["secondDescription"]) ? $_POST["secondDescription"] : '';
+    $desc2 = $_POST["firstDescription"] ?? '';
+    $desc3 = $_POST["secondDescription"] ?? '';
     $medium = $_POST["medium"];
     $color = $_POST["isColor"];
     $isAvailable = $_POST["availability"];
@@ -285,127 +308,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $orderOfDisplay = $_POST["orderOfDisplay"];
     $carousel = $_POST["carousel"];
     $selectWork = $_POST["selectWork"];
-    $long_description = isset($_POST["long_description"]) ? $_POST["long_description"] : '';
+    $long_description = $_POST["long_description"] ?? '';
 
-    // Check if destination directories exist
     $baseImageDir = '../baseImages/';
     $thumbnailDir = '../thumbnails/';
+    $webDir = $baseImageDir . 'web/';
 
-    if (!file_exists($baseImageDir)) {
-        if (!mkdir($baseImageDir, 0755, true)) {
-            header('Content-Type: application/json');
-            echo json_encode(array("success" => false, "message" => "Base image directory doesn't exist and couldn't be created"));
-            die;
+    foreach (array($baseImageDir, $thumbnailDir) as $dir) {
+        if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+            uploadFail("Image folder is missing and couldn't be created", 500);
         }
-    } else if (!is_writable($baseImageDir)) {
-        header('Content-Type: application/json');
-        echo json_encode(array("success" => false, "message" => "Base image directory not writable"));
-        die;
-    }
-
-    if (!file_exists($thumbnailDir)) {
-        if (!mkdir($thumbnailDir, 0755, true)) {
-            header('Content-Type: application/json');
-            echo json_encode(array("success" => false, "message" => "Thumbnail directory doesn't exist and couldn't be created"));
-            die;
-        }
-    } else if (!is_writable($thumbnailDir)) {
-        header('Content-Type: application/json');
-        echo json_encode(array("success" => false, "message" => "Thumbnail directory not writable"));
-        die;
-    }
-
-    // Process the image
-    if ($photo['error'] === UPLOAD_ERR_OK) {
-        $tempFilePath = $photo['tmp_name'];
-
-        // Generate a new destination path with the JPEG extension
-        $fileExtension = pathinfo($photo['name'], PATHINFO_EXTENSION);
-        $baseName = basename($photo['name'], "." . $fileExtension);
-        $newFileName = $baseName . ".jpeg";
-        $destination = $baseImageDir . $newFileName;
-
-        try {
-            // Convert and upload the image
-            convertToProgressiveJPEGAndUpload($tempFilePath, $destination);
-            $fileLocation = $newFileName;
-
-            // Create thumbnail
-            createAndSaveThumbnail($destination, $thumbnailDir, $newFileName);
-
-            // Make the web-sized copy the public site shows now, replacing
-            // any older copy left by an earlier upload with the same name. If
-            // this fails, webImage.php makes it on the first visit instead.
-            $webDir = $baseImageDir . 'web/';
-            $webCopy = $webDir . $newFileName;
-            if (is_file($webCopy)) {
-                @unlink($webCopy);
-            }
-            try {
-                if (is_dir($webDir) || @mkdir($webDir, 0755, true)) {
-                    createWebImage($destination, $webCopy);
-                }
-            } catch (Throwable $webError) {
-                error_log('Web copy not made at upload for ' . $newFileName . ': ' . $webError->getMessage());
-            }
-        } catch (Exception $e) {
-            header('Content-Type: application/json');
-            echo json_encode(array(
-                "success" => false,
-                "message" => "Image processing error",
-                "error" => $e->getMessage()
-            ));
-            die;
+        if (!is_writable($dir)) {
+            uploadFail("Image folder is not writable", 500);
         }
     }
 
-    // Insert into database
+    $newFileName = uniqueArtworkFileName($conn, $photo['name'], array($baseImageDir, $thumbnailDir, $webDir));
+    $destination = $baseImageDir . $newFileName;
+
+    try {
+        convertToProgressiveJPEGAndUpload($photo['tmp_name'], $destination);
+        createAndSaveThumbnail($destination, $thumbnailDir, $newFileName);
+    } catch (Throwable $e) {
+        @unlink($destination);
+        @unlink($thumbnailDir . $newFileName);
+        error_log('Upload image processing failed: ' . $e->getMessage());
+        uploadFail("This picture could not be read. Please use a JPEG, PNG or GIF.", 415);
+    }
+
+    // The web-sized copy the public site shows. If this fails, webImage.php
+    // makes it on the first visit instead.
+    try {
+        if (is_dir($webDir) || @mkdir($webDir, 0755, true)) {
+            createWebImage($destination, $webDir . $newFileName);
+        }
+    } catch (Throwable $webError) {
+        error_log('Web copy not made at upload for ' . $newFileName . ': ' . $webError->getMessage());
+    }
+
     try {
         $query = "INSERT INTO allWorks (fileLocation, name, desc2,
                     desc3, medium, color,
-                    isAvailable, year, OrderOfDisplay,
+                    isAvailable, year, orderOfDisplay,
                     carousel, isSelectWork, long_description)
-            VALUES (?, ?, ?, 
-                    ?, ?, ?, 
-                    ?, ?, ?, 
-                    ?, ?, ?
-            )";
-
-        $theArray = array($fileLocation, $name, $desc2,
-            $desc3, $medium, $color,
-            $isAvailable, $year, $orderOfDisplay,
-            $carousel, $selectWork, $long_description);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $uploadQuery = $conn->prepare($query);
-        $uploadQuery->execute($theArray);
-
-        $newId = $conn->lastInsertId();
-
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => true,
-            "message" => "Image uploaded successfully",
-            "id" => $newId,
-            "filename" => $fileLocation
-        ));
+        $uploadQuery->execute(array($newFileName, $name, $desc2,
+            $desc3, $medium, $color,
+            $isAvailable, $year, $orderOfDisplay,
+            $carousel, $selectWork, $long_description));
     } catch (PDOException $e) {
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => false,
-            "message" => "Database error",
-            "error" => $e->getMessage()
-        ));
+        // Don't leave image files behind for a work that doesn't exist
+        foreach (array($baseImageDir, $thumbnailDir, $webDir) as $dir) {
+            @unlink($dir . $newFileName);
+        }
+        error_log('Upload database error: ' . $e->getMessage());
+        uploadFail("The work could not be saved. Please try again.", 500);
     }
 
+    header('Content-Type: application/json');
+    echo json_encode(array(
+        "success" => true,
+        "message" => "Image uploaded successfully",
+        "id" => $conn->lastInsertId(),
+        "filename" => $newFileName
+    ));
     die;
 }
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
-    if (($_SESSION["ambar"] ?? null) != "connected") {
-        header("Location: signIn/signIn.php?status=needCredentials");
-        die;
-    }
+    requireAdminApi();
 
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_PATCH);
@@ -570,10 +544,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-    if (($_SESSION["ambar"] ?? null) != "connected") {
-        header("Location: signIn/signIn.php?status=needCredentials");
-        die;
-    }
+    requireAdminApi();
 
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_DELETE);
