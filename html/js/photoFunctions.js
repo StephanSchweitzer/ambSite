@@ -273,8 +273,10 @@ $(document).ready(function() {
         openInfo();
     } else if (path === '/current-project') {
         openCurrentProject();
-    } else if (window.innerWidth <= 992) {
-        // On mobile, land directly on the works instead of the carousel
+    } else if (window.innerWidth <= 992 && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+        // On phones and tablets, land directly on the works instead of the
+        // carousel. The touch check keeps a narrow desktop window (e.g. half
+        // the screen) on the carousel.
         getProjectsAndWorks();
         spawnNewsletterFloat();
     } else {
