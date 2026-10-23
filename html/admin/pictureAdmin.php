@@ -999,8 +999,9 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                             <img id="uploadPreview" class="img-fluid rounded mb-3" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTk5OTkiPlNlbGVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=" alt="Upload Preview">
                             <div class="mb-3">
                                 <label for="photoPostUpload" class="form-label">Select Image</label>
-                                <input class="form-control" type="file" accept="image/*" name="photoPostUpload" id="photoPostUpload">
-                                <div class="form-text">Maximum file size: 1.2 MB</div>
+                                <input class="form-control" type="file" accept="image/*,.heic,.heif" name="photoPostUpload" id="photoPostUpload">
+                                <div class="form-text">Any photo works. Large ones are resized automatically.</div>
+                                <div class="form-text" id="uploadPrepNote"></div>
                             </div>
                         </div>
                     </div>
@@ -1197,6 +1198,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 <div class="toast-container"></div>
 
 <!-- Custom JS -->
+<script src="../js/imagePrep.js"></script>
 <script src="../js/photoAdminFunctions.js"></script>
 
 <script>

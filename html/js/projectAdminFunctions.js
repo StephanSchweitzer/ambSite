@@ -338,7 +338,7 @@ function loadWorksForProject(projectId) {
         // rather than silently dropped.
         allWorks = worksResponse[0]
             .map(work => ({ ...work, id: String(work.id) }))
-            .filter(work => work.isSelectWork == 1 || selectedWorkIds.has(work.id))
+            .filter(work => (work.isSelectWork == 1 && work.visible == 1) || selectedWorkIds.has(work.id))
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         worksLoadedFor = projectId;

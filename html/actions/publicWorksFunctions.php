@@ -93,7 +93,7 @@ function ambFormatWork($row)
 // $which: 'active' (the Works page) or 'currentProject'.
 function ambGetProjectsWithWorks($conn, $which = 'active')
 {
-    $where = $which === 'currentProject' ? 'isCurrentProject = 1' : 'active = 1';
+    $where = $which === 'currentProject' ? 'isCurrentProject = 1 AND deleted = 0' : 'active = 1';
     $projects = $conn->query("SELECT id, title, description FROM projects WHERE $where ORDER BY orderOfDisplay DESC")
                      ->fetchAll(PDO::FETCH_ASSOC);
     if (!$projects) {

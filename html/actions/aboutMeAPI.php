@@ -30,50 +30,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $description = $_POST['description'];
-    $dbPath = null;
 
-    // Check if a new photo was uploaded
     if (isset($_FILES['photo']) && !empty($_FILES['photo']['name'])) {
-        $uploadDir = '../baseImages/';
+        // A new photo. It goes through the same steps as artwork uploads:
+        // decoded and re-saved as a JPEG under a name chosen here, so
+        // whatever the file was called or claimed to be, only a real
+        // picture with a .jpeg name ever lands in the public folder.
+        include_once __DIR__ . '/imageManipulationFunctions.php';
 
-        // Create directory if it doesn't exist
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0777, true)) {
-                http_response_code(500);
-                echo json_encode(['status' => 'error', 'message' => 'Failed to create upload directory']);
-                exit;
-            }
+        $uploadDir = '../baseImages/';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'Failed to create upload directory']);
+            exit;
         }
 
         $file = $_FILES['photo'];
-
-        // Validate file type
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!in_array($file['type'], $allowedTypes)) {
+        if ($file['error'] !== UPLOAD_ERR_OK) {
             http_response_code(400);
-            echo json_encode(['status' => 'error', 'message' => 'Invalid file type. Only JPG, PNG, GIF and WEBP are allowed.']);
+            echo json_encode(['status' => 'error', 'message' => 'The picture did not arrive. Please try again.']);
             exit;
         }
 
-        // Generate a unique filename to prevent overwriting
-        $filename = time() . '_' . basename($file['name']);
-        $targetPath = $uploadDir . $filename;
-
-        // Move uploaded file to target directory
-        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-            // Database path should be relative to the root
-            $dbPath = 'baseImages/' . $filename;
-        } else {
-            http_response_code(500);
-            echo json_encode(['status' => 'error', 'message' => 'Failed to upload file: ' . error_get_last()['message']]);
+        $filename = 'about-' . date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '.jpeg';
+        try {
+            convertToProgressiveJPEGAndUpload($file['tmp_name'], $uploadDir . $filename);
+        } catch (Throwable $e) {
+            @unlink($uploadDir . $filename);
+            http_response_code(415);
+            echo json_encode(['status' => 'error', 'message' => 'This picture could not be read. Please use a JPEG, PNG or GIF.']);
             exit;
         }
-    } else if (isset($_POST['currentPictureLocation']) && !empty($_POST['currentPictureLocation'])) {
-        // Use the existing photo location
-        $dbPath = $_POST['currentPictureLocation'];
+
+        // The page shows the web-sized copy, made on first view by webImage.php
+        $dbPath = 'baseImages/web/' . $filename;
     } else {
-        // No picture provided at all
-        $dbPath = 'unavailable';
+        // No new photo: keep the one currently shown. Read from the
+        // database, not from the page, so the path can't be made up.
+        $current = $conn->query("SELECT pictureLocation FROM aboutMe ORDER BY id DESC LIMIT 1")->fetchColumn();
+        $dbPath = $current ?: 'unavailable';
     }
 
     try {

@@ -208,6 +208,13 @@ function convertToProgressiveJPEGAndUpload($sourcePath, $destinationPath) {
         throw new Exception('Could not decode image');
     }
 
+    // Phone photos are often stored sideways with a note saying which way is
+    // up. GD ignores that note and the re-saved file drops it, so turn the
+    // picture upright here.
+    if ($imageType === IMAGETYPE_JPEG) {
+        $image = applyExifOrientation($image, $sourcePath);
+    }
+
     // PNG and GIF become JPEG on a white background (JPEG has no transparency)
     if ($imageType !== IMAGETYPE_JPEG) {
         $bg = imagecreatetruecolor(imagesx($image), imagesy($image));
@@ -225,4 +232,34 @@ function convertToProgressiveJPEGAndUpload($sourcePath, $destinationPath) {
     if (!$ok) {
         throw new Exception('Could not save image');
     }
+}
+
+// Turns a decoded JPEG upright according to its EXIF orientation tag
+function applyExifOrientation($image, $sourcePath)
+{
+    if (!function_exists('exif_read_data')) {
+        return $image;
+    }
+    $exif = @exif_read_data($sourcePath);
+    $orientation = is_array($exif) && isset($exif['Orientation']) ? (int) $exif['Orientation'] : 1;
+
+    $rotate = function ($img, $angle) {
+        $rotated = imagerotate($img, $angle, 0);
+        if ($rotated === false) {
+            return $img;
+        }
+        imagedestroy($img);
+        return $rotated;
+    };
+
+    switch ($orientation) {
+        case 2: imageflip($image, IMG_FLIP_HORIZONTAL); break;
+        case 3: $image = $rotate($image, 180); break;
+        case 4: imageflip($image, IMG_FLIP_VERTICAL); break;
+        case 5: imageflip($image, IMG_FLIP_VERTICAL); $image = $rotate($image, -90); break;
+        case 6: $image = $rotate($image, -90); break;
+        case 7: imageflip($image, IMG_FLIP_HORIZONTAL); $image = $rotate($image, -90); break;
+        case 8: $image = $rotate($image, 90); break;
+    }
+    return $image;
 }

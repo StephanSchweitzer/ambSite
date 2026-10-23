@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if ($theYear == 'projectsAPI') {
         $query = "SELECT $allWorksCols FROM allWorks
-              WHERE isSelectWork = 1
+              WHERE isSelectWork = 1 AND visible = 1
               ORDER BY name ASC";
     }
 
@@ -565,12 +565,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // Create placeholders for IN clause
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
-        $theQuery = "UPDATE allWorks 
-                    SET visible = 0, 
-                        carousel = 0, 
-                        isSelectWork = 0, 
-                        isAvailable = 0 
-                    WHERE workID IN ($placeholders)";
+        // Deleting only hides the works. Their Select Works, Carousel and
+        // For Sale settings are kept (every public query also checks
+        // visible), so restoring brings them back exactly as they were.
+        $theQuery = "UPDATE allWorks SET visible = 0 WHERE workID IN ($placeholders)";
 
         $updateQuery = $conn->prepare($theQuery);
 
@@ -650,12 +648,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     // Regular single-item delete starts here...
     $id = $_DELETE['id'];
 
-    $theQuery = "UPDATE allWorks
-                SET visible = 0,
-                    carousel = 0,
-                    isSelectWork = 0,
-                    isAvailable = 0
-                WHERE workID = ?";
+    // Only hides the work; see the batch delete above
+    $theQuery = "UPDATE allWorks SET visible = 0 WHERE workID = ?";
 
     $theArray = array($id);
 

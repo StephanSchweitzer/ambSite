@@ -7,6 +7,7 @@ $(document).ready(function() {
 var currentAboutMe = '';
 var currentPictureLocation = '';
 var newPhotoSelected = false;
+var preparedPhoto = null; // promise of the picked photo, made ready to upload (imagePrep.js)
 
 // Set up event listeners
 function setupEventListeners() {
@@ -52,13 +53,19 @@ function resetPhotoInput() {
     $('#newPhotoPreview').hide().empty();
     $('#cancelPhotoButton').hide();
     newPhotoSelected = false;
+    preparedPhoto = null;
 }
 
 // Preview the selected photo before upload
 function previewNewPhoto(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
+    if (!(input.files && input.files[0])) return;
 
+    const prep = ImagePrep.prepare(input.files[0]);
+    preparedPhoto = prep;
+
+    prep.then(function(file) {
+        if (preparedPhoto !== prep) return;
+        const reader = new FileReader();
         reader.onload = function(e) {
             $('#newPhotoPreview').empty().show();
             $('<img>')
@@ -68,9 +75,12 @@ function previewNewPhoto(input) {
                 .appendTo('#newPhotoPreview');
             $('#cancelPhotoButton').show();
         };
-
-        reader.readAsDataURL(input.files[0]);
-    }
+        reader.readAsDataURL(file);
+    }, function(error) {
+        if (preparedPhoto !== prep) return;
+        resetPhotoInput();
+        showToast(error.message, 'error');
+    });
 }
 
 // Unified function to update About Me (both photo and description)
@@ -84,20 +94,21 @@ function updateAboutMe() {
 
     $('#updateAboutMeButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Updating...');
 
+    const photoReady = newPhotoSelected && preparedPhoto ? preparedPhoto : Promise.resolve(null);
+
+    photoReady.then(function(photo) {
+        sendAboutMe(description, photo);
+    }, function(error) {
+        showToast(error.message, 'error');
+        $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Update About Me');
+    });
+}
+
+function sendAboutMe(description, photo) {
     let postData = new FormData();
     postData.append('description', description);
-
-    // Add current picture location if no new photo is selected
-    if (!newPhotoSelected && currentPictureLocation) {
-        postData.append('currentPictureLocation', currentPictureLocation);
-    }
-
-    // Add new photo if selected
-    if (newPhotoSelected) {
-        const fileInput = $('#aboutMePhoto')[0].files[0];
-        if (fileInput) {
-            postData.append('photo', fileInput);
-        }
+    if (photo) {
+        postData.append('photo', photo);
     }
 
     $.ajax({

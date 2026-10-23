@@ -12,7 +12,16 @@ var currentFilters = {
 var currentSort = 'order-desc'; // Default sort order
 var allProjects = [];
 var filteredProjects = [];
-var currentWorkAssociatedProjects = [];
+
+// The painting's projects, as on the project page: IDs kept as strings, the
+// selection kept apart from the checkboxes on screen, and nothing saved
+// until the list has loaded for this painting.
+var workProjects = { loadedFor: null, saved: [], selected: new Set() };
+var createProjectsSelected = new Set();
+
+// The picture picked in the upload form, being made ready (see imagePrep.js)
+var preparedUpload = null;
+var EMPTY_UPLOAD_PREVIEW = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTk5OTkiPlNlbGVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=';
 
 
 $(document).ready(function() {
@@ -32,35 +41,49 @@ $(document).ready(function() {
     filterCreateProjects($(this).val().toLowerCase());
   });
 
-  // Select all projects checkbox for create modal
+  // Select all projects checkbox for create modal (the ones shown by the search)
   $('#createSelectAllProjects').on('change', function() {
     const isChecked = $(this).prop('checked');
-    $('#createProjectsList input[type="checkbox"]').prop('checked', isChecked);
+    $('#createProjectsList input[type="checkbox"]').each(function() {
+      $(this).prop('checked', isChecked);
+      toggleInSet(createProjectsSelected, $(this).attr('data-project-id'), isChecked);
+    });
   });
 
-  // Initialize file upload validation
+  // Get the chosen picture ready as soon as it's picked (see imagePrep.js)
   document.getElementById('photoPostUpload').addEventListener('change', function(event) {
     const file = event.target.files[0];
-    const maxSize = 1.2 * 1024 * 1024; // Maximum file size (1.2 MB)
+    preparedUpload = null;
+    if (!file) return;
 
-    if (file) {
-      if (file.size > maxSize) {
-        showToast('Your picture is too large (the max is 1.2 MB), reduce the quality and try again.', 'error');
-        event.target.value = '';
-        document.getElementById('uploadPreview').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTk5OTkiPlNlbGVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=';
-      } else {
-        // Preview the image
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          document.getElementById('uploadPreview').src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    }
+    $('#uploadPrepNote').text('Preparing picture...');
+    const prep = ImagePrep.prepare(file);
+    preparedUpload = { source: file, promise: prep };
+
+    prep.then(function(ready) {
+      if (!preparedUpload || preparedUpload.promise !== prep) return;
+      $('#uploadPrepNote').text(ready === file ? '' : 'Picture converted so it can be uploaded.');
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('uploadPreview').src = e.target.result;
+      };
+      reader.readAsDataURL(ready);
+    }, function(error) {
+      if (!preparedUpload || preparedUpload.promise !== prep) return;
+      preparedUpload = null;
+      $('#uploadPrepNote').text('');
+      event.target.value = '';
+      document.getElementById('uploadPreview').src = EMPTY_UPLOAD_PREVIEW;
+      showToast(error.message, 'error');
+    });
   });
 
   $('button[data-bs-target="#projects-pane"]').on('click', function() {
-    loadProjectsForWork($('#photoId').val());
+    // Load once per opened painting, so switching tabs keeps unsaved ticks
+    const workId = String($('#photoId').val());
+    if (workProjects.loadedFor !== workId) {
+      loadProjectsForWork(workId);
+    }
   });
 
   // Project search functionality
@@ -68,10 +91,13 @@ $(document).ready(function() {
     filterProjects($(this).val().toLowerCase());
   });
 
-  // Select all projects checkbox
+  // Select all projects checkbox (the ones shown by the search)
   $('#selectAllProjects').on('change', function() {
     const isChecked = $(this).prop('checked');
-    $('#projectsList input[type="checkbox"]').prop('checked', isChecked);
+    $('#projectsList input[type="checkbox"]').each(function() {
+      $(this).prop('checked', isChecked);
+      toggleInSet(workProjects.selected, $(this).attr('data-project-id'), isChecked);
+    });
   });
 
   // Save project associations button
@@ -81,7 +107,12 @@ $(document).ready(function() {
 });
 
 function loadCreateProjects() {
-  // Show loading indicator
+  if (window.createAllProjects) {
+    // Already loaded for this upload: keep the ticks
+    filterCreateProjects($('#createProjectSearch').val().toLowerCase());
+    return;
+  }
+
   $('#createProjectsList').html(`
     <li class="list-group-item text-center py-4">
       <div class="spinner-border text-primary" role="status">
@@ -91,74 +122,16 @@ function loadCreateProjects() {
     </li>
   `);
 
-  // Reset search field and select all checkbox
-  $('#createProjectSearch').val('');
-  $('#createSelectAllProjects').prop('checked', false);
-
-  // Load all active projects
-  $.ajax({
-    url: "../actions/projectsAPI.php",
-    type: "GET",
-    data: {activity: 'active'},
-    dataType: "json",
-    success: function(projects) {
-      window.createAllProjects = projects;
-      window.createFilteredProjects = [...projects];
-
-      // Display the projects with checkboxes
-      populateCreateProjectsList(window.createFilteredProjects);
-    },
-    error: function(xhr, status, error) {
-      console.error('Error fetching projects:', error);
-      $('#createProjectsList').html(`
-        <li class="list-group-item text-danger">
-          <i class="fas fa-exclamation-circle"></i> Failed to load projects: ${error}
-        </li>
-      `);
-    }
-  });
-}
-
-function populateCreateProjectsList(projects) {
-  if (!projects || projects.length === 0) {
+  fetchProjectChoices().then(function(projects) {
+    window.createAllProjects = projects.filter(project => project.deleted == 0);
+    filterCreateProjects($('#createProjectSearch').val().toLowerCase());
+  }, function(xhr, status, error) {
+    console.error('Error fetching projects:', error);
     $('#createProjectsList').html(`
-      <li class="list-group-item text-muted" style="background-color: #343a40; color: #ffffff;">
-        <i class="fas fa-info-circle"></i> No active projects found.
+      <li class="list-group-item text-danger">
+        <i class="fas fa-exclamation-circle"></i> Failed to load projects: ${error}
       </li>
     `);
-    return;
-  }
-
-  let listItems = '';
-  projects.forEach(function(project) {
-    listItems += `
-      <li class="list-group-item d-flex align-items-center" style="background-color: #343a40; color: #ffffff; border-color: #495057;">
-        <div class="form-check">
-          <input class="form-check-input create-project-checkbox" type="checkbox" value="" 
-            id="create-project-${project.id}" data-project-id="${project.id}">
-          <label class="form-check-label ms-2" for="create-project-${project.id}" style="color: #ffffff;">
-            ${project.title}
-          </label>
-        </div>
-        ${project.isCurrentProject == 1 ? '<span class="badge bg-primary ms-2">Current Project</span>' : ''}
-      </li>
-    `;
-  });
-
-  $('#createProjectsList').html(listItems);
-
-  // Add click event for the list items (excluding the checkbox)
-  $('#createProjectsList .list-group-item').click(function(e) {
-    if (!$(e.target).hasClass('form-check-input')) {
-      const checkbox = $(this).find('input[type="checkbox"]');
-      checkbox.prop('checked', !checkbox.prop('checked'));
-      updateCreateSelectAllCheckbox();
-    }
-  });
-
-  // Add change event for checkboxes
-  $('.create-project-checkbox').change(function() {
-    updateCreateSelectAllCheckbox();
   });
 }
 
@@ -182,41 +155,25 @@ function updateCreateSelectAllCheckbox() {
 }
 
 function filterCreateProjects(searchTerm) {
-  if (!window.createAllProjects || window.createAllProjects.length === 0) {
-    return;
-  }
-
-  if (!searchTerm) {
-    // If search is empty, show all projects
-    window.createFilteredProjects = [...window.createAllProjects];
-  } else {
-    // Filter projects based on search term
-    window.createFilteredProjects = window.createAllProjects.filter(function(project) {
-      return project.title.toLowerCase().includes(searchTerm) ||
-          (project.description && project.description.toLowerCase().includes(searchTerm));
-    });
-  }
-
-  // Update the projects list
-  populateCreateProjectsList(window.createFilteredProjects);
+  if (!window.createAllProjects) return;
+  renderProjectChoices($('#createProjectsList'), matchProjects(window.createAllProjects, searchTerm),
+      createProjectsSelected, 'create-project-', updateCreateSelectAllCheckbox, true);
 }
 
 function getSelectedCreateProjects() {
-  const selectedProjects = [];
-  $('#createProjectsList input[type="checkbox"]:checked').each(function() {
-    selectedProjects.push($(this).data('project-id'));
-  });
-  return selectedProjects;
+  return Array.from(createProjectsSelected);
 }
 
 
 function loadProjectsForWork(workId) {
+  workId = String(workId || '');
   if (!workId) {
     console.error('No work ID provided');
     return;
   }
 
-  // Show loading indicator
+  workProjects = { loadedFor: null, saved: [], selected: new Set(), all: [] };
+
   $('#projectsList').html(`
     <li class="list-group-item text-center py-4">
       <div class="spinner-border text-primary" role="status">
@@ -225,129 +182,38 @@ function loadProjectsForWork(workId) {
       <p class="mt-2 text-muted">Loading projects...</p>
     </li>
   `);
-
-  // Reset search field and select all checkbox
   $('#projectSearch').val('');
-  $('#selectAllProjects').prop('checked', false);
+  $('#selectAllProjects').prop('checked', false).prop('indeterminate', false);
 
-  // First load all active projects
-  $.ajax({
-    url: "../actions/projectsAPI.php",
-    type: "GET",
-    data: {activity: 'active'},
-    dataType: "json",
-    success: function(projects) {
-      allProjects = projects;
-      filteredProjects = [...projects];
+  $.when(fetchProjectChoices(), fetchProjectsForWork(workId)).then(function(projects, associatedIds) {
+    // Another painting was opened meanwhile
+    if (String($('#photoId').val()) !== workId) return;
 
-      // Then get the projects associated with this work
-      fetchProjectsForWork(workId).then(function(associatedProjectIds) {
-        currentWorkAssociatedProjects = associatedProjectIds;
-
-        // Display the projects with appropriate checkboxes
-        populateProjectsList(filteredProjects);
-
-        // Check the projects that are associated with this work
-        checkProjectCheckboxes(associatedProjectIds);
-      }).catch(function(error) {
-        console.error('Error fetching associated projects:', error);
-        $('#projectsList').html(`
-          <li class="list-group-item text-danger">
-            <i class="fas fa-exclamation-circle"></i> Failed to load associated projects.
-          </li>
-        `);
-      });
-    },
-    error: function(xhr, status, error) {
-      console.error('Error fetching projects:', error);
-      $('#projectsList').html(`
-        <li class="list-group-item text-danger">
-          <i class="fas fa-exclamation-circle"></i> Failed to load projects: ${error}
-        </li>
-      `);
-    }
+    const saved = (associatedIds || []).map(String);
+    workProjects = {
+      loadedFor: workId,
+      saved: saved,
+      selected: new Set(saved),
+      all: projects.filter(project => project.deleted == 0 || saved.includes(project.id))
+    };
+    filterProjects('');
+  }, function(error) {
+    console.error('Error fetching projects:', error);
+    $('#projectsList').html(`
+      <li class="list-group-item text-danger">
+        <i class="fas fa-exclamation-circle"></i> Failed to load projects. This painting's projects will not be changed when you save.
+      </li>
+    `);
   });
 }
 
 function fetchProjectsForWork(workId) {
-  return new Promise(function(resolve, reject) {
-    $.ajax({
-      url: '../actions/worksOfProjectsAPI.php',
-      type: 'GET',
-      data: {'workId': workId},
-      dataType: 'json',
-      success: function(response) {
-        resolve(response);
-      },
-      error: function(xhr, status, error) {
-        // If the endpoint doesn't support workId yet, return empty array
-        if (xhr.status === 400) {
-          console.warn('API does not support workId parameter yet, returning empty array');
-          resolve([]);
-        } else {
-          reject(error);
-        }
-      }
-    });
-  });
-}
-
-// Populate the projects list with checkboxes
-function populateProjectsList(projects) {
-  if (!projects || projects.length === 0) {
-    $('#projectsList').html(`
-      <li class="list-group-item text-muted">
-        <i class="fas fa-info-circle"></i> No active projects found.
-      </li>
-    `);
-    return;
-  }
-
-  let listItems = '';
-  projects.forEach(function(project) {
-    listItems += `
-      <li class="list-group-item d-flex align-items-center">
-        <div class="form-check">
-          <input class="form-check-input project-checkbox" type="checkbox" value="" 
-            id="project-${project.id}" data-project-id="${project.id}">
-          <label class="form-check-label ms-2" for="project-${project.id}">
-            ${project.title}
-          </label>
-        </div>
-        ${project.isCurrentProject == 1 ? '<span class="badge bg-primary ms-2">Current Project</span>' : ''}
-      </li>
-    `;
-  });
-
-  $('#projectsList').html(listItems);
-
-  // Add click event for the list items (excluding the checkbox)
-  $('.list-group-item').click(function(e) {
-    if (!$(e.target).hasClass('form-check-input')) {
-      const checkbox = $(this).find('input[type="checkbox"]');
-      checkbox.prop('checked', !checkbox.prop('checked'));
-      updateSelectAllCheckbox();
-    }
-  });
-
-  // Add change event for checkboxes
-  $('.project-checkbox').change(function() {
-    updateSelectAllCheckbox();
-  });
-}
-
-// Check project checkboxes based on associations
-function checkProjectCheckboxes(projectIds) {
-  // First uncheck all checkboxes
-  $('#projectsList input[type="checkbox"]').prop('checked', false);
-
-  // Check boxes for associated projects
-  projectIds.forEach(function(projectId) {
-    $(`#project-${projectId}`).prop('checked', true);
-  });
-
-  // Update select all checkbox state
-  updateSelectAllCheckbox();
+  return $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'GET',
+    data: {'workId': workId},
+    dataType: 'json'
+  }).then(function(ids) { return ids; });
 }
 
 // Update the select all checkbox based on individual selections
@@ -369,52 +235,25 @@ function updateSelectAllCheckbox() {
   }
 }
 
-// Filter projects based on search input
 function filterProjects(searchTerm) {
-  if (!allProjects || allProjects.length === 0) {
-    return;
-  }
-
-  if (!searchTerm) {
-    // If search is empty, show all projects
-    filteredProjects = [...allProjects];
-  } else {
-    // Filter projects based on search term
-    filteredProjects = allProjects.filter(function(project) {
-      return project.title.toLowerCase().includes(searchTerm) ||
-          (project.description && project.description.toLowerCase().includes(searchTerm));
-    });
-  }
-
-  // Update the projects list
-  populateProjectsList(filteredProjects);
-
-  // Reapply checkboxes for the current work
-  checkProjectCheckboxes(currentWorkAssociatedProjects);
+  if (workProjects.loadedFor === null) return;
+  renderProjectChoices($('#projectsList'), matchProjects(workProjects.all, searchTerm),
+      workProjects.selected, 'project-', updateSelectAllCheckbox, false);
 }
 
-// Save work-project associations
 function saveWorkProjectAssociations() {
-  const workId = $('#photoId').val();
-  if (!workId) {
-    showToast('No work selected', 'error');
+  const workId = String($('#photoId').val());
+  if (workProjects.loadedFor !== workId) {
+    showToast('The projects have not loaded yet, so nothing was saved', 'error');
     return;
   }
 
-  // Get all checked project IDs
-  const selectedProjects = [];
-  $('#projectsList input[type="checkbox"]:checked').each(function() {
-    selectedProjects.push($(this).data('project-id'));
-  });
-
-  // Check if anything changed - make sure we handle null/undefined arrays
-  const existingProjects = currentWorkAssociatedProjects || [];
-  if (arraysEqual(selectedProjects.sort(), existingProjects.sort())) {
+  const projectIds = getChangedWorkProjects(workId);
+  if (projectIds === null) {
     showToast('No changes in project associations', 'info');
     return;
   }
 
-  // Show loading indicator
   const $saveButton = $('#saveProjectAssociations');
   const originalButtonText = $saveButton.html();
   $saveButton.prop('disabled', true).html(`
@@ -422,29 +261,13 @@ function saveWorkProjectAssociations() {
         Saving...
     `);
 
-  // jQuery's ajax will automatically remove empty arrays from POST data
-  // So we'll stringify the array to ensure it's sent properly
-  $.ajax({
-    url: '../actions/worksOfProjectsAPI.php',
-    type: 'POST',
-    data: {
-      'workId': workId,
-      'projectIds': JSON.stringify(selectedProjects)  // Stringify to preserve empty arrays
-    },
-    dataType: 'json',
-    success: function(response) {
-      currentWorkAssociatedProjects = selectedProjects;
-      showToast('Project associations saved successfully', 'success');
-    },
-    error: function(xhr, status, error) {
-      console.error('Error saving project associations:', error);
-      console.error('Response:', xhr.responseText);
-      showToast('Failed to save project associations', 'error');
-    },
-    complete: function() {
-      // Restore button state
-      $saveButton.prop('disabled', false).html(originalButtonText);
-    }
+  postWorkProjects(workId, projectIds).then(function() {
+    showToast('Project associations saved successfully', 'success');
+  }, function(xhr) {
+    console.error('Error saving project associations:', xhr.responseText);
+    showToast('Failed to save project associations. Nothing was changed.', 'error');
+  }).always(function() {
+    $saveButton.prop('disabled', false).html(originalButtonText);
   });
 }
 
@@ -503,7 +326,7 @@ function initializeEventListeners() {
   $('#deleteWorkBtn').click(function() {
     showConfirmationModal(
         'Delete Work',
-        'Are you sure you want to delete this work? This will remove it from Select Works and Carousel.',
+        'Delete this work? It will be hidden from the website, and you can bring it back later from Deleted Works.',
         function() {
           deleteWork();
         }
@@ -595,7 +418,7 @@ function initializeEventListeners() {
 
     showConfirmationModal(
         'Delete Works',
-        `Are you sure you want to delete ${selectedWorks.length} work(s)?`,
+        `Delete ${selectedWorks.length} work(s)? They will be hidden from the website, and you can bring them back later from Deleted Works.`,
         function() {
           batchDeleteWorks();
         }
@@ -1096,7 +919,7 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
     $('#deleteWorkBtn').click(function() {
       showConfirmationModal(
           'Delete Work',
-          'Are you sure you want to delete this work? This will remove it from Select Works and Carousel.',
+          'Delete this work? It will be hidden from the website, and you can bring it back later from Deleted Works.',
           function() {
             deleteWork();
           }
@@ -1107,7 +930,8 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   // Reset the active tab to details
   $('#workDetailsTabs button[data-bs-target="#details-pane"]').tab('show');
 
-  // Reset the projects list
+  // Reset the projects list (it loads when its tab is opened)
+  workProjects = { loadedFor: null, saved: [], selected: new Set(), all: [] };
   $('#projectsList').html(`
     <li class="list-group-item text-center">
       <p class="text-muted">Select the "Associated Projects" tab to load projects</p>
@@ -1177,12 +1001,19 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
 function openPostForm() {
   // Reset form
   document.getElementById('addWorkForm').reset();
-  document.getElementById('uploadPreview').src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTk5OTkiPlNlbGVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=';
+  // The file input may sit outside the form, so clear it directly
+  document.getElementById('photoPostUpload').value = '';
+  preparedUpload = null;
+  $('#uploadPrepNote').text('');
+  document.getElementById('uploadPreview').src = EMPTY_UPLOAD_PREVIEW;
 
   // Reset the active tab to details
   $('#workCreateTabs button[data-bs-target="#create-details-pane"]').tab('show');
 
-  // Reset the projects list
+  // Reset the projects list (it loads when its tab is opened)
+  window.createAllProjects = null;
+  createProjectsSelected = new Set();
+  $('#createProjectSearch').val('');
   $('#createProjectsList').html(`
     <li class="list-group-item text-center" style="background-color: #343a40; color: #ffffff; border-color: #495057;">
       <p style="color: #a8c7e0 !important;">Click the "Associated Projects" tab to load projects</p>
@@ -1216,12 +1047,21 @@ function postPhoto() {
     return;
   }
 
-  var fileInput = $('#photoPostUpload')[0].files[0];
-  if (!fileInput) {
+  if (!preparedUpload) {
     showToast('Please select an image file', 'warning');
     return;
   }
 
+  // Disable upload button to prevent multiple submissions
+  document.getElementById('uploadWorkButton').disabled = true;
+  $('#loadingSpinner').show();
+
+  preparedUpload.promise.then(sendUpload, function(error) {
+    uploadFailed(error.message);
+  });
+}
+
+function sendUpload(fileInput) {
   let isColor = $('input[name=isColorPost]:checked').val();
   let isAvailable = $('input[name=isAvailablePost]:checked').val();
   let isCarousel = $('input[name=isCarouselPost]:checked').val();
@@ -1234,12 +1074,6 @@ function postPhoto() {
 
   // Get selected projects
   const selectedProjects = getSelectedCreateProjects();
-
-  // Show loading spinner
-  $('#loadingSpinner').show();
-
-  // Disable upload button to prevent multiple submissions
-  document.getElementById('uploadWorkButton').disabled = true;
 
   var postData = new FormData();
   postData.append('name', $('#photoPostName').val());
@@ -1401,76 +1235,49 @@ function updateWork() {
 
   console.log("Query string:", queryString);
 
-  // Get the work ID and collect selected projects
-  const workId = $('#photoId').val();
-  const selectedProjects = [];
-  $('#projectsList input[type="checkbox"]:checked').each(function() {
-    selectedProjects.push($(this).data('project-id'));
-  });
+  // Project links are saved only if their tab loaded and something changed
+  const workId = String($('#photoId').val());
+  const changedProjects = getChangedWorkProjects(workId);
 
-  // Send the form data via AJAX
+  const finish = function(message, type) {
+    $('#loadingSpinner').hide();
+    document.getElementById('updateWorkBtn').disabled = false;
+    try {
+      var modal = bootstrap.Modal.getInstance(document.getElementById('photoUpdateModal'));
+      if (modal) {
+        modal.hide();
+      } else {
+        $('#photoUpdateModal').modal('hide');
+      }
+    } catch(e) {
+      console.error("Error closing modal:", e);
+      $('#photoUpdateModal').modal('hide');
+    }
+    refreshCurrentView();
+    showToast(message, type);
+    countWorksStatistics();
+  };
+
   $.ajax({
     url: '../actions/picturesAPI.php',
     type: 'PATCH',
     data: queryString,
     contentType: 'application/x-www-form-urlencoded',
-    success: function(response) {
-      console.log("Update successful. Response:", response);
-
-      // If projects tab has been loaded and we have projects selected
-      if ($('#projectsList').children().length > 0) {
-        // Save project associations
-        $.ajax({
-          url: '../actions/worksOfProjectsAPI.php',
-          type: 'POST',
-          data: {
-            'workId': workId,
-            'projectIds': selectedProjects
-          },
-          dataType: 'json'
-        });
+    success: function() {
+      if (changedProjects === null) {
+        finish('Your work has been successfully updated!', 'success');
+        return;
       }
-
-      // Hide loading spinner
-      $('#loadingSpinner').hide();
-
-      // Re-enable save button
-      document.getElementById('updateWorkBtn').disabled = false;
-
-      // Close modal
-      try {
-        var modal = bootstrap.Modal.getInstance(document.getElementById('photoUpdateModal'));
-        if (modal) {
-          modal.hide();
-        } else {
-          $('#photoUpdateModal').modal('hide');
-        }
-      } catch(e) {
-        console.error("Error closing modal:", e);
-        $('#photoUpdateModal').modal('hide');
-      }
-
-      // Refresh the current view
-      refreshCurrentView();
-
-      // Show success message
-      showToast('Your work has been successfully updated!', 'success');
-
-      // Update statistics
-      countWorksStatistics();
+      postWorkProjects(workId, changedProjects).then(function() {
+        finish('Your work and its projects have been successfully updated!', 'success');
+      }, function() {
+        finish('Your work was updated, but its projects could not be saved. Nothing was removed.', 'warning');
+      });
     },
     error: function(xhr, status, error) {
-      console.error("Update failed. Status:", status);
-      console.error("Error:", error);
-      console.error("Response:", xhr.responseText);
-
-      // Hide loading spinner
+      console.error("Update failed:", xhr.status, xhr.responseText);
       $('#loadingSpinner').hide();
-
-      // Re-enable save button
       document.getElementById('updateWorkBtn').disabled = false;
-
-      // Show error message
       showToast('There has been a problem updating your work', 'error');
     }
   });
@@ -1830,4 +1637,105 @@ function showConfirmationModal(title, message, confirmCallback) {
 
     }
   }
+}
+
+function toggleInSet(set, id, isOn) {
+  if (isOn) {
+    set.add(String(id));
+  } else {
+    set.delete(String(id));
+  }
+}
+
+function fetchProjectChoices() {
+  return $.ajax({
+    url: "../actions/projectsAPI.php",
+    type: "GET",
+    data: {activity: 'all'},
+    dataType: "json"
+  }).then(function(projects) {
+    return projects
+        .map(project => ({ ...project, id: String(project.id) }))
+        .sort((a, b) => (b.orderOfDisplay || 0) - (a.orderOfDisplay || 0));
+  });
+}
+
+function renderProjectChoices($list, projects, selectedSet, idPrefix, onChange, darkRows) {
+  const rowStyle = darkRows ? 'background-color: #343a40; color: #ffffff; border-color: #495057;' : '';
+
+  if (!projects || projects.length === 0) {
+    $list.html(`<li class="list-group-item text-muted" style="${rowStyle}"><i class="fas fa-info-circle"></i> No projects found.</li>`);
+    onChange();
+    return;
+  }
+
+  $list.empty();
+  projects.forEach(function(project) {
+    const checkbox = $('<input>').addClass('form-check-input').attr({
+      type: 'checkbox',
+      id: idPrefix + project.id,
+      'data-project-id': project.id
+    }).prop('checked', selectedSet.has(project.id));
+
+    const label = $('<label>').addClass('form-check-label ms-2').attr('for', idPrefix + project.id)
+        .text(project.title);
+    if (darkRows) {
+      label.css('color', '#ffffff');
+    }
+
+    const row = $('<li>').addClass('list-group-item d-flex align-items-center').attr('style', rowStyle)
+        .append($('<div>').addClass('form-check').append(checkbox, label));
+
+    if (project.isCurrentProject == 1 && project.deleted == 0) {
+      row.append('<span class="badge bg-primary ms-2">Current Project</span>');
+    }
+    if (project.deleted == 1) {
+      row.append('<span class="badge bg-danger ms-2">Deleted</span>');
+    } else if (project.active == 0) {
+      row.append('<span class="badge bg-secondary ms-2">Not shown on site</span>');
+    }
+
+    checkbox.on('change', function() {
+      toggleInSet(selectedSet, project.id, this.checked);
+      onChange();
+    });
+    row.on('click', function(e) {
+      // The checkbox and its label already toggle it themselves
+      if ($(e.target).closest('input, label').length) return;
+      checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+    });
+
+    $list.append(row);
+  });
+  onChange();
+}
+
+function matchProjects(projects, searchTerm) {
+  if (!searchTerm) return projects;
+  return projects.filter(project =>
+      (project.title || '').toLowerCase().includes(searchTerm) ||
+      (project.description || '').toLowerCase().includes(searchTerm));
+}
+
+function getChangedWorkProjects(workId) {
+  if (workProjects.loadedFor !== String(workId)) return null;
+  const selected = Array.from(workProjects.selected).sort();
+  return arraysEqual(selected, workProjects.saved.slice().sort()) ? null : selected;
+}
+
+function postWorkProjects(workId, projectIds) {
+  return $.ajax({
+    url: '../actions/worksOfProjectsAPI.php',
+    type: 'POST',
+    data: {
+      'workId': workId,
+      'projectIds': JSON.stringify(projectIds)  // as JSON so an empty list survives
+    },
+    dataType: 'json'
+  }).then(function(response) {
+    if (workProjects.loadedFor === String(workId)) {
+      workProjects.saved = projectIds.slice();
+    }
+    return response;
+  });
 }
