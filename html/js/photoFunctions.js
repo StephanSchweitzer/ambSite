@@ -494,12 +494,17 @@ function openViewer(items, index, options) {
         return;
     }
     var wasOpen = viewer.open;
+    var modal = document.getElementById('bigPicModal');
+    // A shared painting link arrives with the viewer already drawn open
+    var preopened = modal.hasAttribute('data-preopened');
     viewer.items = items;
     viewer.index = index;
 
     if (!wasOpen) {
         // Start clean rather than flashing the last painting viewed
-        document.getElementById('popUpImage').removeAttribute('src');
+        if (!preopened) {
+            document.getElementById('popUpImage').removeAttribute('src');
+        }
         var here = parseRoute(location.pathname);
         viewer.basePath = here.workId ? '/select-works' : here.path;
     }
@@ -514,7 +519,18 @@ function openViewer(items, index, options) {
 
     if (!wasOpen) {
         viewer.open = true;
-        $('#bigPicModal').modal('show');
+        if (preopened) {
+            // Hand the open viewer to Bootstrap without replaying the fade-in
+            // (no "fade" class means it opens instantly), then swap the
+            // page's own dark background for Bootstrap's identical one and
+            // turn the fade back on so closing still fades out
+            modal.removeAttribute('data-preopened');
+            $(modal).modal('show');
+            $('#preopenedBackdrop').remove();
+            $(modal).add('.modal-backdrop').addClass('fade');
+        } else {
+            $(modal).modal('show');
+        }
     }
 }
 

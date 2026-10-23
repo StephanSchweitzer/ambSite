@@ -260,7 +260,7 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <script src="/js/photoFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/photoFunctions.js'); ?>" defer></script>
     <script src="/js/navLinksFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/navLinksFunctions.js'); ?>" defer></script>
 </head>
-<body data-status="<?= (int) $status ?>">
+<body data-status="<?= (int) $status ?>"<?= $work ? ' class="modal-open"' : '' ?>>
 
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NHCWWZZJ"
@@ -296,8 +296,9 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
         </main>
     </div>
 
-    <!-- Artwork viewer -->
-    <div class="modal fade" id="bigPicModal" tabindex="-1" role="dialog" aria-labelledby="imageTitle" aria-hidden="true">
+    <!-- Artwork viewer. A painting link arrives with it already open, so the
+         page doesn't show the light gallery first and then fade to dark -->
+    <div class="modal <?= $work ? 'show' : 'fade' ?>" id="bigPicModal" tabindex="-1" role="dialog" aria-labelledby="imageTitle"<?= $work ? ' aria-modal="true" style="display: block;" data-preopened' : ' aria-hidden="true"' ?>>
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <button type="button" class="modal-close" data-dismiss="modal" aria-label="Close image view">
@@ -332,6 +333,10 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
             </div>
         </div>
     </div>
+
+<?php if ($work): ?>
+    <div class="modal-backdrop show" id="preopenedBackdrop"></div>
+<?php endif; ?>
 
     <!-- Navigation Overlay for Mobile -->
     <div class="nav-overlay"></div>
