@@ -1,6 +1,6 @@
 <?php
 global $conn;
-session_start();
+include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
 
 if (($_SESSION["ambar"] ?? null) != "connected")
@@ -328,74 +328,22 @@ $newSubscribersCount = count($newSubscribers);
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 <script>
-    // Store the new subscriber IDs for JavaScript reference
-    const newSubscriberIds = <?php echo json_encode(array_column($newSubscribers, 'id')); ?>;
+    // Subscribers who joined since the last visit; newsletterAdmin.js marks
+    // them and offers the "New Subscribers" filter
+    const newSubscriberIds = <?php echo json_encode(array_map('intval', array_column($newSubscribers, 'id'))); ?>;
 
-    // Show the welcome back modal on page load if there are new subscribers
     $(document).ready(function() {
-        if (newSubscriberIds.length > 0) {
-            $('#welcomeBackModal').modal('show');
-        }
-
-        // Highlight new subscribers in the main table when it loads
-        $(document).on('DOMNodeInserted', '#subscribersList tr', function() {
-            const rowId = $(this).data('id');
-            if (newSubscriberIds.includes(rowId)) {
-                $(this).addClass('new-subscriber-row');
-                // Add the "New" badge to the row
-                const statusCell = $(this).find('td:nth-child(4)');
-                statusCell.append(' <span class="badge badge-pill badge-info ml-2">New</span>');
-            }
-        });
-
-        // Add event listeners for the new subscriber cards
+        // Edit/delete buttons on the new-subscriber cards in the welcome window
         $('.edit-subscriber').on('click', function() {
-            const id = $(this).data('id');
-            const email = $(this).data('email');
-            const active = $(this).data('active');
-
-            $('#editId').val(id);
-            $('#editEmail').val(email);
-            $('#editActive').prop('checked', active == 1);
-            $('#editModal').modal('show');
+            $('#welcomeBackModal').modal('hide');
+            openEditModal($(this).data('id'));
         });
 
         $('.delete-subscriber').on('click', function() {
-            const id = $(this).data('id');
-            const email = $(this).data('email');
-
-            $('#deleteId').val(id);
-            $('#deleteEmailText').text(email);
-            $('#deleteModal').modal('show');
-        });
-
-        // Add "New" filter functionality
-        $('#statusFilter').on('change', function() {
-            const filterValue = $(this).val();
-            if (filterValue === 'new') {
-                // Hide all rows, then show only new subscribers
-                $('#subscribersList tr').hide();
-                newSubscriberIds.forEach(id => {
-                    $(`#subscribersList tr[data-id="${id}"]`).show();
-                });
-            } else {
-                // Trigger the existing filter functionality
-                const searchText = $('#searchInput').val().toLowerCase();
-                filterSubscribers(searchText, filterValue);
-            }
+            $('#welcomeBackModal').modal('hide');
+            openDeleteModal($(this).data('id'));
         });
     });
-
-    // Main app functionality (connect to existing JS)
-    // This assumes your existing JS has functions for:
-    // - Loading subscribers
-    // - Filtering subscribers
-    // - Pagination
-    // Here we just define a filter function for reference
-    function filterSubscribers(searchText, statusFilter) {
-        // This would be implemented in your existing JS file
-        // and should handle filtering based on search text and status
-    }
 </script>
 
 <script src="../js/newsletterAdmin.js"></script>

@@ -1,7 +1,7 @@
 <?php
 
 global $conn;
-session_start();
+include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
 
 header('Content-Type: application/json');

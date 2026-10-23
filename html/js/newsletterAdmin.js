@@ -8,14 +8,19 @@ $(document).ready(function() {
     loadSubscribers();
 
     // Search functionality
-    $('#searchInput').on('keyup', function() {
+    $('#searchInput').on('input', function() {
         applyFilters();
     });
 
-    // Status filter
-    $('#statusFilter').on('change', function() {
+    // Status filter and sort order
+    $('#statusFilter, #sortFilter').on('change', function() {
         applyFilters();
     });
+
+    // Welcome window listing the subscribers who joined since the last visit
+    if (newSubscriberIds.length > 0) {
+        $('#welcomeBackModal').modal('show');
+    }
 
     // Edit button handlers
     $('#saveEdit').on('click', function() {
@@ -59,8 +64,7 @@ function loadSubscribers() {
                 allSubscribers = response.data;
                 filteredSubscribers = [...allSubscribers];
                 updateStats();
-                displaySubscribers();
-                showToast('Subscribers loaded successfully', 'success');
+                applyFilters(true);
             } else {
                 showToast('Error loading subscribers: ' + response.message, 'error');
             }
@@ -83,51 +87,57 @@ function updateStats() {
     $('#inactiveSubscribers').text(inactive);
 }
 
-// Apply search and status filters
-function applyFilters() {
+function applyFilters(keepPage) {
     const searchTerm = $('#searchInput').val().toLowerCase();
     const statusFilter = $('#statusFilter').val();
+    const sortType = $('#sortFilter').val();
 
     filteredSubscribers = allSubscribers.filter(sub => {
-        // Apply search filter
         const matchesSearch = sub.email.toLowerCase().includes(searchTerm);
 
-        // Apply status filter
         let matchesStatus = true;
         if (statusFilter === 'active') {
             matchesStatus = sub.active == 1;
         } else if (statusFilter === 'inactive') {
             matchesStatus = sub.active == 0;
+        } else if (statusFilter === 'new') {
+            matchesStatus = isNewSubscriber(sub);
         }
 
         return matchesSearch && matchesStatus;
     });
 
-    // Reset to first page when filtering
-    currentPage = 1;
+    const byDate = (a, b) => new Date(a.subscriptionDate) - new Date(b.subscriptionDate);
+    const byEmail = (a, b) => a.email.toLowerCase().localeCompare(b.email.toLowerCase());
+    const sorters = {
+        email_asc: byEmail,
+        email_desc: (a, b) => byEmail(b, a),
+        date_asc: byDate,
+        date_desc: (a, b) => byDate(b, a)
+    };
+    filteredSubscribers.sort(sorters[sortType] || byEmail);
+
+    if (!keepPage) {
+        currentPage = 1;
+    }
     displaySubscribers();
 }
 
-// Display subscribers with pagination
 function displaySubscribers() {
     const subscribers = filteredSubscribers;
     const totalPages = Math.ceil(subscribers.length / itemsPerPage);
 
-    // Adjust current page if needed
     if (currentPage > totalPages && totalPages > 0) {
         currentPage = totalPages;
     }
 
-    // Calculate range for current page
     const start = (currentPage - 1) * itemsPerPage;
     const end = Math.min(start + itemsPerPage, subscribers.length);
     const pageSubscribers = subscribers.slice(start, end);
 
-    // Clear the table
     const tbody = $('#subscribersList');
     tbody.empty();
 
-    // Display no results message if needed
     if (pageSubscribers.length === 0) {
         tbody.append(`
             <tr>
@@ -135,26 +145,28 @@ function displaySubscribers() {
             </tr>
         `);
     } else {
-        // Add each subscriber to the table
         pageSubscribers.forEach((subscriber, index) => {
             const rowNumber = start + index + 1;
             const date = new Date(subscriber.subscriptionDate);
             const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            const statusBadge = subscriber.active == 1
+            const isNew = isNewSubscriber(subscriber);
+            const statusBadge = (subscriber.active == 1
                 ? '<span class="badge badge-success">Active</span>'
-                : '<span class="badge badge-secondary">Inactive</span>';
+                : '<span class="badge badge-secondary">Inactive</span>')
+                + (isNew ? ' <span class="badge badge-pill badge-info ml-2">New</span>' : '');
+            const id = Number(subscriber.id);
 
             tbody.append(`
-                <tr>
+                <tr data-id="${id}" class="${isNew ? 'new-subscriber-row' : ''}">
                     <td>${rowNumber}</td>
-                    <td>${subscriber.email}</td>
-                    <td>${formattedDate}</td>
+                    <td>${escapeHtml(subscriber.email)}</td>
+                    <td>${escapeHtml(formattedDate)}</td>
                     <td>${statusBadge}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary mr-2" onclick="openEditModal(${subscriber.id})">
+                        <button class="btn btn-sm btn-primary mr-2" onclick="openEditModal(${id})">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${subscriber.id})">
+                        <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${id})">
                             <i class="fas fa-trash"></i> Delete
                         </button>
                     </td>
@@ -163,7 +175,6 @@ function displaySubscribers() {
         });
     }
 
-    // Update pagination
     updatePagination(totalPages);
 }
 
@@ -509,135 +520,11 @@ function validateEmail(email) {
     return re.test(email);
 }
 
-function highlightNewSubscribers() {
-    if (typeof newSubscriberIds !== 'undefined' && newSubscriberIds.length > 0) {
-        newSubscriberIds.forEach(id => {
-            const row = $(`#subscribersList tr[data-id="${id}"]`);
-            if (row.length) {
-                row.addClass('new-subscriber-row');
-                // Add the "New" badge to the row
-                const statusCell = row.find('td:nth-child(4)');
-                if (!statusCell.find('.badge-info').length) {
-                    statusCell.append(' <span class="badge badge-pill badge-info ml-2">New</span>');
-                }
-            }
-        });
-    }
+
+function isNewSubscriber(sub) {
+    return newSubscriberIds.includes(Number(sub.id));
 }
 
-// Enhanced filter function to include "new" filter
-function enhancedFilterSubscribers(searchText, statusFilter) {
-    // First hide all rows
-    $('#subscribersList tr').hide();
-
-    // Special case for "new" filter
-    if (statusFilter === 'new' && typeof newSubscriberIds !== 'undefined') {
-        newSubscriberIds.forEach(id => {
-            const row = $(`#subscribersList tr[data-id="${id}"]`);
-            if (row.length) {
-                // If there's search text, check if it matches
-                if (!searchText || row.text().toLowerCase().includes(searchText)) {
-                    row.show();
-                }
-            }
-        });
-        return;
-    }
-
-    // Apply regular filtering for other cases
-    $('#subscribersList tr').each(function() {
-        const rowText = $(this).text().toLowerCase();
-        const email = $(this).find('td:nth-child(2)').text().toLowerCase();
-        const active = $(this).find('td:nth-child(4)').text().includes('Active');
-
-        let statusMatch = false;
-
-        if (statusFilter === 'all') {
-            statusMatch = true;
-        } else if (statusFilter === 'active' && active) {
-            statusMatch = true;
-        } else if (statusFilter === 'inactive' && !active) {
-            statusMatch = true;
-        }
-
-        if (statusMatch && (!searchText || rowText.includes(searchText) || email.includes(searchText))) {
-            $(this).show();
-        }
-    });
-
-    // Update pagination after filtering
-    updatePagination();
-}
-
-// Modify your existing event handlers to use the enhanced filter
-// For example, replace your existing filter code with:
-$('#searchInput, #statusFilter').on('input change', function() {
-    const searchText = $('#searchInput').val().toLowerCase();
-    const statusFilter = $('#statusFilter').val();
-    enhancedFilterSubscribers(searchText, statusFilter);
-});
-
-// Add this to your document ready function
-$(document).ready(function() {
-    // Your existing code...
-
-    // Apply highlights after data is loaded
-    const originalLoadSubscribers = window.loadSubscribers || function(){};
-    window.loadSubscribers = function() {
-        originalLoadSubscribers.apply(this, arguments);
-
-        // Add a slight delay to ensure DOM is updated
-        setTimeout(highlightNewSubscribers, 500);
-    };
-
-    // Show welcome modal
-    if (typeof newSubscriberIds !== 'undefined' && newSubscriberIds.length > 0) {
-        $('#welcomeBackModal').modal('show');
-    }
-
-    // Add sort functionality
-    $('#sortFilter').on('change', function() {
-        const sortValue = $(this).val();
-        sortSubscribers(sortValue);
-    });
-});
-
-// Function to sort subscribers
-function sortSubscribers(sortType) {
-    const rows = $('#subscribersList tr').get();
-
-    rows.sort(function(a, b) {
-        let compA, compB;
-
-        if (sortType === 'email_asc' || sortType === 'email_desc') {
-            compA = $(a).find('td:nth-child(2)').text().toLowerCase();
-            compB = $(b).find('td:nth-child(2)').text().toLowerCase();
-        } else if (sortType === 'date_asc' || sortType === 'date_desc') {
-            compA = new Date($(a).find('td:nth-child(3)').attr('data-date') || 0);
-            compB = new Date($(b).find('td:nth-child(3)').attr('data-date') || 0);
-        }
-
-        // Default sorting (for invalid sort types)
-        if (compA === undefined || compB === undefined) {
-            return 0;
-        }
-
-        // Apply sort direction
-        if (sortType.endsWith('_desc')) {
-            return compB < compA ? -1 : compB > compA ? 1 : 0;
-        } else {
-            return compA < compB ? -1 : compA > compB ? 1 : 0;
-        }
-    });
-
-    // Replace current rows with sorted ones
-    $.each(rows, function(index, row) {
-        $('#subscribersList').append(row);
-    });
-
-    // Update pagination after sorting
-    updatePagination();
-
-    // Re-highlight new subscribers
-    highlightNewSubscribers();
+function escapeHtml(text) {
+    return $('<div>').text(text == null ? '' : String(text)).html();
 }

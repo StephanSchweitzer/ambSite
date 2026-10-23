@@ -954,14 +954,16 @@ function openPhotoInfo(id, location, name, firstDescription, secondDescription, 
   $('#carouselBadge').toggle(carousel == 1);
   $('#availableBadge').toggle(availability == 1);
 
-  // Set medium dropdown
+  // Set medium dropdown. A medium missing from the list gets a temporary
+  // entry, so the dropdown never keeps showing (and saving) the previous
+  // painting's medium instead.
   var selectElement = document.getElementById("photoMedium");
-  for (var i = 0; i < selectElement.options.length; i++) {
-    if (selectElement.options[i].value === medium) {
-      selectElement.options[i].selected = true;
-      break;
-    }
+  $(selectElement).find('option.unlisted-medium').remove();
+  var found = Array.from(selectElement.options).some(option => option.value === medium);
+  if (!found) {
+    $(selectElement).append($('<option>').addClass('unlisted-medium').val(medium || '').text(medium || '(no medium)'));
   }
+  selectElement.value = medium || '';
 
   // Set other fields
   $('#photoCreationYear').val(creationYear);
@@ -1480,6 +1482,8 @@ function batchUpdateWorks(field, value) {
       // Hide loading spinner
       $('#loadingSpinner').hide();
 
+      const count = selectedWorks.length;
+
       // Clear selection
       $('.work-card').removeClass('selected');
       updateSelectedCount();
@@ -1489,7 +1493,7 @@ function batchUpdateWorks(field, value) {
 
       // Show success message
       const operation = field === 'selectWork' ? 'Select Works' : 'Carousel';
-      showToast(`${selectedWorks.length} works have been added to ${operation}!`, 'success');
+      showToast(`${count} work(s) added to ${operation}!`, 'success');
 
       // Update statistics
       countWorksStatistics();
@@ -1526,6 +1530,8 @@ function batchDeleteWorks() {
       // Hide loading spinner
       $('#loadingSpinner').hide();
 
+      const count = selectedWorks.length;
+
       // Clear selection
       $('.work-card').removeClass('selected');
       updateSelectedCount();
@@ -1534,7 +1540,7 @@ function batchDeleteWorks() {
       refreshCurrentView();
 
       // Show success message
-      showToast(`${selectedWorks.length} works have been deleted!`, 'success');
+      showToast(`${count} work(s) deleted!`, 'success');
 
       // Update statistics
       countWorksStatistics();

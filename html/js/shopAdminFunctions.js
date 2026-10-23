@@ -1,4 +1,5 @@
 var pageNumber = 'active';
+var openProductVisible = 1; // whether the item open in the edit window is live or deleted
 
 $( document ).ready(function()
 {
@@ -72,6 +73,7 @@ function insertData(data)
 }
 
 function openProductInfo(id, name, productOrder, available, buttonCode, visible) {
+	openProductVisible = visible == 0 ? 0 : 1;
 	document.getElementById('deleteOrRestore').innerHTML = '<button  type="button" class="btn btn-danger" onclick="deleteProduct()">Delete Item</button>';
 
 	if (visible == 0)
@@ -140,6 +142,7 @@ function createProduct() {
 		  showToast('Shop item successfully created', 'success');
 
   		$('#productPostModal').modal('hide');
+  		$('#productPostModal form')[0].reset();
   		document.getElementById('uploadProductButton').disabled = false;
   	},
   	error: function(xhr, status, error) {
@@ -170,10 +173,10 @@ function updateProduct()
   	buttonCode: $('#editShopifyCode').val(),
   	productOrder: $('#editOrderOfDisplay').val(),
   	available : activeInt,
-  	visible : 1
+  	// Saving keeps a deleted item deleted; only Restore brings it back
+  	visible : openProductVisible
   };
 
-  console.log(formData);
   // Send the form data via AJAX
   $.ajax({
   	url: '../actions/shopAPI.php',
@@ -192,7 +195,7 @@ function updateProduct()
   	},
   	error: function(xhr, status, error) {
       // Handle the error response
-        showToast('There has been a problem, tell bubbers', 'error');
+        showToast('There has been a problem saving this item', 'error');
   		console.error('Error:', error);
       // You can perform error handling here
   	}
@@ -297,7 +300,7 @@ function restoreProduct()
 			$('#productUpdateModal').modal('hide');
 		},
 		error: function(xhr, status, error) {
-			showToast('Problem dude, no restoration', 'error');
+			showToast('There has been a problem restoring this item', 'error');
 			console.error('Error:', error);
 		}
 	});

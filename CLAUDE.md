@@ -315,8 +315,8 @@ all artwork. The size limits are in `actions/imageManipulationFunctions.php`.
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
 | SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
-| Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages |
-| Auth | `html/signIn/` — session-based; admin pages check `$_SESSION["ambar"] === "connected"`; `login_attempts` table rate-limits |
+| Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB). |
+| Auth | `html/signIn/` — session-based; every entry point includes `database/session.php` (cookie flags) instead of calling `session_start()`; admin pages check `$_SESSION["ambar"] === "connected"`, admin APIs call `requireAdminApi()` from `actions/adminAuth.php` (401 JSON, never a redirect); `login_attempts` rate-limits (5 per hour, cleared on success) |
 | DB connection | `html/database/pdo.php` — loads `.env` from project root, exposes global `$conn` (PDO) and `env()` helper. Every entry point `include`s it. |
 | Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
 
@@ -345,6 +345,18 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
 - Some legacy class/id names are whimsical (`whiteForTheTopMaybe`,
   `holdForNow`, `sideBySide`). Rename only with a full grep across PHP, JS,
   and CSS — they're referenced from all three.
+- **IDs arrive as numbers, form fields hold text.** Since PHP 8.1, `pdo_mysql`
+  returns integer columns as ints, so JSON IDs are numbers while checkbox
+  `data-*` attributes and inputs are strings. Strict comparisons
+  (`===`, `includes`) between the two silently never match — that is what
+  once made saving a project wipe its works. The admin JS converts IDs with
+  `String()` on arrival; keep doing that.
+- Link-replacing saves (`worksOfProjectsAPI.php` POST) delete and re-insert
+  the whole set in one transaction. The pages keep their own selection and
+  only send it once the list has loaded for that item and changed; never
+  build the list to save from the checkboxes currently on screen.
+- Deleting a painting only sets `visible = 0` (its flags are kept for
+  restore); every public query must filter on `visible = 1`.
 - API responses are inconsistent: some endpoints return bare JSON arrays,
   others `{status, data}` wrappers. Match whatever the consuming JS expects.
 - Query results are often read by numeric column index (`$result[$i][3]`), so

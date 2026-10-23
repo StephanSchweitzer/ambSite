@@ -1,5 +1,5 @@
 <?php
-session_start();
+include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
 
 // Failed sign-ins are counted per IP address. Five within an hour blocks
