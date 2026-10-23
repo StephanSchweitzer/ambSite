@@ -60,7 +60,15 @@ if (isset($pages[$path])) {
     $title = $pages[$path]['title'];
 } elseif (preg_match('#^/work/(\d+)(?:/[^/]*)?$#', $path, $match)) {
     $view = 'works';
-    $work = $conn ? ambGetPublicWork($conn, $match[1]) : null;
+    $lookupFailed = false;
+    try {
+        $work = $conn ? ambGetPublicWork($conn, $match[1]) : null;
+    } catch (Throwable $ex) {
+        // Show the Works page rather than an error; the script finds the painting
+        error_log('index.php work ' . $match[1] . ': ' . $ex->getMessage());
+        $work = null;
+        $lookupFailed = true;
+    }
     if ($work) {
         if ($requestPath !== $work['path']) {
             redirectTo($work['path']);
@@ -69,7 +77,7 @@ if (isset($pages[$path])) {
         $workText = ambExcerpt($work['firstDescription'], 100000);
         $description = $workText !== '' ? ambExcerpt($workText, 140) . ' — by Ambar Velasco' : 'Artwork by Ambar Velasco';
         $shareWork = $work;
-    } elseif ($conn) {
+    } elseif ($conn && !$lookupFailed) {
         $status = 404; // only claim "not found" when the database was asked
         $view = 'notfound';
     }

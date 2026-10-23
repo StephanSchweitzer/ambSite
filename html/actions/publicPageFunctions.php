@@ -21,16 +21,24 @@ function ambMultiline($text)
     return $text ? str_replace("\n", '<br>', (string) $text) : '';
 }
 
-// Plain text for a meta description: no tags, single spaces, cut at a word
+// Plain text for a meta description: no tags, single spaces, cut at a word.
+// Counts characters with preg (not mb_*), since the server has no mbstring.
 function ambExcerpt($html, $length = 160)
 {
-    $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) $html), ENT_QUOTES, 'UTF-8')));
-    if (mb_strlen($text, 'UTF-8') <= $length) {
+    $text = html_entity_decode(strip_tags((string) $html), ENT_QUOTES, 'UTF-8');
+    $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+    $chars = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY);
+    if (!$chars || count($chars) <= $length) {
         return $text;
     }
-    $cut = mb_substr($text, 0, $length, 'UTF-8');
-    $space = mb_strrpos($cut, ' ', 0, 'UTF-8');
-    return rtrim($space > $length * 0.6 ? mb_substr($cut, 0, $space, 'UTF-8') : $cut, ' ,.;:-') . '…';
+    $cut = array_slice($chars, 0, $length);
+    for ($i = $length - 1; $i > $length * 0.6; $i--) {
+        if ($cut[$i] === ' ') {
+            $cut = array_slice($cut, 0, $i);
+            break;
+        }
+    }
+    return rtrim(implode('', $cut), ' ,.;:-') . '…';
 }
 
 // Same as projectSectionId() in photoFunctions.js
