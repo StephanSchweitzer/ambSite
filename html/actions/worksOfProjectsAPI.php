@@ -57,124 +57,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
     die;
 }
 
-// POST method with two different behaviors:
-// 1. When projectId and workIds are provided, update project-works associations
-// 2. When workId and projectIds are provided, update work-projects associations
+// Replaces a set of links in one transaction, so a failure partway through
+// leaves the old links in place instead of a half-emptied project.
+// $ownerColumn is the side being edited ('projectId' or 'workId').
+function replaceLinks($conn, $ownerColumn, $ownerId, $otherIds)
+{
+    $otherColumn = $ownerColumn === 'projectId' ? 'workId' : 'projectId';
+
+    $conn->beginTransaction();
+    try {
+        $conn->prepare("DELETE FROM worksInProjects WHERE $ownerColumn = ?")->execute(array($ownerId));
+        $insert = $conn->prepare("INSERT INTO worksInProjects ($ownerColumn, $otherColumn) VALUES (?, ?)");
+        foreach ($otherIds as $otherId) {
+            $insert->execute(array($ownerId, $otherId));
+        }
+        $conn->commit();
+    } catch (Exception $e) {
+        $conn->rollBack();
+        throw $e;
+    }
+}
+
+// Reads a list of IDs sent either as a JSON string ("[1,2]") or as a form
+// array, keeping only whole numbers, without duplicates
+function readIdList($value)
+{
+    if (is_string($value)) {
+        $value = json_decode($value, true);
+    }
+    if (!is_array($value)) {
+        return null;
+    }
+    $ids = array();
+    foreach ($value as $id) {
+        if (filter_var($id, FILTER_VALIDATE_INT) === false) {
+            return null;
+        }
+        $ids[(int) $id] = true;
+    }
+    return array_keys($ids);
+}
+
+// POST replaces links, from either side:
+// 1. projectId + workIds: set which works are in a project
+// 2. workId + projectIds: set which projects a work is in
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
+    header('Content-Type: application/json');
+
     if (($_SESSION["ambar"] ?? null) != "connected")
     {
-        header("Location: signIn/signIn.php?status=needCredentials");
+        http_response_code(401);
+        echo json_encode(array('status' => 'error', 'message' => 'Unauthorized'));
         die;
     }
 
-    // Original functionality: Associate multiple works with a project
-    if (isset($_POST["projectId"]) && isset($_POST["workIds"])) {
-        $projectId = $_POST["projectId"];
-
-        // Handle stringified array input
-        if (is_string($_POST["workIds"]) && strpos($_POST["workIds"], '[') === 0) {
-            $workIds = json_decode($_POST["workIds"]);
-        } else {
-            $workIds = $_POST["workIds"];
-        }
-
-        // Ensure workIds is an array, even if empty
-        if (!is_array($workIds)) {
-            $workIds = [];
-        }
-
-        // First delete all existing associations for this project
-        $query = "DELETE FROM worksInProjects WHERE projectId = ?";
-        $theArray = array($projectId);
-
-        try {
-            $uploadQuery = $conn->prepare($query);
-            $uploadQuery->execute($theArray);
-        } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
-            die;
-        }
-
-        // If we have works to add, insert them
-        if (count($workIds) > 0) {
-            $query = "INSERT INTO worksInProjects (projectId, workId) VALUES (?, ?)";
-
-            foreach ($workIds as $workId)
-            {
-                $theArray = array($projectId, $workId);
-
-                try {
-                    $uploadQuery = $conn->prepare($query);
-                    $uploadQuery->execute($theArray);
-                } catch (PDOException $e) {
-                    http_response_code(500);
-                    echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
-                    die;
-                }
-            }
-        }
-
-        echo json_encode(array('status' => 'success', 'ids' => $workIds));
-    }
-    // New functionality: Associate multiple projects with a work
-    elseif (isset($_POST["workId"]) && isset($_POST["projectIds"])) {
-        $workId = $_POST["workId"];
-
-        // Handle stringified array input
-        if (is_string($_POST["projectIds"]) && strpos($_POST["projectIds"], '[') === 0) {
-            $projectIds = json_decode($_POST["projectIds"]);
-        } else {
-            $projectIds = $_POST["projectIds"];
-        }
-
-        // Ensure projectIds is an array, even if empty
-        if (!is_array($projectIds)) {
-            $projectIds = [];
-        }
-
-        // First delete all existing associations for this work
-        $query = "DELETE FROM worksInProjects WHERE workId = ?";
-        $theArray = array($workId);
-
-        try {
-            $deleteQuery = $conn->prepare($query);
-            $deleteQuery->execute($theArray);
-        } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
-            die;
-        }
-
-        // If we have projects to add, insert them
-        $insertResults = [];
-        if (count($projectIds) > 0) {
-            $query = "INSERT INTO worksInProjects (projectId, workId) VALUES (?, ?)";
-
-            foreach ($projectIds as $projectId)
-            {
-                $theArray = array($projectId, $workId);
-
-                try {
-                    $insertQuery = $conn->prepare($query);
-                    $insertQuery->execute($theArray);
-                    $insertResults[] = $projectId;
-                } catch (PDOException $e) {
-                    http_response_code(500);
-                    echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
-                    die;
-                }
-            }
-        }
-
-        echo json_encode(array('status' => 'success', 'projectIds' => $insertResults));
-    }
-    else {
+    if (isset($_POST["projectId"], $_POST["workIds"])) {
+        $ownerColumn = 'projectId';
+        $ownerId = filter_var($_POST["projectId"], FILTER_VALIDATE_INT);
+        $otherIds = readIdList($_POST["workIds"]);
+    } elseif (isset($_POST["workId"], $_POST["projectIds"])) {
+        $ownerColumn = 'workId';
+        $ownerId = filter_var($_POST["workId"], FILTER_VALIDATE_INT);
+        $otherIds = readIdList($_POST["projectIds"]);
+    } else {
         http_response_code(400);
         echo json_encode(array('status' => 'error', 'message' => 'Invalid parameters. Either projectId+workIds or workId+projectIds must be provided.'));
+        die;
     }
 
+    if ($ownerId === false || $otherIds === null) {
+        http_response_code(400);
+        echo json_encode(array('status' => 'error', 'message' => 'IDs must be whole numbers'));
+        die;
+    }
+
+    try {
+        replaceLinks($conn, $ownerColumn, $ownerId, $otherIds);
+    } catch (Exception $e) {
+        error_log('worksOfProjectsAPI: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(array('status' => 'error', 'message' => 'Could not save; nothing was changed'));
+        die;
+    }
+
+    echo json_encode(array('status' => 'success', 'ids' => $otherIds));
     die;
 }
-?>
