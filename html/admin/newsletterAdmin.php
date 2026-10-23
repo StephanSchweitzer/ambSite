@@ -3,7 +3,7 @@ global $conn;
 session_start();
 include '../database/pdo.php';
 
-if ($_SESSION["ambar"] != "connected")
+if (($_SESSION["ambar"] ?? null) != "connected")
 {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;

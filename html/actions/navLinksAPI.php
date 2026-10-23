@@ -135,7 +135,7 @@ try {
 
         case 'POST':
             // Verify authentication
-            if ($_SESSION["ambar"] != "connected")
+            if (($_SESSION["ambar"] ?? null) != "connected")
             {
                 sendError('Unauthorized', 401);
             }
@@ -161,7 +161,7 @@ try {
 
         case 'PATCH':
             // Ensure user is authenticated before modifying data
-            if ($_SESSION['ambar'] != "connected") {
+            if (($_SESSION["ambar"] ?? null) != "connected") {
                 sendError('Unauthorized', 401);
             }
 

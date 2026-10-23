@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 // 2. When workId and projectIds are provided, update work-projects associations
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
-    if ($_SESSION["ambar"] != "connected")
+    if (($_SESSION["ambar"] ?? null) != "connected")
     {
         header("Location: signIn/signIn.php?status=needCredentials");
         die;

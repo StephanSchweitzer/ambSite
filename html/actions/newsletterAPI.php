@@ -69,7 +69,7 @@ try {
 
         case 'PUT':
             // Require authentication for modification
-            if ($_SESSION["ambar"] != "connected") {
+            if (($_SESSION["ambar"] ?? null) != "connected") {
                 sendError('Unauthorized', 401);
             }
 
@@ -138,7 +138,7 @@ try {
 
         case 'DELETE':
             // Require authentication for deletion
-            if ($_SESSION["ambar"] != "connected") {
+            if (($_SESSION["ambar"] ?? null) != "connected") {
                 sendError('Unauthorized', 401);
             }
 

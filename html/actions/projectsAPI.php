@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
-  if ($_SESSION["ambar"] != "connected")
+  if (($_SESSION["ambar"] ?? null) != "connected")
   {
     header("Location: signIn/signIn.php?status=needCredentials");
     die;
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 {
 
-  if ($_SESSION["ambar"] != "connected")
+  if (($_SESSION["ambar"] ?? null) != "connected")
   {
     header("Location: signIn/signIn.php?status=needCredentials");
     die;
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 {
 
-  if ($_SESSION["ambar"] != "connected")
+  if (($_SESSION["ambar"] ?? null) != "connected")
   {
     header("Location: signIn/signIn.php?status=needCredentials");
     die;

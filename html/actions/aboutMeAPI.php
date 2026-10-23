@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 // For POST requests, check authentication
-if ($_SESSION["ambar"] != "connected") {
+if (($_SESSION["ambar"] ?? null) != "connected") {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;
 }
