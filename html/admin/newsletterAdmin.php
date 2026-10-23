@@ -70,8 +70,8 @@ $newSubscribersCount = count($newSubscribers);
         <br>
     </div>
     <br>
-    <div style="max-width: 85vw; margin: 0 auto;">
-        <div class="content-box" style="color: white; padding: 20px;">
+    <div class="newsletter-body">
+        <div class="content-box newsletter-content">
 
             <!-- Dashboard Stats -->
             <div class="row mb-4">

@@ -12,6 +12,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
  <head>
    <!-- IE 11 compatibility -->
    <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
      <link rel="stylesheet" href="admin.css">  <!-- Ensure this path is correct -->
@@ -29,6 +30,24 @@ if (($_SESSION["ambar"] ?? null) != "connected")
    .card {
      cursor: pointer;
    }
+
+    @media (max-width: 767.98px) {
+      #existingPostInformation {
+        display: flex !important;
+        flex-direction: column;
+        padding: 0 !important;
+      }
+
+      #existingPostInformation .card {
+        width: 100%;
+      }
+
+      .shop-buttons .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+    }
 
     #worksList
     {
@@ -51,10 +70,12 @@ if (($_SESSION["ambar"] ?? null) != "connected")
      <br>
      <a href="mainAdmin.php"><button type="submit" class="btn btn-info">Main Admin Page</button></a>
     <br><br><br>
-    <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('active')">See all items for sale</button>
+    <div class="shop-buttons">
+     <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('active')">See all items for sale</button>
      <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('inactive')">See all items not for sale</button>
      <button type="button" class="btn btn-secondary" onclick="loadAndInsertProducts('invisible')">See all deleted items</button>
      <button type="button" class="btn btn-primary" onclick="openPostForm()">Create Shop Item</button>
+    </div>
      <br><br>
 
 

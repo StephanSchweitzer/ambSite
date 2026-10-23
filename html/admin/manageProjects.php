@@ -470,6 +470,53 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             color: #ffc107; /* Same as active color on hover */
             border-color: #636b74 #636b74 #495057; /* Slightly lighter borders on hover */
         }
+
+        /* Phones and small tablets */
+        @media (max-width: 767.98px) {
+            .admin-container {
+                margin: 10px;
+                padding: 12px;
+            }
+
+            .page-header {
+                padding: 18px;
+                margin-bottom: 15px;
+            }
+
+            .page-header .lead {
+                font-size: 1rem;
+                margin-bottom: 0;
+            }
+
+            .control-panel {
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+
+            .control-panel .text-right {
+                text-align: left !important;
+            }
+
+            .control-panel .btn-action {
+                display: block;
+                width: 100%;
+                margin: 5px 0;
+            }
+
+            .project-counts {
+                gap: 8px;
+            }
+
+            .filter-controls .btn-action {
+                margin: 0;
+                padding: 8px 6px;
+                font-size: 0.85rem;
+            }
+
+            .project-card {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>

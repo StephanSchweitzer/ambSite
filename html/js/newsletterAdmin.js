@@ -158,11 +158,11 @@ function displaySubscribers() {
 
             tbody.append(`
                 <tr data-id="${id}" class="${isNew ? 'new-subscriber-row' : ''}">
-                    <td>${rowNumber}</td>
-                    <td>${escapeHtml(subscriber.email)}</td>
-                    <td>${escapeHtml(formattedDate)}</td>
-                    <td>${statusBadge}</td>
-                    <td>
+                    <td data-label="#">${rowNumber}</td>
+                    <td data-label="Email">${escapeHtml(subscriber.email)}</td>
+                    <td data-label="Subscribed">${escapeHtml(formattedDate)}</td>
+                    <td data-label="Status">${statusBadge}</td>
+                    <td data-label="Actions">
                         <button class="btn btn-sm btn-primary mr-2" onclick="openEditModal(${id})">
                             <i class="fas fa-edit"></i> Edit
                         </button>

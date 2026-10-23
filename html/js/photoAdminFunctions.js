@@ -658,7 +658,7 @@ function insertData(data) {
     let isSelectWork = item.isSelectWork;
 
     // Create card elements
-    let cardCol = $('<div>').addClass('col-xl-3 col-lg-4 col-md-6 col-sm-6 mb-4');
+    let cardCol = $('<div>').addClass('col-6 col-md-6 col-lg-4 col-xl-3 mb-4');
     let card = $('<div>').addClass('work-card').attr('data-id', id);
 
     // Image container
