@@ -1,14 +1,28 @@
 RewriteEngine On
-
-RewriteCond %{HTTP_HOST} ^www.ambarvelasco.com$
-RewriteRule ^(.*)$ http://ambarvelasco.com/$1 [R=301]
-
-RewriteCond %{HTTP_HOST} ^www.ambarvelasco.com$
-RewriteCond %{SERVER_PORT} ^443
-RewriteRule ^(.*)$ https://ambarvelasco.com/$1 [R=301]
-
 RewriteBase /
+
+# www.ambarvelasco.com -> ambarvelasco.com, straight to https in one hop
+RewriteCond %{HTTP_HOST} ^www\.ambarvelasco\.com$ [NC]
+RewriteRule ^(.*)$ https://ambarvelasco.com/$1 [R=301,L]
+
+# Web-sized artwork copies. The first request for one runs webImage.php,
+# which makes and saves it; after that Apache serves the saved file directly.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^baseImages/web/([^/]+)$ actions/webImage.php?f=$1 [B,L]
+
+# The sitemap lists every work, so it is generated from the database
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+# Every other address that isn't a real file or folder is a page of the
+# site, handled by index.php (unknown ones get a proper "not found")
 RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.php [L]
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+</IfModule>

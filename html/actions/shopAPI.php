@@ -9,6 +9,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
   $activity = $_GET['activity'] ?? '';
 
+  // Unavailable and hidden items are only listed for the admin
+  if (($activity == "inactive" || $activity == "invisible") && ($_SESSION["ambar"] ?? null) != "connected")
+  {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(array('status' => 'error', 'message' => 'Unauthorized'));
+    die;
+  }
+
   $statusCondition = "WHERE available = 1 AND visible = 1 ";
 
   if ($activity == "inactive")

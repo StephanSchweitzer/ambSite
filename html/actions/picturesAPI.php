@@ -6,8 +6,17 @@ include '../database/pdo.php';
 include 'imageManipulationFunctions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $theYear = "";
-    $theYear = $_GET['theYear'];
+    $theYear = $_GET['theYear'] ?? '';
+
+    // These views include hidden/trashed works and are only for the admin
+    // pages. Everything else filters on visible = 1 and stays public.
+    $adminOnlyViews = array('everything', 'invisible', 'stats', 'projectsAPI');
+    if (in_array($theYear, $adminOnlyViews, true) && ($_SESSION["ambar"] ?? null) != "connected") {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(array('status' => 'error', 'message' => 'Unauthorized'));
+        die;
+    }
 
     // One canonical column list for every allWorks query below. Keeping it in a
     // single place means no branch can silently omit a column — the mismatch
@@ -323,6 +332,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Create thumbnail
             createAndSaveThumbnail($destination, $thumbnailDir, $newFileName);
+
+            // Make the web-sized copy the public site shows now, replacing
+            // any older copy left by an earlier upload with the same name. If
+            // this fails, webImage.php makes it on the first visit instead.
+            $webDir = $baseImageDir . 'web/';
+            $webCopy = $webDir . $newFileName;
+            if (is_file($webCopy)) {
+                @unlink($webCopy);
+            }
+            try {
+                if (is_dir($webDir) || @mkdir($webDir, 0755, true)) {
+                    createWebImage($destination, $webCopy);
+                }
+            } catch (Throwable $webError) {
+                error_log('Web copy not made at upload for ' . $newFileName . ': ' . $webError->getMessage());
+            }
         } catch (Exception $e) {
             header('Content-Type: application/json');
             echo json_encode(array(
@@ -633,7 +658,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
         $deletedFiles = array();
         if (!$isShared && $fileName !== '') {
-            foreach (array('../baseImages/', '../thumbnails/') as $dir) {
+            foreach (array('../baseImages/', '../baseImages/web/', '../thumbnails/') as $dir) {
                 $path = $dir . $fileName;
                 if (is_file($path) && unlink($path)) {
                     $deletedFiles[] = $path;

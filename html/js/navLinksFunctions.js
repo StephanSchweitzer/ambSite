@@ -1,5 +1,7 @@
-// Single initialization approach using IIFE
-(function() {
+// Builds the menu from the links Ambar manages in the admin (navLinks table)
+// and runs the newsletter sign-up form inside it.
+
+(function () {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', loadAndInsertNavBarLinks);
     } else {
@@ -7,16 +9,15 @@
     }
 })();
 
-// Flag to prevent multiple initializations
+// Prevents double submissions of the newsletter form
 let newsletterSubmissionInProgress = false;
 
 function loadAndInsertNavBarLinks() {
-    // Prevent multiple initializations
     if (window.navLinksInitialized) return;
     window.navLinksInitialized = true;
 
     $.ajax({
-        url: '../actions/navLinksAPI.php',
+        url: '/actions/navLinksAPI.php',
         type: 'GET',
         dataType: 'json',
         success: function (response) {
@@ -24,19 +25,19 @@ function loadAndInsertNavBarLinks() {
                 insertLinks(response.data);
                 loadAndDisplayProjectTitles();
 
-                // Add overlay element for mobile menu if it doesn't exist
                 if ($('.nav-overlay').length === 0) {
                     $('body').append('<div class="nav-overlay"></div>');
                 }
 
-                // Set up event listeners for newsletter form ONLY ONCE
-                // First remove any existing handlers to be safe
                 $(document).off('click', '#newsletterSubmit');
                 $(document).off('keypress', '#newsletterEmail');
-
-                // Then add the new ones with submission protection
                 $(document).on('click', '#newsletterSubmit', handleNewsletterSubmit);
                 $(document).on('keypress', '#newsletterEmail', handleNewsletterKeypress);
+
+                // Apply the phone/desktop menu classes to the new links
+                if (typeof setupResponsiveLayout === 'function') {
+                    setupResponsiveLayout();
+                }
             } else {
                 console.log("Error with loading links");
             }
@@ -44,7 +45,6 @@ function loadAndInsertNavBarLinks() {
     });
 }
 
-// Newsletter submission handlers
 function handleNewsletterSubmit(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -68,198 +68,154 @@ function handleNewsletterKeypress(event) {
 function insertLinks(links) {
     $('#navLinksBox').empty();
     links.forEach(function (link) {
-        let id = link.ID;
-        let displayedText = link.displayedText;
-        let linkRedirection = link.linkRedirection;
-        let onclick = link['onclick'];
-        let isNewTab = link.isNewTab;
-        let attachedFollowingDiv = link.attachedFollowingDiv;
-
-        createNewNavLinkRow(displayedText, linkRedirection, onclick, isNewTab, attachedFollowingDiv);
+        createNewNavLinkRow(link.displayedText, link.linkRedirection, link['onclick'], link.isNewTab, link.attachedFollowingDiv);
     });
 
-    // After creating all links, check if the newsletter div exists and add the form
     if ($('#newsletterSignUp').length > 0) {
         $('#newsletterSignUp').html(`
             <div class="newsletter-container">
-                <input type="email" id="newsletterEmail" placeholder="Enter your email address" class="newsletter-input">
+                <label for="newsletterEmail" class="sr-only">Email address</label>
+                <input type="email" id="newsletterEmail" placeholder="Enter your email address" class="newsletter-input" autocomplete="email">
                 <div class="button-container">
                     <button id="newsletterSubmit" class="newsletter-button">Subscribe</button>
                 </div>
             </div>
         `);
 
-        // Important: Initially hide the newsletter form
+        // Hidden until the Newsletter link is clicked
         $('#newsletterSignUp').hide();
     }
 }
 
+// Menu links that show a page of the site get that page's real address, so
+// they can be opened in a new tab or copied; a normal click stays in the page
+const pageAddresses = {
+    'getProjectsAndWorks': '/select-works',
+    'openInfo': '/about',
+    'loadShop': '/shop',
+    'openCurrentProject': '/current-project'
+};
+
 function createNewNavLinkRow(displayedText, linkRedirection, instructionString, isNewTab, attachedFollowingDiv) {
-    // Create a container div for the link to maintain proper spacing
     const linkContainer = $('<div>').addClass('nav-link-container');
-
-    // Create a new anchor element
     const listItem = $('<a></a>');
+    const instructions = instructionString
+        ? instructionString.split(';').map(instr => instr.trim()).filter(Boolean)
+        : [];
 
-    // Set the attributes
-    listItem.attr({
-        href: linkRedirection,
-        class: 'mainLinkGenres'
-    });
-
-    // Set the displayed text
-    listItem.text(displayedText);
-
-    // If the link should open in a new tab
-    if (isNewTab == 1) {
-        listItem.attr('target', '_blank');
-    }
-
-    listItem.on('click', function(event) {
-        if (instructionString) {
-            const instructions = instructionString.split(';').map(instr => instr.trim());
-
-            instructions.forEach(instruction => {
-                if (functionMappings[instruction]) {
-                    functionMappings[instruction](event);
-                } else if (specialMappings[instruction]) {
-                    specialMappings[instruction]();
-                }
-            });
+    let href = linkRedirection;
+    instructions.forEach(function (instruction) {
+        if (pageAddresses[instruction] && (!href || href === '#')) {
+            href = pageAddresses[instruction];
         }
     });
 
-    // Add the link to the container
-    linkContainer.append(listItem);
+    listItem.attr({ href: href, class: 'mainLinkGenres' }).text(displayedText);
 
-    // Append the container to the nav box
+    if (isNewTab == 1) {
+        listItem.attr({ target: '_blank', rel: 'noopener' });
+    }
+
+    listItem.on('click', function (event) {
+        if (!instructions.length) {
+            return; // plain link (e.g. Instagram)
+        }
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return; // let the browser open the page in a new tab
+        }
+        event.preventDefault();
+        instructions.forEach(function (instruction) {
+            if (functionMappings[instruction]) {
+                functionMappings[instruction](event);
+            }
+        });
+    });
+
+    linkContainer.append(listItem);
     $('#navLinksBox').append(linkContainer);
 
     if (attachedFollowingDiv) {
         try {
-            attachedFollowingDiv = JSON.parse(attachedFollowingDiv);
-            const additionalContent = $('<div></div>').attr({
-                id: attachedFollowingDiv.id,
-                class: attachedFollowingDiv.class
-            });
-
-            $('#navLinksBox').append(additionalContent);
-            return;
+            const extra = JSON.parse(attachedFollowingDiv);
+            $('#navLinksBox').append($('<div></div>').attr({ id: extra.id, class: extra.class }));
         } catch (e) {
             console.error("Error parsing attachedFollowingDiv:", e);
         }
     }
 }
 
+// What the instructions stored with each menu link do. The old
+// "selectWorksAreShown" flags are no longer needed but may still be stored.
 const functionMappings = {
-    "getProjectsAndWorks": function(event) {
-        getProjectsAndWorks();
-    },
-    "toggleSublinks": function(event) {
-        toggleSublinks(event, 'selectProjectCategories');
-    },
-    "toggleNewsLetterSignUp": function(event) {
-        toggleNewsLetterSignUp(event);
-    },
-    "loadShop": loadShop,
-    "openInfo": openInfo,
-    "openCurrentProject": openCurrentProject
+    "getProjectsAndWorks": function () { getProjectsAndWorks(); },
+    "toggleSublinks": function (event) { toggleSublinks(event, 'selectProjectCategories'); },
+    "toggleNewsLetterSignUp": function (event) { toggleNewsLetterSignUp(event); },
+    "loadShop": function () { loadShop(); },
+    "openInfo": function () { openInfo(); },
+    "openCurrentProject": function () { openCurrentProject(); },
+    "selectWorksAreShown": function () {},
+    "selectWorksAreNotShown": function () {}
 };
 
-const specialMappings = {
-    "selectWorksAreShown": function() {
-        window.selectWorksAreShown = true;
-    },
-    "selectWorksAreNotShown": function() {
-        window.selectWorksAreShown = false;
-    }
-};
-
+// The project names under "Works" — from the same request the Works page uses
 function loadAndDisplayProjectTitles() {
-    $.ajax({
-        url: '../actions/projectsAPI.php',
-        type: 'GET',
-        data: {'activity': 'active'},
-        dataType: 'json',
-        success: function(projects) {
-            let container = $('#selectProjectCategories');
-            container.empty();
-            projects.forEach(function(project) {
-                let title = project.title;
-                let sectionId = 'projectSection' + project.title.trim();
-                let link = $('<a>')
-                    .attr('href', '#' + sectionId)
-                    .text(title);
+    fetchPublicWorks('projects').then(function (projects) {
+        const container = $('#selectProjectCategories');
+        container.empty();
+        projects.forEach(function (project) {
+            const sectionId = projectSectionId(project.title);
+            const link = $('<a>').attr('href', '/select-works#' + sectionId).text(project.title);
 
-                // Modified click handler that keeps dropdown open
-                link.on('click', function(e) {
-                    e.preventDefault(); // Prevent default jump behavior
-                    e.stopPropagation(); // Prevent bubbling up to close dropdown
+            link.on('click', function (e) {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation(); // keep the dropdown open
 
-                    // On mobile, close the drawer so the selected works are visible
-                    if (window.innerWidth <= 992) {
-                        $('#hamburgerMenu').removeClass('active');
-                        $('#navLinksBox').removeClass('active');
-                        $('.nav-overlay').removeClass('active');
-                        $('#sideBySide').removeClass('menu-open');
-                    }
+                // On phones, close the drawer so the works are visible
+                if (window.innerWidth <= 992) {
+                    $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
+                    $('#navLinksBox').removeClass('active');
+                    $('.nav-overlay').removeClass('active');
+                    $('#sideBySide').removeClass('menu-open');
+                }
 
-                    // Load the specific section with proper loading indicator
-                    if (typeof window.loadProjectSection === 'function') {
-                        window.loadProjectSection(sectionId);
-
-                        // Force dropdown to stay open
-                        setTimeout(function() {
-                            window.ensureDropdownOpen('selectProjectCategories');
-                        }, 100);
-                    } else {
-                        // Fallback
-                        window.getProjectsAndWorks(sectionId);
-                    }
-
-                    return false; // Prevent event propagation
-                });
-
-                container.append(link);
+                loadProjectSection(sectionId);
             });
-        },
-        error: function() {
-            console.log('Error loading project titles.');
-        }
+
+            container.append(link);
+        });
+    }, function () {
+        console.log('Error loading project titles.');
     });
 }
 
-// Fixed version of the toggleNewsLetterSignUp function
 function toggleNewsLetterSignUp(event) {
     if (event) {
         event.preventDefault();
-        event.stopPropagation(); // Stop event bubbling to prevent menu closing
+        event.stopPropagation(); // keep the mobile menu open
     }
 
     var newsletterForm = $("#newsletterSignUp");
-
-    // Toggle the newsletter form with animation
-    newsletterForm.slideToggle(300, function() {
-        // Focus the email input if the form is now visible
+    newsletterForm.slideToggle(300, function () {
         if (newsletterForm.is(":visible")) {
             $("#newsletterEmail").focus();
         }
     });
 
-    // Keep the mobile menu open
     if (window.innerWidth <= 992) {
         $('#navLinksBox').addClass('active');
     }
-
-    return false; // Prevent default action and bubbling
+    return false;
 }
 
-// Inline feedback under the newsletter form (replaces alert popups)
+// Inline feedback under the newsletter form
 function showNewsletterMessage(text, type) {
     let container = $(".newsletter-container");
     let msg = container.find(".newsletter-message");
     if (msg.length === 0) {
-        msg = $('<p>').addClass('newsletter-message');
+        msg = $('<p>').addClass('newsletter-message').attr('role', 'status');
         container.append(msg);
     }
     msg.removeClass('success error').addClass(type).text(text).stop(true, true).show();
@@ -270,82 +226,67 @@ function showNewsletterMessage(text, type) {
 
 function sendEmailToDB() {
     const email = $("#newsletterEmail").val();
-    if (validateEmail(email)) {
-        // Set flag to prevent duplicate submissions
-        newsletterSubmissionInProgress = true;
-
-        // Optionally disable the submit button
-        $("#newsletterSubmit").prop('disabled', true);
-
-        // Make API call to save the email
-        $.ajax({
-            url: '../actions/newsletterAPI.php',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ email: email }),
-            success: function(response) {
-                if (response.status === 'success') {
-                    // Clear the input field after submission
-                    $("#newsletterEmail").val("");
-                    showNewsletterMessage("Thank you for subscribing!", "success");
-
-                    // Keep mobile menu open
-                    if (window.innerWidth <= 992) {
-                        setTimeout(function() {
-                            $('#navLinksBox').addClass('active');
-                        }, 100);
-                    }
-                } else {
-                    showNewsletterMessage(response.message || "Something went wrong. Please try again.", "error");
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error("Error sending email:", error);
-                showNewsletterMessage("An error occurred. Please try again later.", "error");
-            },
-            complete: function() {
-                // Reset flag when the AJAX call completes (success or error)
-                newsletterSubmissionInProgress = false;
-                // Re-enable the submit button
-                $("#newsletterSubmit").prop('disabled', false);
-            }
-        });
-    } else {
+    if (!validateEmail(email)) {
         showNewsletterMessage("Please enter a valid email address.", "error");
+        return;
     }
+
+    newsletterSubmissionInProgress = true;
+    $("#newsletterSubmit").prop('disabled', true);
+
+    $.ajax({
+        url: '/actions/newsletterAPI.php',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ email: email }),
+        success: function (response) {
+            if (response.status === 'success') {
+                $("#newsletterEmail").val("");
+                showNewsletterMessage("Thank you for subscribing!", "success");
+                if (window.innerWidth <= 992) {
+                    setTimeout(function () {
+                        $('#navLinksBox').addClass('active');
+                    }, 100);
+                }
+            } else {
+                showNewsletterMessage(response.message || "Something went wrong. Please try again.", "error");
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("Error sending email:", error);
+            showNewsletterMessage("An error occurred. Please try again later.", "error");
+        },
+        complete: function () {
+            newsletterSubmissionInProgress = false;
+            $("#newsletterSubmit").prop('disabled', false);
+        }
+    });
 }
 
 function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function toggleSublinks(event, sublinksId) {
     if (event) {
         event.preventDefault();
-        event.stopPropagation(); // Prevent event bubbling
+        event.stopPropagation();
     }
-
-    var sublinks = $("#" + sublinksId);
-    sublinks.slideToggle();
-    $("#breaksForTitles").slideToggle();
-
-    // Keep mobile menu open
+    $("#" + sublinksId).slideToggle();
     if (window.innerWidth <= 992) {
         $('#navLinksBox').addClass('active');
     }
-
-    return false; // Prevent default action and bubbling
+    return false;
 }
 
 // Open (rather than toggle) the newsletter form and focus the email field —
-// used by the floating newsletter nudge on the landing page
+// used by the floating newsletter nudge
 function ensureNewsletterOpen() {
     var newsletterForm = $("#newsletterSignUp");
     if (newsletterForm.is(":visible")) {
         $("#newsletterEmail").focus();
     } else {
-        newsletterForm.slideDown(300, function() {
+        newsletterForm.slideDown(300, function () {
             $("#newsletterEmail").focus();
         });
     }
@@ -355,6 +296,5 @@ function ensureDropdownOpen(sublinksId) {
     var sublinks = $("#" + sublinksId);
     if (!sublinks.is(":visible")) {
         sublinks.show();
-        $("#breaksForTitles").show();
     }
 }

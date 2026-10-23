@@ -278,15 +278,36 @@ fetched by JavaScript from the JSON endpoints in `html/actions/` and injected
 into the DOM. **So most "page content" HTML lives in JS string templates in
 `html/js/`, not in PHP files.**
 
+Routing: `photoFunctions.js` keeps the address bar in step with what's drawn
+(`pushState` + a `popstate` handler, so Back/Forward work). Routes are `/`,
+`/select-works`, `/about`, `/shop`, `/current-project`, and
+`/work/<id>/<slug>` — the Works page scrolled to that painting with it open
+in the viewer (the id finds it; the slug is decoration). `index.php` parses
+the same routes server-side to send a real 404 for unknown paths and to print
+per-page `<title>`, canonical, Open Graph and JSON-LD tags (a shared painting
+link previews that painting). Because pages can be nested (`/work/1/x`),
+every asset and API URL in the public page and its JS must be root-relative
+(`/actions/...`, `/baseImages/...`).
+
+Images on the public site: the gallery, slideshow and viewer show a web-sized
+copy (max 1600×2400, JPEG q82) at `baseImages/web/<file>`, never the
+multi-megapixel original. Copies are made at upload (`picturesAPI.php` POST)
+and, for anything older, on first request: `.htaccess` routes a missing
+`baseImages/web/*` file to `actions/webImage.php`, which writes it (one at a
+time, memory-checked) so Apache serves it statically from then on. They live
+inside `baseImages/`, so they're gitignored and excluded from the deploy like
+all artwork. The size limits are in `actions/imageManipulationFunctions.php`.
+
 | Area | Files |
 |---|---|
 | Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js`, `js/shopFunctions.js` |
-| JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe, sidebar) |
+| JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
+| SEO | `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt` |
 | Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages |
 | Auth | `html/signIn/` — session-based; admin pages check `$_SESSION["ambar"] === "connected"`; `login_attempts` table rate-limits |
 | DB connection | `html/database/pdo.php` — loads `.env` from project root, exposes global `$conn` (PDO) and `env()` helper. Every entry point `include`s it. |
-| Images | `html/img/` (full size), `imgMid/`, `thumbnails/`, `baseImages/`, `miscIcons/`. Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
+| Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf, arrows). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
 
 The local `.env` points at the scratch database `ambar_site_local`; production
 credentials live in a separate `.env` on the server and are deliberately not on
@@ -319,7 +340,13 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   reordering columns in a SELECT silently breaks the JSON output.
 - jQuery comes from the Google CDN (3.7.0) in `index.php`; the vendored
   `js/jquery-3.6.0.js` is used by some admin pages. Bootstrap 4.5.2 via CDN.
-- `html/oldCode.txt` is dead code kept for reference; ignore it.
+  On the public page all scripts load with `defer`, in order.
+- The menu links come from the `navLinks` table; their `onclick` column holds
+  `;`-separated names that `navLinksFunctions.js` maps to functions
+  (`getProjectsAndWorks`, `openInfo`, `toggleSublinks`, ...). Those names now
+  route through `goTo()`; keep them working if renaming anything.
+- Security headers (nosniff, Referrer-Policy, X-Frame-Options, HSTS) are set
+  in `html/.htaccess`.
 
 ## Conventions
 

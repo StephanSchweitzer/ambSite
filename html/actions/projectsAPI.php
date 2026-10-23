@@ -22,7 +22,17 @@ function makeNewCurrentProject($id)
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
   $activity = isset($_GET['activity']) ? $_GET['activity'] : "";
-  
+
+  // Inactive, deleted and "all" project lists are only for the admin pages
+  $adminOnlyActivities = array('inactive', 'deleted', 'all');
+  if (in_array($activity, $adminOnlyActivities, true) && ($_SESSION["ambar"] ?? null) != "connected")
+  {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(array('status' => 'error', 'message' => 'Unauthorized'));
+    die;
+  }
+
   $activityCondition = "WHERE active = 1 ";
 
   if($activity == 'inactive')

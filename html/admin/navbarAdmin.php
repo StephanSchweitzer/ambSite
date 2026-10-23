@@ -13,7 +13,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="admin.css">
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Navbar Admin</title>
     <style>
         :root {

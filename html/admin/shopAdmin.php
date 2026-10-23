@@ -22,7 +22,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
 
 
    <meta charset="utf-8">
-   <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+   <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
    <title>Shop Admin page</title>
 
    <style>

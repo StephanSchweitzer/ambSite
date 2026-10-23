@@ -15,7 +15,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="admin.css">
     <script src="../js/projectAdminFunctions.js"></script>
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Project Admin Dashboard</title>
 
     <style>

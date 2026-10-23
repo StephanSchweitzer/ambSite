@@ -81,23 +81,6 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: #bdbbb4; }
 
-/* Legacy font faces (still referenced by a few admin-era classes) */
-@font-face {
-  font-family: 'Nunito';
-  src: url('fonts/static/Nunito-Light.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'NunitoBold';
-  src: url('fonts/static/Nunito-SemiBold.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* ---------- Links ---------- */
 a {
   text-decoration: none;
@@ -134,28 +117,10 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   pointer-events: auto;
 }
 
-.headerNoMove2 {
-  top: 0;
-  bottom: 0;
-  position: fixed;
-  width: 100%;
-  height: 150px;
-  z-index: 100;
-}
-
-.headerNoMove3 {
-  top: 0;
-  bottom: 0;
-  position: fixed;
-  width: 100%;
-  height: 18px;
-  z-index: 100;
-  color: white;
-  background-color: white;
-}
-
 .blockForHeader {
-  max-width: 21vw;
+  /* 19vw keeps the logo clear of the white content sheet, which starts at
+     24vw (5vw margin + 19vw, less the logo's -12px nudge) */
+  max-width: 19vw;
   margin-left: 5vw;
   margin-top: 1vw;
   padding: 0;
@@ -177,9 +142,22 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   flex-direction: row;
 }
 
+/* The logo is the page's main heading; the h1 itself adds no styling */
+.site-title {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: inherit;
+  line-height: 0;
+}
+
+.site-title a {
+  display: block;
+}
+
 .ambarNamePic {
   margin-top: 2vh;
   width: 100%;
+  height: auto;
   max-width: 250px;
   margin-left: -12px;
   transition: transform 0.4s var(--ease-out-soft);
@@ -195,16 +173,7 @@ a:hover .ambarNamePic {
   margin-left: 4vw !important;
   width: 44vw;
   max-width: 170px;
-}
-
-/* Legacy white strips kept for the modal open/close choreography */
-.whiteComeAndGo {
-  background-color: white;
-  color: white;
-  height: 20px;
-  position: fixed;
-  width: 100%;
-  z-index: 10000000;
+  height: auto;
 }
 
 /* ---------- Hamburger ---------- */
@@ -509,8 +478,12 @@ a:hover .ambarNamePic {
 
 .carousel-inner { width: 100%; }
 
+.carousel-link { display: block; }
+
 .carousel-pic {
   cursor: pointer;
+  width: auto;
+  height: auto;
   max-height: 72vh;
   max-width: 100%;
   margin: auto;
@@ -603,13 +576,6 @@ a:hover .ambarNamePic {
   margin-top: 40px;
 }
 
-.projectWorksForRows {
-  column-count: 3;
-  column-gap: 0;
-  margin-top: 50px;
-  margin-left: 33px;
-}
-
 /* ---------- Artwork cards ---------- */
 .card {
   margin-right: 2px;
@@ -627,6 +593,24 @@ a:hover .ambarNamePic {
   font-weight: var(--font-weight-light);
   color: var(--color-text-secondary);
   margin-bottom: 0px;
+}
+
+/* Each work is a link to its own address (/work/<id>/<name>) */
+.work-card,
+.work-card:hover,
+.work-card:focus {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Keyboard focus on a work: show the title as on hover */
+.work-card:focus-visible {
+  outline-offset: 6px;
+}
+
+.work-card:focus-visible .img-overlay {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .img-container {
@@ -695,14 +679,6 @@ a:hover .ambarNamePic {
   color: #ffffff;
 }
 
-.img-containerForRows {
-  width: 100%;
-  height: auto;
-  display: block;
-  break-inside: avoid;
-  padding: 10px;
-}
-
 /* ---------- Sparkle separators between projects ---------- */
 .work-separator {
   border: none;
@@ -715,8 +691,6 @@ a:hover .ambarNamePic {
   font-size: 12px;
   user-select: none;
 }
-
-.work-separator.last { visibility: hidden; }
 
 /* ==========================================================================
    Image modal
@@ -769,6 +743,23 @@ a:hover .ambarNamePic {
 }
 
 #imageTitle, #imageDescription, #popUpImage { cursor: pointer; }
+
+/* While the next painting loads, the current one dims instead of vanishing */
+#popUpImage {
+  transition: opacity 0.2s ease;
+}
+
+#popUpImage.is-loading {
+  opacity: 0.35;
+}
+
+.image-counter {
+  font-size: 0.75rem !important;
+  letter-spacing: 0.22em;
+  opacity: 0.5 !important;
+  margin-top: 2px;
+  min-height: 1em;
+}
 
 .imageInfo {
   color: white;
@@ -905,70 +896,6 @@ a:hover .ambarNamePic {
   width: 100%;
 }
 
-.section-loading {
-  padding: 30px;
-  text-align: center;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-  box-shadow: var(--shadow-soft);
-  margin: 20px auto;
-  position: relative;
-  z-index: 5;
-}
-
-.section-loading .loading-spinner {
-  width: 36px;
-  height: 36px;
-  margin: 10px auto;
-}
-
-.fullpage-loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.92);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  pointer-events: none;
-}
-
-.fullpage-loading .loading-spinner {
-  width: 52px;
-  height: 52px;
-  margin-bottom: 18px;
-}
-
-.fullpage-loading p {
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-light);
-  letter-spacing: 0.08em;
-}
-
-/* Lazy loading fade-in */
-img.lazy-image {
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-img.lazy-image.loaded { opacity: 1; }
-
-img.loaded {
-  animation: imgFadeIn 0.55s ease;
-}
-
-@keyframes imgFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 /* ==========================================================================
    Current project (image / description flip cards)
@@ -1112,12 +1039,17 @@ img.loaded {
   box-shadow: var(--shadow-lifted);
 }
 
-.iconsRow {
-  display: flex;
-  flex-direction: row;
-  margin: 3%;
-  justify-content: center;
-  align-items: center;
+/* Email addresses in the About text become links */
+.email-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--amb-pink);
+  text-underline-offset: 3px;
+}
+
+.email-link:hover {
+  color: var(--color-ink);
+  text-decoration-color: var(--color-ink);
 }
 
 /* ==========================================================================
@@ -1292,7 +1224,7 @@ img.loaded {
 }
 
 /* ==========================================================================
-   Floating newsletter nudge (landing view only)
+   Floating newsletter nudge (every page, until dismissed with its x)
    ========================================================================== */
 .newsletter-float {
   position: fixed;
@@ -1407,10 +1339,7 @@ img.loaded {
 /* ==========================================================================
    Misc / utilities
    ========================================================================== */
-.invisible { opacity: 0 !important; }
-.invisibleText { opacity: 0 !important; }
-.hidden-maintain-space { visibility: hidden; }
-
+/* Page frozen behind the artwork viewer (top is set from JS) */
 .no-scroll {
   overflow: hidden;
   position: fixed;
@@ -1428,6 +1357,38 @@ img.loaded {
   margin: 40px auto;
   max-width: 480px;
   font-weight: var(--font-weight-light);
+}
+
+/* Page not found */
+.not-found {
+  width: 100%;
+  text-align: center;
+  padding: 12vh 20px;
+}
+
+.not-found h2 {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+
+.not-found p {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-light);
+}
+
+.not-found-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding-bottom: 4px;
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-ink) !important;
+  border-bottom: 2px solid transparent;
+  border-image: var(--amb-rainbow) 1;
 }
 
 /* Bootstrap modal centering (kept from original) */

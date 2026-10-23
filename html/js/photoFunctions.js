@@ -1,721 +1,987 @@
-var selectWorksAreShown = false;
-var currentImageIndex = 0; // Global variable to track the current image index
-let images = []; // Global array to store image URLs
-let startX, startY;
-let isPinching = false;
-var imageIsRows = ''; //img-containerForRows - keep as empty string for single column
-var projectIsRows = ''; //projectWorksForRows - keep as empty string for single column
+// ==========================================================================
+// Public site: pages, galleries and the artwork viewer
+// ==========================================================================
+//
+// The whole public site is one page (index.php); everything visible is drawn
+// here. The address bar is kept in step with what's on screen, so the
+// browser's Back/Forward buttons, bookmarks and shared links all work:
+//
+//   /                  home slideshow (phones and tablets go to the works)
+//   /select-works      the works, grouped by project
+//   /work/<id>/<name>  the works, scrolled to that painting, open in the viewer
+//   /about  /shop  /current-project
+//   anything else      "page not found" (index.php also sends a real 404)
+
+var BREAKPOINT = 992;
+var GALLERY_SIZES = '(max-width: 992px) 92vw, 62vw';
+var PAGE_TITLES = {
+    'home': 'Ambar Velasco Portfolio',
+    'works': 'Select Works - Ambar Velasco',
+    'about': 'About - Ambar Velasco',
+    'shop': 'Shop - Ambar Velasco',
+    'current-project': 'Current Project - Ambar Velasco',
+    'notfound': 'Page not found - Ambar Velasco'
+};
+
 var isMobile = false;
+var currentView = null;      // which page is drawn: 'home', 'works', 'about', ...
+var viewReady = false;       // true once that page's content has arrived
+var galleryItems = [];       // the works on the current page, in order
+var cachedRequests = {};     // API responses, fetched once per visit
+var aboutLayout = null;
 var zIndexCounter = 22;
+
+// The artwork viewer (the full-screen modal)
+var viewer = {
+    items: [],
+    index: 0,
+    open: false,
+    basePath: '/select-works',  // the page underneath, restored on close
+    closingFromHistory: false,
+    loadToken: 0
+};
 var scrollPosition = 0;
+var startX, startY;
+var isPinching = false;
 
-$(window).on("load", function() {
-    // Check responsive layout
-    setupResponsiveLayout();
+// We put the scroll position back ourselves (see rememberScroll)
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
 
-    // Fix width of all thumbnails
-    $('.size12020, .size12021, .size12022').each(function(index, element) {
-        let theWidth = this.width;
-        $(this).closest('.holdForNow, .holdForNowNew').css("min-width", (theWidth - 1) + "px");
-        $(this).closest('.holdPhotoandBlack, .holdPhotoandBlackNew').css("min-width", (theWidth - 1) + "px");
+// --------------------------------------------------------------------------
+// Small helpers
+// --------------------------------------------------------------------------
 
-        // Correct the source of the larger images
-        let idOfForm = "#" + ($(this).hasClass('size12020') ? '20' :
-                $(this).hasClass('size12021') ? '21' : '22') +
-            $(this).attr("id") + "IMG";
-        let imgPath = $(idOfForm).attr("sourceForJS");
-        $(idOfForm).attr("src", imgPath);
-    });
+function webImageUrl(location) {
+    return '/baseImages/web/' + encodeURIComponent(location);
+}
 
-    // Make invisible elements visible with a delay for text
-    $('.invisible').removeClass('invisible');
+function thumbnailUrl(location) {
+    return '/thumbnails/' + encodeURIComponent(location);
+}
 
-    setTimeout(function() {
-        $('.invisibleText').removeClass('invisibleText');
-    }, 500);
+function originalImageUrl(location) {
+    return '/baseImages/' + encodeURIComponent(location);
+}
 
-    createAndShowSideBarLinks();
-});
+function isTouchDevice() {
+    return window.innerWidth <= BREAKPOINT && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
 
-// Add window resize handler
-$(window).on("resize", function() {
-    setupResponsiveLayout();
-});
+// The page has smooth scrolling for in-page jumps, but putting the page back
+// where it was must be instant, or it visibly glides down from the top
+function instantScrollTo(y) {
+    var html = document.documentElement;
+    var previous = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo(0, Math.max(0, y));
+    html.style.scrollBehavior = previous;
+}
+
+function currentScrollY() {
+    return viewer.open ? scrollPosition : window.pageYOffset;
+}
+
+// Save how far down the current page is, so Back can return to the same spot
+function rememberScroll() {
+    history.replaceState($.extend({}, history.state, { scrollY: currentScrollY() }), '');
+}
+
+function projectSectionId(title) {
+    var slug = String(title).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return 'section-' + (slug || 'project');
+}
+
+function multiline(text) {
+    return text ? String(text).replace(/\n/g, '<br>') : '';
+}
+
+function loadingHtml(message) {
+    return '<div class="loading-container"><div class="loading-spinner"></div><p>' + message + '</p></div>';
+}
+
+function errorHtml(message) {
+    return '<div class="error-message"><p>' + message + '</p></div>';
+}
+
+// One request per kind of data per visit; a failed request is retried next time
+function fetchPublicWorks(view) {
+    if (!cachedRequests[view]) {
+        cachedRequests[view] = $.ajax({
+            url: '/actions/publicWorksAPI.php',
+            data: { view: view },
+            dataType: 'json'
+        }).then(function (response) {
+            return response.projects || response.works || [];
+        });
+        cachedRequests[view].fail(function () {
+            delete cachedRequests[view];
+        });
+    }
+    return cachedRequests[view];
+}
+
+// <img> for a work: a small or web-sized copy depending on the screen,
+// loaded only as it scrolls near (lazy), with its space reserved up front so
+// the page doesn't jump around while pictures arrive
+function workImage(work, options) {
+    var img = document.createElement('img');
+    img.loading = options.lazy ? 'lazy' : 'eager';
+    img.decoding = 'async';
+    if (work.width && work.height) {
+        img.width = work.width;
+        img.height = work.height;
+        if (options.sizes && work.width > 400) {
+            img.sizes = options.sizes;
+            img.srcset = thumbnailUrl(work.location) + ' 400w, ' + webImageUrl(work.location) + ' ' + work.width + 'w';
+        }
+    }
+    img.src = webImageUrl(work.location);
+    img.alt = work.name;
+    img.setAttribute('data-original', originalImageUrl(work.location));
+    if (options.className) {
+        img.className = options.className;
+    }
+    return img;
+}
+
+// If a web-sized copy can't be loaded for any reason, show the original instead
+document.addEventListener('error', function (event) {
+    var img = event.target;
+    if (!img || img.tagName !== 'IMG' || !img.getAttribute('data-original') || img.getAttribute('data-fell-back')) {
+        return;
+    }
+    img.setAttribute('data-fell-back', '1');
+    img.removeAttribute('srcset');
+    img.src = img.getAttribute('data-original');
+}, true);
+
+// --------------------------------------------------------------------------
+// Responsive layout (desktop / mobile class pairs, swapped at 992px)
+// --------------------------------------------------------------------------
 
 function setupResponsiveLayout() {
-    if (window.innerWidth <= 992) {
-        // Apply mobile classes
-        $('#popUpImage').removeClass('popUpImage').addClass('popUpImageMobile');
-        $('#imagesAndContent').removeClass('imagesAndContent').addClass('imagesAndContentMobile');
-        $('#blockForHeader').removeClass('blockForHeader').addClass('blockForHeaderMobile');
-        $('#whiteForTheTopMaybe').addClass('headerNoMove3');
-        $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-        $('#whiteForTheTop').addClass('headerNoMove3');
-        $('#navLinksBox').removeClass('navLinksBox').addClass('navLinksBoxMobile');
-        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
-        $('#selectProjectCategories').removeClass('hiddenLinkStuff').addClass('hiddenLinkStuffMobile');
-        $('#ambName').removeClass('ambarNamePic').addClass('ambarNamePicMobile');
+    var mobile = window.innerWidth <= BREAKPOINT;
 
-        imageIsRows = '';
-        projectIsRows = '';
-        isMobile = true;
+    $('#popUpImage').toggleClass('popUpImageMobile', mobile).toggleClass('popUpImage', !mobile);
+    $('#imagesAndContent').toggleClass('imagesAndContentMobile', mobile).toggleClass('imagesAndContent', !mobile);
+    $('#blockForHeader').toggleClass('blockForHeaderMobile', mobile).toggleClass('blockForHeader', !mobile);
+    $('#navLinksBox').toggleClass('navLinksBoxMobile', mobile).toggleClass('navLinksBox', !mobile);
+    $('#homePageCarousel').toggleClass('homePageCarouselMobile', mobile).toggleClass('homePageCarousel', !mobile);
+    $('#selectProjectCategories').toggleClass('hiddenLinkStuffMobile', mobile).toggleClass('hiddenLinkStuff', !mobile);
+    $('#ambName').toggleClass('ambarNamePicMobile', mobile).toggleClass('ambarNamePic', !mobile);
 
-        // Improve tap targets for mobile
-        const allLinks = document.querySelectorAll('a');
-        allLinks.forEach(link => {
-            link.style.padding = '.05em';
-            link.style.margin = '-.05em';
-        });
+    // Bigger tap targets for the menu links on phones
+    $('#navLinksBox a').each(function () {
+        this.style.padding = mobile ? '.05em' : '';
+        this.style.margin = mobile ? '-.05em' : '';
+    });
+    if (mobile) {
+        $('#navLinksBox a.mainLinkGenres').css({ padding: '.7em', margin: '-.7em' });
+    }
 
-        const genreLinks = document.querySelectorAll('a.mainLinkGenres');
-        genreLinks.forEach(link => {
-            link.style.padding = '.7em';
-            link.style.margin = '-.7em';
-        });
-    } else {
-        // Apply desktop classes
-        $('#popUpImage').removeClass('popUpImageMobile').addClass('popUpImage');
-        $('#imagesAndContent').removeClass('imagesAndContentMobile').addClass('imagesAndContent');
-        $('#blockForHeader').removeClass('blockForHeaderMobile').addClass('blockForHeader');
-        $('#navLinksBox').removeClass('navLinksBoxMobile').addClass('navLinksBox');
-        $('#homePageCarousel').removeClass('homePageCarouselMobile').addClass('homePageCarousel');
-        $('#selectProjectCategories').removeClass('hiddenLinkStuffMobile').addClass('hiddenLinkStuff');
-        $('#ambName').removeClass('ambarNamePicMobile').addClass('ambarNamePic');
+    isMobile = mobile;
 
-        imageIsRows = '';
-        projectIsRows = '';
-        isMobile = false;
-
-        // Reset tap targets for desktop
-        const allLinks = document.querySelectorAll('a');
-        allLinks.forEach(link => {
-            link.style.padding = '';
-            link.style.margin = '';
-        });
+    // The About page has a stacked layout for narrower screens
+    if (currentView === 'about' && viewReady && aboutLayout !== (window.innerWidth <= 1206 ? 'stacked' : 'side')) {
+        renderAbout(true);
     }
 }
 
-$(document).ready(function() {
-    // Setup mobile menu toggle
-    $('#hamburgerMenu').on('click', function(e) {
-        e.stopPropagation();
-        $(this).toggleClass('active');
-        $('#navLinksBox').toggleClass('active');
-        $('.nav-overlay').toggleClass('active');
-        $('#sideBySide').toggleClass('menu-open');
-    });
+$(window).on('resize', setupResponsiveLayout);
 
-    // Close menu when clicking the overlay
-    $('.nav-overlay').on('click', function() {
-        $('#hamburgerMenu').removeClass('active');
-        $('#navLinksBox').removeClass('active');
-        $(this).removeClass('active');
-        $('#sideBySide').removeClass('menu-open');
-    });
+// --------------------------------------------------------------------------
+// Moving between pages
+// --------------------------------------------------------------------------
 
-    // Special handling for newsletter and submenu toggles
-    $(document).on('click', '#navLinksBox a', function(e) {
-        if (window.innerWidth <= 992) {
-            // Check if this is a toggle link (for newsletter or submenu)
-            const isToggleLink = (
-                $(this).text() === "Works" ||
-                $(this).text() === "Newsletter"
-            );
+function parseRoute(pathname) {
+    var path = '/' + String(pathname).replace(/^\/+|\/+$/g, '');
+    var pages = {
+        '/': 'home',
+        '/index.php': 'home',
+        '/select-works': 'works',
+        '/about': 'about',
+        '/shop': 'shop',
+        '/current-project': 'current-project'
+    };
+    if (pages[path]) {
+        return { view: pages[path], path: path === '/index.php' ? '/' : path };
+    }
+    var match = path.match(/^\/work\/(\d+)(?:\/[^\/]*)?$/);
+    if (match) {
+        return { view: 'works', path: path, workId: Number(match[1]) };
+    }
+    return { view: 'notfound', path: path };
+}
 
-            // If it's a toggle link, prevent menu from closing
-            if (isToggleLink) {
-                e.stopPropagation();
-            } else if (!$(this).closest('#selectProjectCategories').length &&
-                !$(this).closest('#newsletterSignUp').length) {
-                // If it's a regular link (not in a submenu or newsletter), close the menu
-                $('#hamburgerMenu').removeClass('active');
-                $('#navLinksBox').removeClass('active');
-                $('.nav-overlay').removeClass('active');
-                $('#sideBySide').removeClass('menu-open');
-            }
+// Phones and tablets skip the home slideshow and land on the works
+function resolveView(route) {
+    return route.view === 'home' && isTouchDevice() ? 'works' : route.view;
+}
+
+// Draws a page (without touching the address bar). Returns a promise that
+// resolves once the page's content is on screen.
+function renderView(view) {
+    if (view === currentView && viewReady) {
+        return $.Deferred().resolve().promise();
+    }
+    switch (view) {
+        case 'works': return renderWorks();
+        case 'about': return renderAbout();
+        case 'shop': return renderShop();
+        case 'current-project': return renderCurrentProject();
+        case 'notfound': return renderNotFound();
+        default: return renderHome();
+    }
+}
+
+// Go to another page of the site, adding it to the browser history.
+// options.section: scroll to that project section once the works are shown.
+function goTo(path, options) {
+    options = options || {};
+    if (viewer.open) {
+        closeViewer({ fromHistory: true });
+    }
+
+    var route = parseRoute(path);
+    var view = resolveView(route);
+    var changingPage = view !== currentView;
+
+    if (path !== location.pathname) {
+        rememberScroll();
+        var newPath = view === 'works' && route.view === 'home' ? '/select-works' : path;
+        history.pushState({ path: newPath }, '', newPath);
+    }
+
+    var ready = renderView(view);
+    if (changingPage && !options.section) {
+        instantScrollTo(0);
+    }
+
+    ready.then(function () {
+        if (options.section) {
+            scrollToSection(options.section, !changingPage);
         }
     });
+    return ready;
+}
+window.goTo = goTo;
 
-    // Prevent newsletter form clicks from closing the menu
-    $(document).on('click', '#newsletterSignUp, #newsletterEmail, #newsletterSubmit', function(e) {
-        if (window.innerWidth <= 992) {
-            e.stopPropagation();
-        }
-    });
+// Back / Forward
+window.addEventListener('popstate', function (event) {
+    var route = parseRoute(location.pathname);
+    var view = resolveView(route);
+    var state = event.state || {};
 
-    // Setup modal for click outside to close
-    $('#bigPicModal').on('click', function(event) {
-        if (!$(event.target).closest('#popUpImage, .modal-nav-arrows, .nav-arrow').length) {
-            $('#bigPicModal').modal('hide');
-        }
-    });
+    // Forward into a painting that's on the page already
+    if (route.workId && currentView === 'works' && viewReady) {
+        openSharedWork(route.workId, { fromHistory: true });
+        return;
+    }
 
-    // Modal scroll management
-    $('.modal').on('hidden.bs.modal', function() {
-        $('body').removeClass('no-scroll').css('top', '');
-        $(window).scrollTop(scrollPosition);
-        $('#modifyZIndex').removeClass('headerNoMove2').addClass('headerNoMove');
-        $('#whiteForTheTop').removeClass('headerNoMove3').addClass('whiteComeAndGo');
-    });
+    if (viewer.open) {
+        closeViewer({ fromHistory: true });
+    }
 
-    $('.modal').on('show.bs.modal', function() {
-        scrollPosition = $(window).scrollTop();
-        $('body').addClass('no-scroll').css('top', -scrollPosition);
-        $('#modifyZIndex').removeClass('headerNoMove').addClass('headerNoMove2');
-        $('#whiteForTheTop').removeClass('whiteComeAndGo').addClass('headerNoMove3');
-    });
+    // e.g. Back after closing the viewer: the right page is already showing
+    if (view === currentView && !route.workId) {
+        return;
+    }
 
-    // Image modal click handlers
-    document.getElementById('popUpImage').addEventListener('click', function(event) {
-        if (isPinching) {
-            return;
-        }
-        let imgWidth = this.clientWidth;
-        let xCoordinate = event.offsetX; // Get the x coordinate of the click
-
-        if (xCoordinate < imgWidth / 2) {
-            // Click on the left side
-            changeImage(-1); // Go to the previous image
+    renderView(view).then(function () {
+        if (route.workId) {
+            openSharedWork(route.workId, {});
         } else {
-            // Click on the right side
-            changeImage(1); // Go to the next image
+            instantScrollTo(typeof state.scrollY === 'number' ? state.scrollY : 0);
         }
     });
-
-    document.addEventListener('keydown', function(event) {
-        if ($('#bigPicModal').hasClass('show')) {
-            if (event.keyCode === 37) { // Left arrow key
-                changeImage(-1); // Go to the previous image
-            } else if (event.keyCode === 39) { // Right arrow key
-                changeImage(1); // Go to the next image
-            }
-        }
-    });
-
-    // Touch events for mobile
-    document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
-        isPinching = false;
-        if (e.touches.length === 1) {
-            this.style.transition = 'none';  // Disable transitions for immediate feedback
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            // Prepare for a pinch gesture
-            isPinching = true;
-        }
-    }, false);
-
-    document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
-        if (e.touches.length === 2) {
-            // Continue to handle pinch gesture
-            isPinching = true;
-        } else if (e.touches.length === 1 && !isPinching) {
-            // Handle single finger swipe
-            let currentX = e.touches[0].clientX;
-            let currentY = e.touches[0].clientY;
-            let deltaX = Math.round((currentX - startX) * 0.3);  // Reduced movement for more control
-            let deltaY = currentY - startY;
-
-            // Provide feedback by translating image based on finger movement
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                e.preventDefault();  // Prevent scrolling when moving horizontally
-                this.style.transform = `translateX(${deltaX}px)`;
-            }
-        }
-    }, false);
-
-    document.getElementById('popUpImage').addEventListener('touchend', function(e) {
-        this.style.transition = 'transform 0.3s ease';  // Re-enable transitions
-        if (!isPinching && e.changedTouches.length === 1) {
-            let endX = e.changedTouches[0].clientX;
-            let endY = e.changedTouches[0].clientY;
-            let deltaX = endX - startX;
-            let deltaY = endY - startY;
-
-            // Determine if the swipe was primarily vertical and downward
-            if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
-                // Clear downward swipe, minimal horizontal movement
-                $('#bigPicModal').modal('hide');  // Close the modal
-            } else if (Math.abs(deltaX) > window.innerWidth * 0.1 && !isPinching) {
-                // Horizontal swipe exceeds threshold
-                changeImage(deltaX > 0 ? -1 : 1);
-            } else {
-                // Swipe did not meet any criteria for action
-                this.style.transform = '';  // Reset position
-            }
-        }
-    }, false);
-
-    // Add arrow navigation
-    const prevArrow = document.getElementById('prevImage');
-    const nextArrow = document.getElementById('nextImage');
-
-    if (prevArrow) {
-        prevArrow.addEventListener('click', function() {
-            changeImage(-1);
-        });
+    if (typeof state.scrollY !== 'number') {
+        instantScrollTo(0);
     }
-
-    if (nextArrow) {
-        nextArrow.addEventListener('click', function() {
-            changeImage(1);
-        });
-    }
-
-    // Determine page type by route and load appropriate content
-    var path = window.location.pathname;
-
-    if (path === '/shop') {
-        loadShop();
-    } else if (path === '/select-works') {
-        getProjectsAndWorks();
-    } else if (path === '/about') {
-        openInfo();
-    } else if (path === '/current-project') {
-        openCurrentProject();
-    } else if (window.innerWidth <= 992 && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
-        // On phones and tablets, land directly on the works instead of the
-        // carousel. The touch check keeps a narrow desktop window (e.g. half
-        // the screen) on the carousel.
-        getProjectsAndWorks();
-        spawnNewsletterFloat();
-    } else {
-        getCarousel();
-    }
-
-    // The newsletter float only lives on the landing view — remove it as
-    // soon as the visitor navigates anywhere via the nav
-    $(document).on('click', '#navLinksBox a', function() {
-        $('#newsletterFloat').fadeOut(300, function() { $(this).remove(); });
-    });
 });
 
-function createAndShowSideBarLinks() {
-    return;
-    // Keep empty as per original code
+function setView(view) {
+    currentView = view;
+    viewReady = false;
+    document.title = PAGE_TITLES[view] || PAGE_TITLES.home;
+    $('#imagesAndContent').attr('data-view', view);
 }
 
-function accessPictureForm(divName) {
-    let newDiveName = '#' + divName;
-    $(newDiveName).modal('show');
-}
+// --------------------------------------------------------------------------
+// Works page
+// --------------------------------------------------------------------------
 
-function getProjectsAndWorks(partOfThePage) {
-    $('#imagesAndContent').css('padding-top', '50px');
+function renderWorks() {
+    setView('works');
+    var content = $('#imagesAndContent').css('padding-top', '50px');
+    content.html(loadingHtml('Loading works...'));
 
-    if (selectWorksAreShown) {
-        return;
-    }
-
-    $.ajax({
-        url: "../actions/projectsAPI.php",
-        type: "GET",
-        data: {'activity': 'active'},
-        dataType: "json",
-        success: function(data) {
-            makeProjectCards(data, partOfThePage);
-        },
-        error: function() {
-            console.log("An error occurred.");
-        },
-    });
-
-    selectWorksAreShown = true;
-}
-
-// Add this to photoFunctions.js
-function loadProjectSection(projectSectionId) {
-    // Create and show a fixed loading overlay
-    ensureDropdownOpen('selectProjectCategories');
-
-    const loadingOverlay = $('<div>').addClass('fullpage-loading')
-        .html('<div class="loading-spinner"></div><p>Loading images...</p>');
-    $('body').append(loadingOverlay);
-
-    // Make sure projects are loaded
-    if (!selectWorksAreShown) {
-        // If projects aren't loaded, load them first
-        $.ajax({
-            url: "../actions/projectsAPI.php",
-            type: "GET",
-            data: {'activity': 'active'},
-            dataType: "json",
-            success: function(data) {
-                makeProjectCards(data, null); // Load projects but don't scroll yet
-
-                // After projects load, wait for images and then scroll
-                preloadVisibleImagesAndScroll(projectSectionId);
-            },
-            error: function(xhr, status, error) {
-                console.log("Error loading projects:", error);
-                $('.fullpage-loading').remove();
-            }
-        });
-    } else {
-        // Projects already loaded, just preload visible images and scroll
-        preloadVisibleImagesAndScroll(projectSectionId);
-    }
-}
-
-// Helper function to preload images and scroll
-function preloadVisibleImagesAndScroll(projectSectionId) {
-    const targetSection = document.getElementById(projectSectionId);
-    if (!targetSection) {
-        $('.fullpage-loading').remove();
-        return;
-    }
-
-    // Get all unloaded images in the document
-    const lazyImages = document.querySelectorAll('img[data-src]');
-
-    // If no images need loading, scroll immediately
-    if (lazyImages.length === 0) {
-        $('.fullpage-loading').remove();
-        smoothScrollTo(projectSectionId);
-        return;
-    }
-
-    // Create a counter to track loaded images
-    let loadedCount = 0;
-    let errorCount = 0;
-    const totalImages = lazyImages.length;
-
-    // Update loading message
-    $('.fullpage-loading p').text(`Loading images (0/${totalImages})...`);
-
-    // Set a safety timeout in case some images never load
-    const safetyTimeout = setTimeout(() => {
-        // Force finish loading after 10 seconds if not all images loaded
-        if (loadedCount + errorCount < totalImages) {
-            console.warn(`Timed out waiting for all images. Loaded: ${loadedCount}, Errors: ${errorCount}, Total: ${totalImages}`);
-
-            // Force load remaining images
-            lazyImages.forEach(img => {
-                if (!img.classList.contains('loaded') && !img.classList.contains('error')) {
-                    img.src = img.dataset.src || '';
-                    img.removeAttribute('data-src');
-                    img.classList.add('loaded');
-                }
-            });
-
-            // Remove overlay and scroll
-            $('.fullpage-loading').fadeOut(300, function() {
-                $(this).remove();
-                smoothScrollTo(projectSectionId);
-            });
-        }
-    }, 10000); // 10 second timeout
-
-    // Function to check if loading is complete
-    function checkComplete() {
-        if (loadedCount + errorCount >= totalImages) {
-            clearTimeout(safetyTimeout);
-
-            // All images processed, remove overlay and scroll
-            $('.fullpage-loading').fadeOut(300, function() {
-                $(this).remove();
-                smoothScrollTo(projectSectionId);
-            });
-        } else {
-            // Update progress message
-            $('.fullpage-loading p').text(`Loading images (${loadedCount + errorCount}/${totalImages})...`);
-        }
-    }
-
-    // Load all images with proper error handling
-    lazyImages.forEach(img => {
-        // Skip if already loaded
-        if (img.classList.contains('loaded') || img.classList.contains('error')) {
-            loadedCount++;
-            checkComplete();
+    return fetchPublicWorks('projects').then(function (projects) {
+        if (currentView !== 'works') {
             return;
         }
+        content.empty();
+        var items = [];
 
-        const newImg = new Image();
+        projects.forEach(function (project, projectIndex) {
+            var section = createProjectElement(project);
+            var grid = section.find('.projectWorks');
+            project.works.forEach(function (work) {
+                // The first couple of pictures load straight away; the rest
+                // load as the visitor scrolls towards them
+                grid.append(createWorkCard(work, items.length, items.length > 1));
+                items.push(work);
+            });
+            if (projectIndex < projects.length - 1) {
+                section.append('<div class="work-separator" aria-hidden="true"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
+            }
+            content.append(section);
+        });
 
-        newImg.onload = function() {
-            // Replace data-src with actual src
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-            img.classList.add('loaded');
-            loadedCount++;
-            checkComplete();
-        };
-
-        newImg.onerror = function() {
-            console.error('Failed to load image:', img.dataset.src);
-            // Mark as error but still show something
-            img.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22232%22%20height%3D%22131%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20232%20131%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_188f638d5a2%20text%20%7B%20fill%3A%236c757d%3Bfont-family%3Avar%28--font-primary%29%3Bfont-size%3A12px%3Bfont-weight%3Avar%28--font-weight-light%29%3B%20%7D%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_188f638d5a2%22%3E%3Crect%20width%3D%22232%22%20height%3D%22131%22%20fill%3D%22%23f5f5f5%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2288.5%22%20y%3D%2270.6%22%3EImage%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E';
-            img.removeAttribute('data-src');
-            img.classList.add('error');
-            errorCount++;
-            checkComplete();
-        };
-
-        // Start loading (with a slight delay between images to prevent overloading)
-        setTimeout(() => {
-            newImg.src = img.dataset.src;
-        }, 50 * lazyImages.indexOf(img)); // Stagger loading slightly
-    });
-}
-
-// Smooth scrolling function
-function smoothScrollTo(elementId) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    console.log("scrolling now")
-
-    const headerOffset = 100;
-    const elementPosition = element.getBoundingClientRect().top;
-    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-    window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-    });
-}
-
-
-// Modify the jumpToSection function in photoFunctions.js
-function jumpToSection(partOfThePage) {
-    if (partOfThePage != null) {
-        loadProjectSection(partOfThePage);
-    }
-}
-
-function fetchWorkIdsForProject(id) {
-    return $.ajax({
-        url: '../actions/worksOfProjectsAPI.php',
-        type: 'GET',
-        data: {'projectId': id},
-        dataType: 'json'
+        galleryItems = items;
+        viewReady = true;
+    }, function () {
+        if (currentView === 'works') {
+            content.html(errorHtml('Sorry, there was a problem loading the works. Please try again later.'));
+        }
     });
 }
 
 function createProjectElement(project) {
-    let title = project.title;
-    let description = project.description ? project.description.replace(/\n/g, '<br>') : '';
-
-    // Create project wrapper with the SINGLE column layout
-    let projectDiv = $('<div>').addClass('project').attr({
-        'alt': title,
-        'id': 'projectSection' + title.trim()
-    }).css({
-        'border': '0px',
-        'text-align': 'center'
-    });
-
-    // Create header section
-    let titleAndDescriptionDiv = $('<div>').addClass('project-header');
-    let insertTitle = $('<h2>').text(title).addClass('project-title');
-    let insertDescription = $('<p>').html(description).addClass('project-description');
-
-    titleAndDescriptionDiv.append(insertTitle, insertDescription);
-
-    // Create works container with SINGLE column layout
-    let worksOfProjectDiv = $('<div>').addClass('projectWorks');
-
-    // Assemble project
-    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv);
-
-    return projectDiv;
+    var section = $('<section>').addClass('project').attr('id', projectSectionId(project.title));
+    var header = $('<div>').addClass('project-header');
+    header.append($('<h2>').addClass('project-title').text(project.title));
+    if (project.description) {
+        header.append($('<p>').addClass('project-description').html(multiline(project.description)));
+    }
+    section.append(header, $('<div>').addClass('projectWorks'));
+    return section;
 }
 
-function makeProjectCards(projects, partOfThePage) {
-    $('#imagesAndContent').empty();
-    images.length = 0;
-
-    // Show loading indicator
-    $('#imagesAndContent').html('<div class="loading-container"><div class="loading-spinner"></div><p>Loading projects...</p></div>');
-
-    let projectPromises = projects.map(project => {
-        return fetchWorkIdsForProject(project.id).then(workIds => {
-            return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
-                return {project, allWorksForProject}; // Return project info with its works
-            });
-        });
-    });
-
-    Promise.all(projectPromises).then(results => {
-        $('#imagesAndContent').empty();
-
-        results.forEach(({project, allWorksForProject}) => {
-            let mainProj = createProjectElement(project);
-            allWorksForProject.forEach(information => {
-                let card = createWorkCardElement(information);
-                mainProj.find('.projectWorks').first().append(card);
-            });
-            if (projects[projects.length - 1].title != project.title) {
-                mainProj.append('<div class="work-separator" id="seperator' + project.title + '"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
-            }
-            $('#imagesAndContent').append(mainProj);
-        });
-
-        // Enable lazy loading
-        enableLazyLoading();
-
-        // Jump to specific section if needed
-        jumpToSection(partOfThePage);
-
-        // Update browser history and title
-        history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
-        document.title = 'Select Works - Ambar Velasco';
-    }).catch(error => {
-        console.error('Error:', error);
-        $('#imagesAndContent').html('<div class="error-message"><p>Sorry, there was a problem loading projects. Please try again later.</p></div>');
-    });
+// Each work is a real link to its own address, so it can be opened in a new
+// tab, copied and shared; a normal click opens the viewer instead
+function createWorkCard(work, index, lazy) {
+    var container = $('<div>').addClass('img-container');
+    container.append(workImage(work, { sizes: GALLERY_SIZES, lazy: lazy }));
+    container.append(
+        $('<div>').addClass('img-overlay').attr('aria-hidden', 'true')
+            .append($('<h3>').addClass('overlay-title').text(work.name))
+    );
+    return $('<a>').addClass('card work-card').attr({
+        href: work.path,
+        'data-index': index,
+        'aria-label': work.name
+    }).append(container);
 }
 
-// Enable lazy loading for images
-// Add this to enhance the enableLazyLoading function
-function enableLazyLoading() {
-    // First, handle any images that should be immediately visible
-    const immediateLoadImages = document.querySelectorAll('img[data-src]:not(.lazy-defer)');
-    immediateLoadImages.forEach(img => {
-        img.src = img.dataset.src;
-        img.removeAttribute('data-src');
-        img.classList.add('loaded');
-    });
+$(document).on('click', '.work-card', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return; // let "open in new tab" and friends work as normal
+    }
+    event.preventDefault();
+    openViewer(galleryItems, Number(this.getAttribute('data-index')), {});
+});
 
-    // Then set up lazy loading for the rest
-    if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src) {
-                        img.src = img.dataset.src;
-                        img.removeAttribute('data-src');
-                        img.classList.add('loaded');
-                        observer.unobserve(img);
-                    }
-                }
-            });
-        }, { rootMargin: '200px 0px' }); // Larger margin to start loading earlier
+// Scroll so a painting sits in the middle of the screen (or near the top if
+// it's taller than the screen)
+function scrollWorkIntoView(index) {
+    var card = document.querySelector('.work-card[data-index="' + index + '"]');
+    if (!card) {
+        return;
+    }
+    var rect = card.getBoundingClientRect();
+    var room = window.innerHeight - rect.height;
+    instantScrollTo(window.pageYOffset + rect.top - (room > 120 ? room / 2 : 90));
+}
 
-        document.querySelectorAll('img[data-src].lazy-defer').forEach(img => {
-            imageObserver.observe(img);
-        });
+function scrollToSection(sectionId, smooth) {
+    var section = document.getElementById(sectionId);
+    if (!section) {
+        return;
+    }
+    var top = section.getBoundingClientRect().top + window.pageYOffset - 100;
+    if (smooth) {
+        window.scrollTo({ top: top, behavior: 'smooth' });
     } else {
-        // Fallback for browsers without IntersectionObserver
-        document.querySelectorAll('img[data-src]').forEach(img => {
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-            img.classList.add('loaded');
-        });
+        instantScrollTo(top);
     }
 }
 
-function createWorkCardElement(information) {
-    let imageURL = "baseImages/" + information.location;
-    let thumbnailURL = "baseImages/" + information.location;
-    let title = information.name;
-    let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
-    let long_description = information.long_description;
+// Opening a shared /work/<id> link: scroll the works to that painting, then
+// open it. A work that isn't on the Works page (e.g. only in the slideshow)
+// is shown on its own.
+function openSharedWork(workId, options) {
+    var index = -1;
+    for (var i = 0; i < galleryItems.length; i++) {
+        if (galleryItems[i].id === workId) {
+            index = i;
+            break;
+        }
+    }
 
-    // Create image info object for the modal
-    let imageInfo = {
-        url: imageURL,
-        title: title,
-        description: description,
-        long_description: long_description
-    };
-
-    // Create image container
-    let imageContainer = $('<div>').addClass('img-container');
-
-    // Create the image element with data-src for lazy loading
-    let imgElement = $('<img>')
-        .attr({
-            'data-src': thumbnailURL,
-            'src': 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', // Tiny placeholder
-            'alt': title,
-            'title': title,
-            'decoding': 'async'
-        });
-
-    imageContainer.append(imgElement);
-
-    // Create overlay that shows on hover
-    let overlay = $('<div>').addClass('img-overlay');
-    let overlayTitle = $('<h3>').text(title).addClass('overlay-title');
-    overlay.append(overlayTitle);
-    imageContainer.append(overlay);
-
-    // Create card
-    let card = $('<div>').addClass('card').attr('alt', title).css({
-        'border': '0px',
-        'text-align': 'center'
-    }).append(imageContainer);
-
-    // Add click handler
-    card.on('click', function() {
-        makeBigPic(imageURL);
-    });
-
-    // Add to global images array
-    images.push(imageInfo);
-
-    return card;
-}
-
-function getWorksInfoFromIdsArray(projectIds) {
-    return $.ajax({
-        url: '../actions/getWorksByIdArray.php',
-        method: 'GET',
-        data: {'projectIds': projectIds},
-        dataType: 'json',
-    });
-}
-
-function getCarousel() {
-    genre = {
-        theYear: 'carousel'
+    if (index >= 0) {
+        if (!options.fromHistory) {
+            scrollWorkIntoView(index);
+        }
+        openViewer(galleryItems, index, { addressIsSet: true });
+        return;
     }
 
     $.ajax({
-        url: 'actions/picturesAPI.php',
-        method: 'GET',
-        data: genre,
-        dataType: 'json',
-        success: function(response) {
-            createCarousel(response);
-            spawnNewsletterFloat();
-        },
-        error: function(xhr, status, error) {
-            console.log('Error:', error);
+        url: '/actions/publicWorksAPI.php',
+        data: { view: 'work', id: workId },
+        dataType: 'json'
+    }).then(function (response) {
+        openViewer([response.work], 0, { addressIsSet: true });
+    }, function () {
+        // Hidden or deleted since the link was shared: just show the works
+        history.replaceState({ path: '/select-works' }, '', '/select-works');
+    });
+}
+
+// --------------------------------------------------------------------------
+// The artwork viewer
+// --------------------------------------------------------------------------
+
+// options.addressIsSet: the address bar already shows this work (a shared
+// link, or Back/Forward), so don't add a history entry
+function openViewer(items, index, options) {
+    if (!items.length) {
+        return;
+    }
+    var wasOpen = viewer.open;
+    viewer.items = items;
+    viewer.index = index;
+
+    if (!wasOpen) {
+        // Start clean rather than flashing the last painting viewed
+        document.getElementById('popUpImage').removeAttribute('src');
+        var here = parseRoute(location.pathname);
+        viewer.basePath = here.workId ? '/select-works' : here.path;
+    }
+
+    var work = items[index];
+    if (!options.addressIsSet && location.pathname !== work.path) {
+        rememberScroll();
+        history.pushState({ path: work.path, viewer: true }, '', work.path);
+    }
+
+    showViewerImage();
+
+    if (!wasOpen) {
+        viewer.open = true;
+        $('#bigPicModal').modal('show');
+    }
+}
+
+function showViewerImage() {
+    var work = viewer.items[viewer.index];
+    var img = document.getElementById('popUpImage');
+    var src = webImageUrl(work.location);
+    var token = ++viewer.loadToken;
+
+    $('#imageTitle').text(work.name);
+    $('#imageDescription').html(multiline(work.firstDescription));
+    $('#imageCounter').text(viewer.items.length > 1 ? (viewer.index + 1) + ' / ' + viewer.items.length : '');
+    $('.modal-nav-arrows').toggle(viewer.items.length > 1);
+    document.title = work.name + ' - Ambar Velasco';
+
+    img.alt = work.name;
+    img.style.transform = '';
+    img.setAttribute('data-original', originalImageUrl(work.location));
+    img.removeAttribute('data-fell-back');
+
+    // Keep the previous picture up until the next one is ready (no blank
+    // flash), and only show a spinner if it takes a moment
+    var spinnerTimer = setTimeout(function () {
+        if (token === viewer.loadToken) {
+            $('#spinner').show();
+            $(img).addClass('is-loading');
+        }
+    }, 150);
+
+    var loader = new Image();
+    loader.onload = loader.onerror = function (event) {
+        if (token !== viewer.loadToken) {
+            return;
+        }
+        clearTimeout(spinnerTimer);
+        $('#spinner').hide();
+        $(img).removeClass('is-loading');
+        img.src = event.type === 'error' ? img.getAttribute('data-original') : src;
+    };
+    loader.src = src;
+
+    // Get the neighbours ready so the arrows feel instant
+    [-1, 1].forEach(function (step) {
+        var neighbour = viewer.items[(viewer.index + step + viewer.items.length) % viewer.items.length];
+        if (neighbour && neighbour !== work) {
+            new Image().src = webImageUrl(neighbour.location);
         }
     });
 }
 
-// Floating newsletter nudge shown on the landing view. Drifts gently around
-// the page, pauses on hover, can be dismissed for the rest of the session,
-// and opens the newsletter sign-up when clicked.
-function spawnNewsletterFloat() {
-    if (sessionStorage.getItem('newsletterFloatDismissed')) return;
-    if (document.getElementById('newsletterFloat')) return;
+function changeImage(step) {
+    if (!viewer.open || viewer.items.length < 2) {
+        return;
+    }
+    viewer.index = (viewer.index + step + viewer.items.length) % viewer.items.length;
+    var work = viewer.items[viewer.index];
+    // Stepping through paintings updates the address without piling up history
+    history.replaceState($.extend({}, history.state, { path: work.path }), '', work.path);
+    showViewerImage();
+}
 
-    let float = $(`
-        <div id="newsletterFloat" class="newsletter-float" role="button" tabindex="0" aria-label="Sign up for the newsletter">
-          <div class="newsletter-float-inner">
-            <img src="imgMid/transparentHomeLeafFinal.png" alt="" class="newsletter-float-leaf">
-            <span class="newsletter-float-text">Newsletter</span>
-            <button type="button" class="newsletter-float-close" aria-label="Dismiss newsletter reminder">&times;</button>
-          </div>
-        </div>`);
+// options.fromHistory: the address bar has already moved (Back button), so
+// only the modal needs closing
+function closeViewer(options) {
+    if (!viewer.open) {
+        return;
+    }
+    viewer.closingFromHistory = !!(options && options.fromHistory);
+    $('#bigPicModal').modal('hide');
+}
 
-    $('body').append(float);
+// Kept for anything that still calls it by its old name
+function makeBigPic(imageUrl) {
+    for (var i = 0; i < galleryItems.length; i++) {
+        if (webImageUrl(galleryItems[i].location) === imageUrl || originalImageUrl(galleryItems[i].location) === imageUrl) {
+            openViewer(galleryItems, i, {});
+            return;
+        }
+    }
+}
 
-    float.find('.newsletter-float-close').on('click', function(e) {
-        e.stopPropagation();
-        sessionStorage.setItem('newsletterFloatDismissed', '1');
-        float.fadeOut(250, function() { float.remove(); });
+function setupViewer() {
+    var modal = $('#bigPicModal');
+
+    // Freeze the page behind the viewer exactly where it is
+    modal.on('show.bs.modal', function () {
+        scrollPosition = window.pageYOffset;
+        $('body').addClass('no-scroll').css('top', -scrollPosition + 'px');
     });
 
-    float.on('click keydown', function(e) {
-        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    modal.on('hidden.bs.modal', function () {
+        viewer.open = false;
+        viewer.loadToken++;
+        $('#spinner').hide();
+        $('body').removeClass('no-scroll').css('top', '');
+        instantScrollTo(scrollPosition);
+        document.title = PAGE_TITLES[currentView] || PAGE_TITLES.home;
+
+        if (viewer.closingFromHistory) {
+            viewer.closingFromHistory = false;
+            return;
+        }
+        // Closed by the visitor: take the address back to the page underneath.
+        // If opening added a history entry, step back over it so Back doesn't
+        // reopen the painting; for a shared link there's nothing to step back to.
+        if (history.state && history.state.viewer) {
+            history.back();
+        } else if (parseRoute(location.pathname).workId) {
+            history.replaceState({ path: viewer.basePath }, '', viewer.basePath);
+        }
+    });
+
+    // Click on the dark background closes; click on the picture steps through
+    modal.on('click', function (event) {
+        if (!$(event.target).closest('#popUpImage, .nav-arrow').length) {
+            closeViewer();
+        }
+    });
+
+    document.getElementById('popUpImage').addEventListener('click', function (event) {
+        if (isPinching) {
+            return;
+        }
+        changeImage(event.offsetX < this.clientWidth / 2 ? -1 : 1);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (!viewer.open) {
+            return;
+        }
+        if (event.key === 'ArrowLeft') {
+            changeImage(-1);
+        } else if (event.key === 'ArrowRight') {
+            changeImage(1);
+        }
+    });
+
+    $('#prevImage').on('click', function () { changeImage(-1); });
+    $('#nextImage').on('click', function () { changeImage(1); });
+
+    // Touch: swipe sideways to step through, swipe down to close
+    var image = document.getElementById('popUpImage');
+    image.addEventListener('touchstart', function (e) {
+        isPinching = e.touches.length > 1;
+        if (e.touches.length === 1) {
+            this.style.transition = 'none';
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }
+    }, false);
+
+    image.addEventListener('touchmove', function (e) {
+        if (e.touches.length > 1) {
+            isPinching = true;
+        } else if (e.touches.length === 1 && !isPinching) {
+            var deltaX = Math.round((e.touches[0].clientX - startX) * 0.3);
+            var deltaY = e.touches[0].clientY - startY;
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                e.preventDefault();
+                this.style.transform = 'translateX(' + deltaX + 'px)';
+            }
+        }
+    }, false);
+
+    image.addEventListener('touchend', function (e) {
+        this.style.transition = 'transform 0.3s ease';
+        if (isPinching || e.changedTouches.length !== 1) {
+            return;
+        }
+        var deltaX = e.changedTouches[0].clientX - startX;
+        var deltaY = e.changedTouches[0].clientY - startY;
+
+        if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
+            closeViewer();
+        } else if (Math.abs(deltaX) > window.innerWidth * 0.1) {
+            changeImage(deltaX > 0 ? -1 : 1);
+        } else {
+            this.style.transform = '';
+        }
+    }, false);
+}
+
+// --------------------------------------------------------------------------
+// Home slideshow
+// --------------------------------------------------------------------------
+
+function renderHome() {
+    setView('home');
+    var content = $('#imagesAndContent').css('padding-top', '');
+    content.html('<div class="initial-loading"><div class="loading-spinner"></div></div>');
+
+    return fetchPublicWorks('carousel').then(function (works) {
+        if (currentView !== 'home') {
+            return;
+        }
+        createCarousel(works);
+        viewReady = true;
+    }, function () {
+        if (currentView === 'home') {
+            content.html(errorHtml('Sorry, there was a problem loading the page. Please try again later.'));
+        }
+    });
+}
+
+function createCarousel(works) {
+    var content = $('#imagesAndContent').empty();
+    var carousel = $('<div>').attr('id', 'homePageCarousel').addClass('carousel slide')
+        .addClass(isMobile ? 'homePageCarouselMobile' : 'homePageCarousel');
+    var inner = $('<div>').addClass('carousel-inner');
+
+    works.forEach(function (work, index) {
+        var link = $('<a>').addClass('carousel-link').attr({ href: work.path, 'data-index': index, 'aria-label': work.name })
+            .append(workImage(work, { sizes: GALLERY_SIZES, lazy: index > 0, className: 'd-block carousel-pic' }));
+        inner.append($('<div>').addClass('carousel-item' + (index === 0 ? ' active' : '')).append(link));
+    });
+    carousel.append(inner);
+
+    // Arrows only make sense with more than one picture
+    if (works.length > 1) {
+        carousel.append(
+            '<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">' +
+            '<span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="sr-only">Previous</span></a>' +
+            '<a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">' +
+            '<span class="carousel-control-next-icon" aria-hidden="true"></span><span class="sr-only">Next</span></a>'
+        );
+    }
+
+    content.append(carousel);
+    galleryItems = works;
+
+    if (works.length > 1) {
+        carousel.carousel({ interval: 3000 });
+    }
+}
+
+$(document).on('click', '.carousel-link', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+    }
+    event.preventDefault();
+    openViewer(galleryItems, Number(this.getAttribute('data-index')), {});
+});
+
+// --------------------------------------------------------------------------
+// About
+// --------------------------------------------------------------------------
+
+function fetchAboutMe() {
+    if (!cachedRequests.about) {
+        cachedRequests.about = $.ajax({ url: '/actions/aboutMeAPI.php', dataType: 'json' });
+        cachedRequests.about.fail(function () {
+            delete cachedRequests.about;
+        });
+    }
+    return cachedRequests.about;
+}
+
+// Turn plain email addresses in the About text into clickable links
+function linkEmailAddresses(root) {
+    var pattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    var textNodes = [];
+    while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach(function (node) {
+        var text = node.nodeValue;
+        pattern.lastIndex = 0;
+        if (!pattern.test(text) || $(node.parentNode).closest('a').length) {
+            return;
+        }
+        pattern.lastIndex = 0;
+        var fragment = document.createDocumentFragment();
+        var last = 0;
+        var match;
+        while ((match = pattern.exec(text))) {
+            fragment.appendChild(document.createTextNode(text.slice(last, match.index)));
+            var link = document.createElement('a');
+            link.href = 'mailto:' + match[0];
+            link.className = 'email-link';
+            link.textContent = match[0];
+            fragment.appendChild(link);
+            last = match.index + match[0].length;
+        }
+        fragment.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(fragment, node);
+    });
+}
+
+function renderAbout(keepScroll) {
+    if (!keepScroll) {
+        setView('about');
+        $('#imagesAndContent').css('padding-top', '50px').html(loadingHtml(''));
+    }
+
+    return fetchAboutMe().then(function (aboutMe) {
+        if (currentView !== 'about') {
+            return;
+        }
+        var description = multiline(aboutMe.description);
+        var picture = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
+        if (!/^(https?:)?\//.test(picture)) {
+            picture = '/' + picture;
+        }
+
+        aboutLayout = window.innerWidth <= 1206 ? 'stacked' : 'side';
+        var content = document.getElementById('imagesAndContent');
+        var image = '<div class="ambPicDiv"><img id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async"></div>';
+        content.innerHTML = aboutLayout === 'stacked'
+            ? '<div class="infoflexMobile">' + image + '<p>' + description + '</p></div>'
+            : '<div class="infoflex"><div class="size1" id="aboutMeInfo"><p>' + description + '</p></div><div class="size2">' + image + '</div></div>';
+        document.getElementById('ambarPersoPic').src = picture;
+
+        linkEmailAddresses(content);
+        viewReady = true;
+    }, function () {
+        if (currentView === 'about') {
+            $('#imagesAndContent').html(errorHtml("Sorry, we couldn't load the About Me information. Please try again later."));
+        }
+    });
+}
+
+// --------------------------------------------------------------------------
+// Current project (image / description flip cards)
+// --------------------------------------------------------------------------
+
+function renderCurrentProject() {
+    setView('current-project');
+    var content = $('#imagesAndContent').css('padding-top', '50px');
+    content.html(loadingHtml('Loading...'));
+
+    return fetchPublicWorks('currentProject').then(function (projects) {
+        if (currentView !== 'current-project') {
+            return;
+        }
+        content.empty();
+        var items = [];
+
+        projects.forEach(function (project) {
+            var section = $('<div>').addClass('project').attr('id', projectSectionId(project.title)).css('text-align', 'center');
+            section.append(
+                $('<div>').append(
+                    $('<h2>').text(project.title).css('margin-bottom', '30px'),
+                    $('<p>').html(multiline(project.description)).css({ color: '#71797E', 'margin-bottom': '60px' })
+                )
+            );
+            var grid = $('<div>').addClass('projectWorks');
+            project.works.forEach(function (work) {
+                grid.append(createCurrentProjectCard(work, items.length));
+                items.push(work);
+            });
+            section.append(grid);
+            content.append(section);
+        });
+
+        galleryItems = items;
+        viewReady = true;
+    }, function () {
+        if (currentView === 'current-project') {
+            content.html(errorHtml("Sorry, we couldn't load the current project. Please try again later."));
+        }
+    });
+}
+
+function createCurrentProjectCard(work, index) {
+    var buttons = $('<div>').addClass('buttonContainer').append($('<span>').text('Image'), $('<span>').text('Description'));
+    if (isMobile) {
+        buttons.css('paddingBottom', '15px');
+    }
+
+    var image = workImage(work, { lazy: index > 0, className: 'currentProjectImage' });
+    image.removeAttribute('width');
+    image.removeAttribute('height');
+    var imageContainer = $('<div>').addClass('img-container').append(image);
+
+    var description = $('<div>').addClass('description_text').html(multiline(work.long_description)).css({
+        position: 'relative',
+        maxWidth: '80%',
+        margin: 'auto',
+        cursor: 'default',
+        overflowY: 'auto',
+        zIndex: zIndexCounter++,
+        paddingLeft: '20px',
+        paddingRight: '20px',
+        paddingTop: isMobile ? '5px' : '20px'
+    }).hide();
+
+    // Match the description panel to the picture's size once it has loaded
+    $(image).on('load', function () {
+        var height = imageContainer.height() + (isMobile ? 0 : 20);
+        description.css({ 'max-height': height + 'px', 'min-height': height + 'px', width: imageContainer.width() + 'px' });
+    });
+
+    imageContainer.on('click', function () {
+        openViewer(galleryItems, index, {});
+    });
+
+    buttons.on('click', function () {
+        if (description.is(':hidden')) {
+            imageContainer.fadeToggle().promise().done(function () { description.fadeToggle(); });
+        } else {
+            description.fadeToggle().promise().done(function () { imageContainer.fadeToggle(); });
+        }
+    });
+
+    var holder = $('<div>').addClass('projectImgTxtContainer')
+        .css({ display: 'flex', flexDirection: 'column', overflow: 'hidden' })
+        .append(imageContainer, description);
+
+    return $('<div>').addClass('card').css({ border: '0px', 'text-align': 'center', 'margin-bottom': '60px' })
+        .append(buttons, holder);
+}
+
+// --------------------------------------------------------------------------
+// Shop
+// --------------------------------------------------------------------------
+
+function renderShop() {
+    setView('shop');
+    var content = $('#imagesAndContent').css('padding-top', '50px');
+    content.html(loadingHtml('Loading shop...'));
+
+    return $.ajax({
+        url: '/actions/shopAPI.php',
+        data: { activity: 'active' },
+        dataType: 'json'
+    }).then(function (items) {
+        if (currentView !== 'shop') {
+            return;
+        }
+        content.empty().append($('<div>', { 'class': 'shop-top-space' }));
+        // Each item is a Shopify buy-button embed that draws its own product card
+        items.forEach(function (item) {
+            content.append($('<div>').addClass('shopItem').append($('<div>').addClass('buy-button-embed').html(item.buttonCode)));
+        });
+        viewReady = true;
+    }, function () {
+        if (currentView === 'shop') {
+            content.html(errorHtml("Sorry, we couldn't load the shop items. Please try again later."));
+        }
+    });
+}
+
+// --------------------------------------------------------------------------
+// Page not found
+// --------------------------------------------------------------------------
+
+function renderNotFound() {
+    setView('notfound');
+    $('#imagesAndContent').css('padding-top', '50px').html(
+        '<div class="not-found">' +
+        '<h2>Page not found</h2>' +
+        '<p>Sorry, there\'s nothing at this address.</p>' +
+        '<p><a href="/select-works" class="not-found-link">See the works</a></p>' +
+        '</div>'
+    );
+    viewReady = true;
+    return $.Deferred().resolve().promise();
+}
+
+$(document).on('click', '.not-found-link', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+    }
+    event.preventDefault();
+    goTo('/select-works');
+});
+
+// --------------------------------------------------------------------------
+// Floating newsletter nudge. Drifts gently around the page, pauses on hover,
+// opens the newsletter sign-up when clicked, and stays on every page until
+// the visitor dismisses it with its x (for the rest of their visit).
+// --------------------------------------------------------------------------
+
+function spawnNewsletterFloat() {
+    try {
+        if (sessionStorage.getItem('newsletterFloatDismissed')) {
+            return;
+        }
+    } catch (e) { /* storage blocked: just show it */ }
+    if (document.getElementById('newsletterFloat')) {
+        return;
+    }
+
+    var float = $(
+        '<div id="newsletterFloat" class="newsletter-float" role="button" tabindex="0" aria-label="Sign up for the newsletter">' +
+        '  <div class="newsletter-float-inner">' +
+        '    <img src="/miscIcons/newsletterLeaf.png" alt="" class="newsletter-float-leaf" width="30" height="26">' +
+        '    <span class="newsletter-float-text">Newsletter</span>' +
+        '    <button type="button" class="newsletter-float-close" aria-label="Dismiss newsletter reminder">&times;</button>' +
+        '  </div>' +
+        '</div>'
+    );
+    $('body').append(float);
+
+    float.find('.newsletter-float-close').on('click', function (e) {
+        e.stopPropagation();
+        try {
+            sessionStorage.setItem('newsletterFloatDismissed', '1');
+        } catch (err) { /* storage blocked: hide for this page only */ }
+        float.fadeOut(250, function () { float.remove(); });
+    });
+
+    float.on('click keydown', function (e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
         e.preventDefault();
-        if (window.innerWidth <= 992 && !$('#navLinksBox').hasClass('active')) {
+        if (window.innerWidth <= BREAKPOINT && !$('#navLinksBox').hasClass('active')) {
             $('#hamburgerMenu').trigger('click'); // open the drawer so the form is visible
         }
         if (typeof ensureNewsletterOpen === 'function') {
@@ -724,500 +990,132 @@ function spawnNewsletterFloat() {
     });
 }
 
-function createCarousel(informations) {
-    images.length = 0;
+// --------------------------------------------------------------------------
+// Names the menu links (stored in the database) call
+// --------------------------------------------------------------------------
 
-    // Create the carousel structure
-    let carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
-        <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
-
-    let active = 'active';
-
-    // Add images to carousel
-    informations.forEach(function(information) {
-        let imageURL = "baseImages/" + information.location;
-        let thumbnailURL = "thumbnails/" + information.location;
-        let title = information.name;
-        let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
-
-        let imageInfo = {
-            url: imageURL,
-            title: title,
-            description: description
-        };
-
-        let thisImage = `<div id="${information.name}" class="carousel-item ${active}" >
-            <img class="d-block carousel-pic" src="${thumbnailURL}" alt="${title}" decoding="async" onclick="makeBigPic('${imageURL}')">
-            </div>`;
-
-        carouselHtml += thisImage;
-        active = '';
-        images.push(imageInfo);
-    });
-
-    // Add carousel controls
-    carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="sr-only">Previous</span>
-        </a>
-        <a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="sr-only">Next</span>
-        </a>
-        </div>`;
-
-    document.getElementById('imagesAndContent').innerHTML = carouselHtml;
-
-    $('#homePageCarousel').carousel({
-        interval: 3000
-    });
-
-    if (isMobile) {
-        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
-    }
+function getProjectsAndWorks() {
+    return goTo('/select-works');
 }
 
-function makeBigPic(clickedImageUrl) {
-    const spinner = document.getElementById('spinner');
-    if (spinner) spinner.style.display = 'block';
-
-    // Find the index of the clicked image in our images array
-    currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
-    let currentImage = images[currentImageIndex];
-    const imgElement = document.getElementById('popUpImage');
-
-    // Clear current image while loading
-    imgElement.src = '';
-
-    // Show modal first with loading spinner
-    $('#bigPicModal').modal('show');
-
-    // Force scroll to top immediately
-    $('#bigPicModal .modal-body').scrollTop(0);
-
-    // Then set the new image source
-    imgElement.src = currentImage.url;
-
-    // Handle image loading
-    imgElement.onload = function() {
-        if (spinner) spinner.style.display = 'none';
-        document.getElementById('imageTitle').textContent = currentImage.title;
-        document.getElementById('imageDescription').innerHTML = currentImage.description;
-    };
-
-    // Handle load errors
-    imgElement.onerror = function() {
-        if (spinner) spinner.style.display = 'none';
-        console.error('Failed to load image:', currentImage.url);
-        document.getElementById('imageTitle').textContent = 'Image failed to load';
-        document.getElementById('imageDescription').innerHTML = 'Sorry, there was a problem loading this image.';
-    };
-}
-
-function changeImage(step) {
-    currentImageIndex += step;
-
-    if (currentImageIndex >= images.length) {
-        currentImageIndex = 0;
-    } else if (currentImageIndex < 0) {
-        currentImageIndex = images.length - 1;
-    }
-
-    const imgElement = document.getElementById('popUpImage');
-    const spinner = document.getElementById('spinner');
-    document.getElementById('imageTitle').innerHTML = '';
-    document.getElementById('imageDescription').innerHTML = '';
-
-    // Show the loading spinner
-    if (spinner) spinner.style.display = 'block';
-
-    // Clear previous image and text
-    imgElement.style.transform = '';
-    imgElement.src = '';  // Clear the source to trigger loading state
-
-    // Set the new image source
-    const newImageSrc = images[currentImageIndex].url;
-    imgElement.src = newImageSrc;
-
-    // Wait for the image to load
-    imgElement.onload = function() {
-        // Hide the loading spinner
-        if (spinner) spinner.style.display = 'none';
-
-        // Update the text once the image has loaded
-        document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
-        document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
-    };
-
-    // Handle load errors
-    imgElement.onerror = function() {
-        if (spinner) spinner.style.display = 'none';
-        console.error('Failed to load image:', newImageSrc);
-        document.getElementById('imageTitle').textContent = 'Image failed to load';
-        document.getElementById('imageDescription').innerHTML = 'Sorry, there was a problem loading this image.';
-    };
-}
-
-function fetchCurrentAboutMe() {
-    return $.ajax({
-        url: '../actions/aboutMeAPI.php',
-        type: 'GET',
-        dataType: 'json',
-    });
-}
-
-async function openInfo() {
-    $('#imagesAndContent').css('padding-top', '50px');
-
-    try {
-        const aboutMe = await fetchCurrentAboutMe();
-        let description = aboutMe.description ? aboutMe.description.replace(/\n/g, "<br>") : '';
-        let imageLocation = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
-
-        // Use window.innerWidth instead of user-agent detection for responsive layout
-        if (window.innerWidth <= 1206) {
-            document.getElementById('imagesAndContent').innerHTML = `
-          <div class="infoflexMobile">
-            <div class="ambPicDiv">
-              <img src="${imageLocation}" id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async">
-            </div>
-            <p>${description}</p>
-          </div>
-          `;
-        } else {
-            document.getElementById('imagesAndContent').innerHTML = `
-          <div class="infoflex">
-            <div class="size1" id="aboutMeInfo">
-              <p>${description}</p>
-            </div>
-            <div class="size2">
-              <div class="ambPicDiv">
-                <img src="${imageLocation}" id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async">
-              </div>
-            </div>
-          </div>
-          `;
-        }
-
-        // Close mobile menu if open
-        if (window.innerWidth <= 992) {
-            $('#hamburgerMenu').removeClass('active');
-            $('#navLinksBox').removeClass('active');
-            $('.nav-overlay').removeClass('active');
-            $('#sideBySide').removeClass('menu-open');
-        }
-
-        history.pushState({page: 'about'}, 'About - Ambar Velasco', '/about');
-        document.title = 'About - Ambar Velasco';
-    } catch (error) {
-        console.error('Error loading about information:', error);
-        $('#imagesAndContent').html(`
-            <div class="error-message">
-                <p>Sorry, we couldn't load the About Me information. Please try again later.</p>
-            </div>
-        `);
-    }
+function openInfo() {
+    return goTo('/about');
 }
 
 function openCurrentProject() {
-    $('#imagesAndContent').css('padding-top', '50px');
-
-    $.ajax({
-        url: "../actions/projectsAPI.php",
-        type: "GET",
-        data: {'activity': 'currentProject'},
-        dataType: "json",
-        success: function(data) {
-            makeCurrentProjectCards(data);
-        },
-        error: function() {
-            console.log("An error occurred.");
-            $('#imagesAndContent').html(`
-                <div class="error-message">
-                    <p>Sorry, we couldn't load the current project. Please try again later.</p>
-                </div>
-            `);
-        },
-    });
-
-    selectWorksAreShown = false;
-}
-
-function createCurrentProjectElement(project) {
-    let worksOfProjectDiv = $('<div>').addClass('projectWorks');
-    let titleAndDescriptionDiv = $('<div>');
-    let title = project.title;
-    let description = project.description ? project.description.replace(/\n/g, '<br>') : '';
-    let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
-    let insertDescription = $('<p>').html(description).css({
-        'color': '#71797E',
-        'margin-bottom': '60px'
-    });
-
-    titleAndDescriptionDiv.append(insertTitle, insertDescription);
-
-    let projectDiv = $('<div>').addClass('project').attr({
-        'alt': title,
-        'id': 'projectSection' + title.trim()
-    }).css({'border': '0px', 'text-align': 'center'});
-
-    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv);
-
-    return projectDiv;
-}
-
-async function createCurrentProjectWorkCardElement(information) {
-    let imageURL = "baseImages/" + information.location;
-    let title = information.name;
-    let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
-    let long_description = '';
-    if (information.long_description) {
-        long_description = information.long_description.replace(/\n/g, '<br>');
-    }
-
-    let imageInfo = {
-        url: imageURL,
-        title: title,
-        description: description,
-        long_description: long_description
-    };
-
-    try {
-        const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
-
-        let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-        let imageButton = $('<span>').text('Image');
-        let textButton = $('<span>').text('Description');
-        let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
-
-        if (isMobile) {
-            buttonContainer.css('paddingBottom', '15px');
-        }
-
-        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows)
-            .append($('<img>').addClass("currentProjectImage")
-                .attr('src', imageURL)
-                .attr('alt', 'Image of ' + title)
-                .attr('Title', title)
-                .attr('Description', description));
-
-        let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
-            position: 'relative',
-            maxWidth: '80%',
-            margin: 'auto',
-            cursor: 'default',
-            overflowY: 'auto',
-            zIndex: zIndexCounter,
-            paddingLeft: '20px',
-            paddingRight: '20px'
-        }).hide();
-
-        zIndexCounter++;
-
-        let contentHolder = $('<div>').attr({'id': 'projectSection' + information.id.trim()})
-            .addClass('projectImgTxtContainer')
-            .css({
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-            })
-            .append(imageContainer, insertDescription);
-
-        let card = $('<div>').addClass('card').attr('alt', title).css({
-            'border': '0px',
-            'text-align': 'center',
-            'margin-bottom': '60px',
-        }).append(buttonContainer).append(contentHolder);
-
-        imageContainer.click(() => makeBigPic(imageURL));
-        images.push(imageInfo);
-
-        buttonContainer.click((event) => {
-            if (insertDescription.is(":hidden")) {
-                imageContainer.fadeToggle().promise().done(() => {
-                    insertDescription.fadeToggle();
-                });
-            } else {
-                insertDescription.fadeToggle().promise().done(() => {
-                    imageContainer.fadeToggle();
-                });
-            }
-        });
-
-        return card;
-    } catch (error) {
-        console.error(error);
-        return null;
-    }
-}
-
-function loadCorrectWidthAndHeightPerImage(imageURL) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = imageURL;
-
-        img.onload = function() {
-            let screenWidth = $(window).width();
-            let screenHeight = $(window).height();
-            let newWidth = img.width;
-            let newHeight = img.height;
-            let maxWidth = (screenWidth * .655) - 29;
-            let minWidth = screenWidth * .50;
-            let maxHeight = screenHeight * .65;
-
-            if (newWidth < minWidth) {
-                const ratio = minWidth / newWidth;
-                newWidth = minWidth;
-                newHeight = newHeight * ratio;
-                resolve({width: newWidth, height: newHeight});
-            }
-
-            if (newWidth > maxWidth) {
-                const ratio = maxWidth / newWidth;
-                newWidth = maxWidth;
-                newHeight = newHeight * ratio;
-            }
-
-            if (newHeight > maxHeight) {
-                const ratio = maxHeight / newHeight;
-                newHeight = maxHeight;
-                newWidth = newWidth * ratio;
-            }
-
-            resolve({width: newWidth, height: newHeight});
-        };
-
-        img.onerror = function() {
-            reject('Error loading image: ' + imageURL);
-        };
-    });
-}
-
-async function makeCurrentProjectCards(projects) {
-    $('#imagesAndContent').empty();
-    images.length = 0;
-
-    let projectPromises = projects.map(async project => {
-        let workIds = await fetchWorkIdsForProject(project.id);
-        let allWorksForProject = await getWorksInfoFromIdsArray(workIds);
-        return { project, allWorksForProject }; // Return project info with its works
-    });
-
-    try {
-        let results = await Promise.all(projectPromises);
-
-        for (const { project, allWorksForProject } of results) {
-            let mainProj = createCurrentProjectElement(project);
-            $('#imagesAndContent').append(mainProj);
-
-            for (const information of allWorksForProject) {
-                let card = await createCurrentProjectWorkCardElement(information);
-                if (card) {
-                    mainProj.find('.projectWorks').first().append(card);
-                }
-            }
-        }
-
-        history.pushState({ page: 'current-project' }, 'Current Project', '/current-project');
-        document.title = 'Current Project - Ambar Velasco';
-        adjustDescriptionHeightsAndWidths();
-    } catch (error) {
-        console.error('Error:', error);
-        $('#imagesAndContent').html(`
-            <div class="error-message">
-                <p>Sorry, we couldn't load the current project. Please try again later.</p>
-            </div>
-        `);
-    }
-}
-
-function adjustDescriptionHeightsAndWidths() {
-    $('.img-container').each(function() {
-        // Find the next .description_text element
-        let descriptionText = $(this).next('.description_text');
-        let descriptionContent = descriptionText[0];
-
-        if (descriptionText.length) {
-            // Get the height of the img-container
-            let containerHeight = $(this).height();
-            let containerWidth = $(this).width();
-
-            if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
-                containerHeight += 20;
-            }
-
-            descriptionText.show();
-            let contentHeight = descriptionContent.scrollHeight;
-            descriptionText.hide();
-
-            // Adjust the height of the description_text element
-            descriptionText.css("max-height", containerHeight + "px");
-            descriptionText.css("min-height", containerHeight + "px");
-            descriptionText.css("width", containerWidth + "px");
-
-            if (!isMobile) {
-                descriptionText.css('padding-top', '20px');
-            } else {
-                descriptionText.css('padding-top', '5px');
-            }
-        }
-    });
+    return goTo('/current-project');
 }
 
 function loadShop() {
-    yearData = { activity: 'active' };
-    $.ajax({
-        url: "../actions/shopAPI.php",
-        type: "GET",
-        data: yearData,
-        dataType: "json",
-        success: function(data) {
-            $('#imagesAndContent').empty();
-            $('#imagesAndContent').css('padding-top', '50px');
+    return goTo('/shop');
+}
 
-            $('<div>', {
-                class: 'shop-top-space'
-            }).prependTo('#imagesAndContent');
-
-            data.forEach(function(item) {
-                $('#imagesAndContent').append(createShopItem(item));
-            });
-
-            history.pushState({page: 'shop'}, 'Shop', '/shop');
-            document.title = 'Shop - Ambar Velasco';
-        },
-        error: function() {
-            console.log("An error occurred.");
-            $('#imagesAndContent').html(`
-                <div class="error-message">
-                    <p>Sorry, we couldn't load the shop items. Please try again later.</p>
-                </div>
-            `);
+// Menu link to one project: show the works and scroll to that project
+function loadProjectSection(sectionId) {
+    ensureDropdownOpen('selectProjectCategories');
+    if (currentView === 'works' && viewReady) {
+        if (location.pathname !== '/select-works') {
+            history.replaceState({ path: '/select-works' }, '', '/select-works');
         }
-    });
+        scrollToSection(sectionId, true);
+        return;
+    }
+    goTo('/select-works', { section: sectionId });
 }
 
-function createShopItem(item) {
-    // The shop API returns a Shopify buy-button embed (buttonCode) per item;
-    // the embed renders the product image, price and purchase button itself.
-    let shopItem = $('<div>').addClass('shopItem');
-    let buyButtonDiv = $('<div>').addClass('buy-button-embed').html(item.buttonCode);
-
-    shopItem.append(buyButtonDiv);
-
-    return shopItem;
-}
-
-// Make functions available globally
-window.makeBigPic = makeBigPic;
 window.getProjectsAndWorks = getProjectsAndWorks;
 window.openInfo = openInfo;
 window.openCurrentProject = openCurrentProject;
 window.loadShop = loadShop;
 window.loadProjectSection = loadProjectSection;
-window.ensureDropdownOpen = function(sublinksId) {
-    var sublinks = $("#" + sublinksId);
-    if (!sublinks.is(":visible")) {
+window.makeBigPic = makeBigPic;
+window.fetchPublicWorks = fetchPublicWorks;
+window.projectSectionId = projectSectionId;
+window.ensureDropdownOpen = function (sublinksId) {
+    var sublinks = $('#' + sublinksId);
+    if (!sublinks.is(':visible')) {
         sublinks.show();
     }
 };
+
+// --------------------------------------------------------------------------
+// Start-up
+// --------------------------------------------------------------------------
+
+$(function () {
+    setupResponsiveLayout();
+    setupViewer();
+
+    // Mobile menu
+    function setMenuOpen(open) {
+        $('#hamburgerMenu').toggleClass('active', open).attr({
+            'aria-expanded': open ? 'true' : 'false',
+            'aria-label': open ? 'Close menu' : 'Open menu'
+        });
+        $('#navLinksBox').toggleClass('active', open);
+        $('.nav-overlay').toggleClass('active', open);
+        $('#sideBySide').toggleClass('menu-open', open);
+    }
+
+    $('#hamburgerMenu').on('click', function (e) {
+        e.stopPropagation();
+        setMenuOpen(!$(this).hasClass('active'));
+    });
+
+    $('.nav-overlay').on('click', function () {
+        setMenuOpen(false);
+    });
+
+    // On phones, menu links close the drawer — except the ones that open a
+    // sub-menu (Works) or the newsletter form inside it
+    $(document).on('click', '#navLinksBox a', function (e) {
+        if (window.innerWidth > BREAKPOINT) {
+            return;
+        }
+        var text = $(this).text();
+        if (text === 'Works' || text === 'Newsletter') {
+            e.stopPropagation();
+        } else if (!$(this).closest('#selectProjectCategories, #newsletterSignUp').length) {
+            setMenuOpen(false);
+        }
+    });
+
+    $(document).on('click', '#newsletterSignUp, #newsletterEmail, #newsletterSubmit', function (e) {
+        if (window.innerWidth <= BREAKPOINT) {
+            e.stopPropagation();
+        }
+    });
+
+    // The logo goes home without reloading the page
+    $('#blockForHeader').on('click', 'a[href="/"]', function (event) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+        }
+        event.preventDefault();
+        if (window.innerWidth <= BREAKPOINT) {
+            setMenuOpen(false);
+        }
+        goTo('/');
+    });
+
+    // First page of the visit
+    var route = parseRoute(location.pathname);
+    var view = document.body.getAttribute('data-status') === '404' ? 'notfound' : resolveView(route);
+    var section = location.hash && location.hash.indexOf('#section-') === 0 ? location.hash.slice(1) : null;
+
+    if (view === 'works' && route.view === 'home') {
+        history.replaceState({ path: '/select-works' }, '', '/select-works');
+    } else {
+        history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
+    }
+
+    renderView(view).then(function () {
+        if (view === 'works' && route.workId) {
+            openSharedWork(route.workId, {});
+        } else if (section) {
+            scrollToSection(section, false);
+        }
+    });
+
+    spawnNewsletterFloat();
+});

@@ -9,7 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../admin/admin.css"> <!-- Path to your admin CSS file -->
-  <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+  <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
   <title>Sign In</title>
 </head>
 <body>

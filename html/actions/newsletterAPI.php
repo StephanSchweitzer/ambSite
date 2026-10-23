@@ -17,6 +17,11 @@ function sendError($message, $code = 500)
 try {
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
+            // The subscriber list is private — only the admin may read it
+            if (($_SESSION["ambar"] ?? null) != "connected") {
+                sendError('Unauthorized', 401);
+            }
+
             // Fetch all active subscriptions, ordered alphabetically by email
             $query = "SELECT id, email, subscriptionDate, active FROM newsletterEmailList ORDER BY email ASC";
             $stmt = $conn->prepare($query);

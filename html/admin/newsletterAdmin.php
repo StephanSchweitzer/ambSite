@@ -55,7 +55,7 @@ $newSubscribersCount = count($newSubscribers);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="newsletterAdmin.css">
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Newsletter Admin Page</title>
 </head>
 <body>

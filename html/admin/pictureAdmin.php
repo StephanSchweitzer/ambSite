@@ -13,7 +13,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <title>Works Administration</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
 
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>

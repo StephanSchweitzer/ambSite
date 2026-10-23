@@ -13,7 +13,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>About Me Admin Page</title>
     <style>
         body {

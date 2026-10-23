@@ -51,7 +51,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
     <meta charset="utf-8">
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Main Admin Page</title>
 </head>
 <body>
