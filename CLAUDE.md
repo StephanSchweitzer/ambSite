@@ -389,7 +389,14 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   off (that, `position: fixed`, or Bootstrap's `body.modal-open`, which
   ambar.css neutralises for touch) makes iOS Safari repaint the whole page
   white for a few frames. A `touchmove` handler on the modal stops page
-  scrolling instead (one finger only, so pinch-zoom still works). The viewer image is sized
+  scrolling instead (one finger only, so pinch-zoom still works).
+  Further iPhone rules, taken from PhotoSwipe after a white flash persisted:
+  on touch screens the gallery picture is never hidden (`hideInPage` is a
+  no-op); the backdrop starts at `VIEWER_MIN_OPACITY` (0.003), never 0; the
+  viewer is `overflow: hidden` except `.can-scroll` (only when a tall
+  painting's caption doesn't fit, never while animating); Bootstrap's own
+  focusing is off (`data-focus="false"`) and the viewer is focused with
+  `preventScroll`; the motion starts after decode, ≥50ms, ≤250ms. The viewer image is sized
   in CSS from `--w`/`--h` (its proportions), so its box is right before it
   loads; `viewerImageWidth()` mirrors that CSS. Hover effects on the gallery
   are inside `@media (hover: hover)` so a tap on a phone doesn't set them off.

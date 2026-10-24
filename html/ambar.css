@@ -1411,9 +1411,24 @@ html.no-scroll {
   overscroll-behavior: none;
 }
 
-/* A swipe inside the viewer never scrolls or pull-to-refreshes the page */
+/* A swipe inside the viewer never scrolls or pull-to-refreshes the page.
+   The viewer only scrolls when a very tall painting and its caption don't
+   fit (.can-scroll, set by updateViewerScrolling), and never while opening
+   or closing: on iPhones a scrolling layer can skip drawing its contents for
+   a few frames when it appears. */
 #bigPicModal {
   overscroll-behavior: contain;
+  overflow: hidden !important;
+}
+
+#bigPicModal.can-scroll:not(.is-opening):not(.is-arriving):not(.is-closing) {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* The dark background gets its own layer from the start (as PhotoSwipe's) */
+.modal-backdrop {
+  will-change: opacity;
 }
 
 /* Phones and tablets: opening the viewer changes nothing at all about the

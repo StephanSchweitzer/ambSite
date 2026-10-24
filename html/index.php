@@ -299,7 +299,7 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <!-- Artwork viewer. A painting link arrives with it already open, so the
          page doesn't show the light gallery first and then fade to dark.
          No Bootstrap "fade": photoFunctions.js animates opening and closing. -->
-    <div class="modal<?= $work ? ' show' : '' ?>" id="bigPicModal" tabindex="-1" role="dialog" aria-labelledby="imageTitle"<?= $work ? ' aria-modal="true" style="display: block;" data-preopened' : ' aria-hidden="true"' ?>>
+    <div class="modal<?= $work ? ' show' : '' ?>" id="bigPicModal" tabindex="-1" role="dialog" data-focus="false" aria-labelledby="imageTitle"<?= $work ? ' aria-modal="true" style="display: block;" data-preopened' : ' aria-hidden="true"' ?>>
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <button type="button" class="modal-close" data-dismiss="modal" aria-label="Close image view">

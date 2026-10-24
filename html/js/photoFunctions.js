@@ -563,6 +563,9 @@ var VIEWER_CLOSE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 // background as it looks over the page
 var PAGE_THEME_COLOR = '#ffffff';
 var VIEWER_THEME_COLOR = '#222220';
+// Never animate opacity up from exactly 0: browsers don't draw an element
+// at 0, then need frames to catch up (PhotoSwipe's MIN_OPACITY)
+var VIEWER_MIN_OPACITY = 0.003;
 
 // options.addressIsSet: the address bar already shows this work (a shared
 // link, or Back/Forward), so don't add a history entry
@@ -614,6 +617,10 @@ function openViewer(items, index, options) {
     // (no "fade" class on the modal, so Bootstrap opens it instantly and the
     // animation below is the only one)
     $(modal).modal('show');
+    // Bootstrap's own focusing is off (data-focus="false" in index.php): a
+    // plain focus() can nudge the page's scroll on iPhones, which makes
+    // Safari redraw it. Focus without scrolling, so Escape still closes.
+    modal.focus({ preventScroll: true });
     pauseSlideshow(true);
 
     if (preopened) {
@@ -622,6 +629,7 @@ function openViewer(items, index, options) {
         // background for Bootstrap's identical one
         modal.removeAttribute('data-preopened');
         $('#preopenedBackdrop').remove();
+        updateViewerScrolling();
     } else {
         animateOpening(source);
     }
@@ -681,8 +689,14 @@ function shrunkAboutMiddle(at, scale) {
 }
 
 // While the painting is in the viewer, its picture on the page is hidden,
-// so there's only ever one of it on screen
+// so there's only ever one of it on screen. Not on phones and tablets:
+// Safari there can take a few frames to draw the viewer, and a hidden
+// picture would leave a white gap meanwhile. The dark background covers
+// it instead (PhotoSwipe leaves the picture on the page alone too).
 function hideInPage(img) {
+    if (isTouchScreen()) {
+        return;
+    }
     var el = $(img).closest('.img-container')[0] || img;
     el.style.visibility = 'hidden';
     viewer.hiddenInPage.push(el);
@@ -733,13 +747,17 @@ function animateOpening(source) {
     // over the picture that was clicked. The picture on the page stays
     // visible underneath until the viewer's copy is ready to be drawn, so
     // there's never a frame with neither (phones can take a frame to draw it).
+    // The dark background starts all but invisible rather than at 0, which
+    // browsers skip drawing and then have to catch up on (as PhotoSwipe
+    // does), and the painting is readied for moving before it moves.
     viewer.opening = true;
     $(modal).addClass('is-opening');
     if (backdrop) {
         backdrop.style.transition = 'none';
-        backdrop.style.opacity = '0';
+        backdrop.style.opacity = String(VIEWER_MIN_OPACITY);
     }
     if (source) {
+        img.style.willChange = 'transform';
         img.style.transition = 'none';
         img.style.transform = transformOnto(at, source.getBoundingClientRect());
     }
@@ -775,22 +793,41 @@ function animateOpening(source) {
             viewer.openTimer = setTimeout(finishOpening, ms + 40);
         }
     };
-    // Start once the copy is decoded and has been on screen for a couple of
-    // frames, sitting exactly over the picture on the page (it's normally
-    // ready at once: it's the same file the page is already showing), but
-    // never wait long for it
-    viewer.openTimer = setTimeout(start, 150);
-    var nextFrame = function () {
-        requestAnimationFrame(function () {
+    // Start once the copy is decoded (it's normally ready at once: it's the
+    // same file the page is already showing) and the starting point has had
+    // at least 50ms on screen, but never wait more than 250ms: PhotoSwipe's
+    // timings
+    viewer.openTimer = setTimeout(start, 250);
+    var decoded = false;
+    var waited = false;
+    var go = function () {
+        if (decoded && waited) {
             requestAnimationFrame(start);
-        });
-        setTimeout(start, 80); // (in case frames aren't being drawn)
+            setTimeout(start, 40); // (in case frames aren't being drawn)
+        }
+    };
+    setTimeout(function () {
+        waited = true;
+        go();
+    }, 50);
+    var whenDecoded = function () {
+        decoded = true;
+        go();
     };
     if (img.getAttribute('src') && img.decode) {
-        img.decode().then(nextFrame, nextFrame);
+        img.decode().then(whenDecoded, whenDecoded);
     } else {
-        nextFrame();
+        whenDecoded();
     }
+}
+
+// The viewer only becomes a scrolling layer when the painting and its
+// caption don't fit on the screen (a very tall painting). On iPhones a
+// scrolling layer can skip drawing its contents for a few frames when it
+// appears, so it isn't one while opening or closing, or when it needn't be.
+function updateViewerScrolling() {
+    var modal = document.getElementById('bigPicModal');
+    $(modal).toggleClass('can-scroll', modal.scrollHeight > modal.clientHeight + 1);
 }
 
 // The painting appears where it is, rising gently into place
@@ -821,9 +858,11 @@ function finishOpening() {
     var img = document.getElementById('popUpImage');
     img.style.transition = '';
     img.style.transform = '';
+    img.style.willChange = '';
     if (!viewer.waitingForImage) {
         img.style.opacity = '';
     }
+    updateViewerScrolling();
     if (viewer.afterOpening) {
         var then = viewer.afterOpening;
         viewer.afterOpening = null;
@@ -838,6 +877,7 @@ function stopOpening() {
     viewer.opening = false;
     viewer.afterOpening = null;
     $('#bigPicModal').removeClass('is-opening is-arriving');
+    document.getElementById('popUpImage').style.willChange = '';
     var backdrop = document.querySelector('.modal-backdrop');
     if (backdrop && backdrop.style.opacity) {
         backdrop.style.transition = 'opacity 250ms ease-out';
@@ -951,6 +991,7 @@ function showViewerImage(direction, opening) {
             img.style.transform = '';
             img.style.opacity = '';
             $('#imageInfo').removeClass('is-changing');
+            updateViewerScrolling();
         };
         if (img.decode) {
             img.decode().then(reveal, reveal);
@@ -1164,6 +1205,16 @@ function makeBigPic(imageUrl) {
 function setupViewer() {
     var modal = $('#bigPicModal');
 
+    var modalEl = modal[0];
+
+    // Keep keyboard focus inside the open viewer (Bootstrap's version of this
+    // would scroll the page; see openViewer)
+    document.addEventListener('focusin', function (event) {
+        if (viewer.open && !modalEl.contains(event.target)) {
+            modalEl.focus({ preventScroll: true });
+        }
+    });
+
     // Hold the page behind the viewer exactly where it is.
     // Computers: switch its scrolling off. That takes away the scrollbar (on
     // computers that show one), which would let the works widen a little;
@@ -1183,7 +1234,6 @@ function setupViewer() {
 
     // A finger dragging on the viewer scrolls the viewer (a very tall
     // painting) but never the page behind it, or the browser's bars
-    var modalEl = modal[0];
     var lastTouchY = 0;
     modalEl.addEventListener('touchstart', function (e) {
         if (e.touches.length === 1) {
