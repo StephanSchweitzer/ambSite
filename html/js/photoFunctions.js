@@ -1103,10 +1103,16 @@ function makeBigPic(imageUrl) {
 function setupViewer() {
     var modal = $('#bigPicModal');
 
-    // Freeze the page behind the viewer exactly where it is
+    // Freeze the page behind the viewer exactly where it is. Freezing takes
+    // away the scrollbar (on computers that show one), which would let the
+    // works widen a little; keeping that much space empty holds them still.
     modal.on('show.bs.modal', function () {
         scrollPosition = window.pageYOffset;
-        $('body').addClass('no-scroll').css('top', -scrollPosition + 'px');
+        var scrollbar = window.innerWidth - document.documentElement.clientWidth;
+        $('body').addClass('no-scroll').css({
+            top: -scrollPosition + 'px',
+            'padding-right': scrollbar > 0 ? scrollbar + 'px' : ''
+        });
     });
 
     // Every way of closing (the close button, the dark background, Escape,
@@ -1126,7 +1132,7 @@ function setupViewer() {
         viewer.source = null;
         viewer.loadToken++;
         $('#spinner').hide();
-        $('body').removeClass('no-scroll').css('top', '');
+        $('body').removeClass('no-scroll').css({ top: '', 'padding-right': '' });
         instantScrollTo(scrollPosition);
         document.title = PAGE_TITLES[currentView] || PAGE_TITLES.home;
         pauseSlideshow(false);
