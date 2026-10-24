@@ -1648,3 +1648,146 @@ html.no-scroll {
     border-top-color: var(--color-line);
   }
 }
+
+/* ==========================================================================
+   TEMPORARY: iPhone flash test switch (?vt= in the address; see
+   VIEWER_TESTS in photoFunctions.js). None of this applies without it.
+   ========================================================================== */
+.vt-label {
+  position: absolute;
+  top: 24px;
+  right: 66px; /* just left of the menu button */
+  z-index: 2;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+/* Probe 2: a small layer of its own, in the margin left of the paintings */
+.vt-dot {
+  position: fixed;
+  left: 3px;
+  top: 50%;
+  z-index: 1100;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--amb-pink);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Probe 3: the dark background on its own */
+.modal-backdrop.vt-dim {
+  pointer-events: none;
+}
+
+/* Test 6: the viewer and its dark background stay on the page, invisible */
+#bigPicModal.vt-persist {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  justify-content: safe center;
+  align-content: center;
+  align-items: center;
+  will-change: opacity;
+}
+
+#bigPicModal.vt-persist.vt-idle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#bigPicModal.vt-persist.vt-idle * {
+  pointer-events: none !important;
+}
+
+#bigPicModal.vt-persist #popUpImage {
+  will-change: transform;
+}
+
+.modal-backdrop.vt-backdrop {
+  opacity: 0.003;
+  pointer-events: none;
+}
+
+.modal-backdrop.vt-backdrop.show {
+  opacity: 0.93;
+}
+
+/* Test 10: no blurred backgrounds */
+html.vt-no-blur .blockForHeaderMobile,
+html.vt-no-blur .navLinksBoxMobile,
+html.vt-no-blur .nav-overlay,
+html.vt-no-blur .newsletter-float-inner {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Test 12: no will-change on the dark background */
+html.vt-no-will-change .modal-backdrop {
+  will-change: auto;
+}
+
+/* ?vt=menu: the list of tests */
+.vt-menu {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 8px 4px 40px;
+}
+
+.vt-menu h2 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.vt-menu p {
+  color: var(--color-text-secondary);
+}
+
+.vt-menu ol {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.vt-menu li {
+  margin-bottom: 8px;
+}
+
+.vt-menu a {
+  display: block;
+  padding: 12px 14px 12px 50px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: var(--color-paper);
+}
+
+.vt-menu b {
+  position: absolute;
+  left: 14px;
+  top: 11px;
+  font-size: 1.1rem;
+}
+
+.vt-menu span {
+  display: block;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.vt-menu small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}

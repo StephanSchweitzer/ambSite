@@ -63,6 +63,51 @@ if ('scrollRestoration' in history) {
 }
 
 // --------------------------------------------------------------------------
+// TEMPORARY test switch, for the white flash iPhones show when a painting
+// opens. ?vt=<number> in the address picks one test and ?vt=menu lists them;
+// without it none of this does anything. Each test changes one thing about
+// opening a painting, or (the probes) does one thing on its own instead of
+// opening it. Remove once the flash is fixed.
+// --------------------------------------------------------------------------
+var VIEWER_TESTS = [
+    { id: '0', name: 'Normal',
+      about: 'Nothing changed: the site exactly as it is.' },
+    { id: '1', name: 'Probe: the page is redrawn', probe: 'redraw',
+      about: 'A tap does not open the painting. The whole page is drawn again (the margins turn pink). Do the paintings blink?' },
+    { id: '2', name: 'Probe: one tiny new layer', probe: 'layer',
+      about: 'A tap does not open the painting. A small pink dot appears at the left edge. Do the paintings blink?' },
+    { id: '3', name: 'Probe: the dark background alone', probe: 'backdrop',
+      about: 'A tap does not open the painting. Only the viewer\'s dark background comes in. Do the paintings blink before it darkens?' },
+    { id: '4', name: 'Pictures decoded at once', syncDecode: true,
+      about: 'The page\'s pictures use decoding="sync" instead of "async".' },
+    { id: '5', name: 'Pictures on screen decoded first', predecode: true,
+      about: 'The pictures on screen are decoded before the viewer opens.' },
+    { id: '6', name: 'Viewer built in advance', driver: 'persist',
+      about: 'The viewer and its dark background sit on the page from the start, invisible, so opening creates nothing new.' },
+    { id: '7', name: 'Viewer without Bootstrap', driver: 'manual',
+      about: 'The viewer opens without Bootstrap\'s modal code (no body class, no scrollbar measuring).' },
+    { id: '8', name: 'No dark background', noBackdrop: true,
+      about: 'The viewer opens without its dark background.' },
+    { id: '9', name: 'Address and title unchanged', noHistory: true,
+      about: 'Opening changes neither the address (no pushState) nor the page title.' },
+    { id: '10', name: 'No blur, no newsletter bubble', noBlur: true,
+      about: 'No blurred header or menu, and no floating newsletter bubble.' },
+    { id: '11', name: 'No animation', noAnim: true,
+      about: 'The painting and the dark background appear at once, with no growing or fading.' },
+    { id: '12', name: 'No will-change, focus or bar colour', noWillChange: true, noFocus: true, noThemeColor: true,
+      about: 'No will-change hints, the viewer is not focused, and the browser bar keeps its colour.' }
+];
+
+// The test asked for (empty without ?vt=)
+var VT = (function () {
+    var asked = (/[?&]vt=([^&#]*)/.exec(location.search) || [])[1];
+    var test = VIEWER_TESTS.filter(function (each) {
+        return each.id === asked;
+    })[0];
+    return $.extend({ menu: asked === 'menu' }, test);
+})();
+
+// --------------------------------------------------------------------------
 // Small helpers
 // --------------------------------------------------------------------------
 
@@ -210,7 +255,7 @@ function fetchPublicWorks(view) {
 function workImage(work, options) {
     var img = document.createElement('img');
     img.loading = options.lazy ? 'lazy' : 'eager';
-    img.decoding = 'async';
+    img.decoding = VT.syncDecode ? 'sync' : 'async';
     // The page's first painting: fetch it ahead of everything else
     if (options.priority) {
         img.setAttribute('fetchpriority', 'high');
@@ -480,6 +525,9 @@ $(document).on('click', '.work-card', function (event) {
         return; // let "open in new tab" and friends work as normal
     }
     event.preventDefault();
+    if (VT.id && testInsteadOfOpening(this)) {
+        return;
+    }
     openViewer(galleryItems, Number(this.getAttribute('data-index')), { from: this });
 });
 
@@ -596,7 +644,7 @@ function openViewer(items, index, options) {
     }
 
     var work = items[index];
-    if (!options.addressIsSet && location.pathname !== work.path) {
+    if (!options.addressIsSet && location.pathname !== work.path && !VT.noHistory) {
         rememberScroll();
         history.pushState({ path: work.path, viewer: true }, '', work.path);
     }
@@ -616,11 +664,13 @@ function openViewer(items, index, options) {
     });
     // (no "fade" class on the modal, so Bootstrap opens it instantly and the
     // animation below is the only one)
-    $(modal).modal('show');
+    viewerModal('show');
     // Bootstrap's own focusing is off (data-focus="false" in index.php): a
     // plain focus() can nudge the page's scroll on iPhones, which makes
     // Safari redraw it. Focus without scrolling, so Escape still closes.
-    modal.focus({ preventScroll: true });
+    if (!VT.noFocus) {
+        modal.focus({ preventScroll: true });
+    }
     pauseSlideshow(true);
 
     if (preopened) {
@@ -713,6 +763,9 @@ function showInPage() {
 // dark (or light) as the colour, rather than with a jump at the start
 function setThemeColor(color, delay) {
     clearTimeout(viewer.themeTimer);
+    if (VT.noThemeColor) {
+        return;
+    }
     if (delay) {
         viewer.themeTimer = setTimeout(function () {
             setThemeColor(color);
@@ -734,6 +787,12 @@ function pauseSlideshow(pause) {
 }
 
 function animateOpening(source) {
+    if (VT.noAnim) {
+        // Test switch: everything is simply there, the dark background too
+        setThemeColor(VIEWER_THEME_COLOR);
+        updateViewerScrolling();
+        return;
+    }
     var modal = document.getElementById('bigPicModal');
     var img = document.getElementById('popUpImage');
     var backdrop = document.querySelector('.modal-backdrop');
@@ -757,7 +816,9 @@ function animateOpening(source) {
         backdrop.style.opacity = String(VIEWER_MIN_OPACITY);
     }
     if (source) {
-        img.style.willChange = 'transform';
+        if (!VT.noWillChange) {
+            img.style.willChange = 'transform';
+        }
         img.style.transition = 'none';
         img.style.transform = transformOnto(at, source.getBoundingClientRect());
     }
@@ -923,7 +984,9 @@ function showViewerImage(direction, opening) {
     var leftAt = Date.now();
 
     $('.modal-nav-arrows').toggle(viewer.items.length > 1);
-    document.title = work.name + ' - Ambar Velasco';
+    if (!VT.noHistory) {
+        document.title = work.name + ' - Ambar Velasco';
+    }
 
     function showDetails() {
         $('#imageTitle').text(work.name);
@@ -1110,14 +1173,24 @@ function closeViewer(options) {
         return;
     }
     // Bootstrap asks first (hide.bs.modal), which starts animateClosing()
-    $('#bigPicModal').modal('hide');
+    viewerModal('hide');
+}
+
+// Bootstrap's modal opens and closes the viewer (the test switch can swap in
+// a stand-in: testViewerModal)
+function viewerModal(command) {
+    if (VT.driver) {
+        testViewerModal(command);
+        return;
+    }
+    $('#bigPicModal').modal(command);
 }
 
 function animateClosing() {
     var modal = document.getElementById('bigPicModal');
     var img = document.getElementById('popUpImage');
     var backdrop = document.querySelector('.modal-backdrop');
-    var ms = prefersReducedMotion() ? 0 : VIEWER_CLOSE_MS;
+    var ms = prefersReducedMotion() || VT.noAnim ? 0 : VIEWER_CLOSE_MS;
 
     viewer.closing = true;
     viewer.loadToken++; // nothing still loading may change the picture now
@@ -1183,7 +1256,7 @@ function finishClosing() {
     setThemeColor(PAGE_THEME_COLOR);
     showInPage();
     viewer.hidingNow = true;
-    $('#bigPicModal').modal('hide'); // instant; hidden.bs.modal tidies up
+    viewerModal('hide'); // instant; hidden.bs.modal tidies up
     viewer.hidingNow = false;
     $('#bigPicModal').removeClass('is-opening is-arriving is-closing');
     var img = document.getElementById('popUpImage');
@@ -1235,12 +1308,12 @@ function setupViewer() {
     // A finger dragging on the viewer scrolls the viewer (a very tall
     // painting) but never the page behind it, or the browser's bars
     var lastTouchY = 0;
-    modalEl.addEventListener('touchstart', function (e) {
+    function onViewerTouchStart(e) {
         if (e.touches.length === 1) {
             lastTouchY = e.touches[0].clientY;
         }
-    }, { passive: true });
-    modalEl.addEventListener('touchmove', function (e) {
+    }
+    function onViewerTouchMove(e) {
         if (e.touches.length !== 1 || !e.cancelable) {
             return; // two fingers: let pinch-zoom work
         }
@@ -1252,7 +1325,7 @@ function setupViewer() {
         if ((down && atTop) || (!down && atBottom)) {
             e.preventDefault();
         }
-    }, { passive: false });
+    }
 
     // Every way of closing (the close button, the dark background, Escape,
     // swipe down, Back) comes through here: animate first, then hide
@@ -1325,7 +1398,7 @@ function setupViewer() {
     // the painting is still flying in or out)
     var image = document.getElementById('popUpImage');
     var tracking = false;
-    image.addEventListener('touchstart', function (e) {
+    function onImageTouchStart(e) {
         isPinching = e.touches.length > 1;
         tracking = e.touches.length === 1 && !viewer.opening && !viewer.closing;
         if (tracking) {
@@ -1333,9 +1406,9 @@ function setupViewer() {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
         }
-    }, false);
+    }
 
-    image.addEventListener('touchmove', function (e) {
+    function onImageTouchMove(e) {
         if (e.touches.length > 1) {
             isPinching = true;
         } else if (tracking && e.touches.length === 1 && !isPinching) {
@@ -1346,9 +1419,9 @@ function setupViewer() {
                 this.style.transform = 'translateX(' + deltaX + 'px)';
             }
         }
-    }, false);
+    }
 
-    image.addEventListener('touchend', function (e) {
+    function onImageTouchEnd(e) {
         if (!tracking) {
             return;
         }
@@ -1367,7 +1440,25 @@ function setupViewer() {
         } else {
             this.style.transform = '';
         }
-    }, false);
+    }
+
+    // (the test switch's viewer built in advance listens only while open)
+    viewer.listenToTouches = function (on) {
+        var method = on ? 'addEventListener' : 'removeEventListener';
+        modalEl[method]('touchstart', onViewerTouchStart, { passive: true });
+        modalEl[method]('touchmove', onViewerTouchMove, { passive: false });
+        image[method]('touchstart', onImageTouchStart, false);
+        image[method]('touchmove', onImageTouchMove, false);
+        image[method]('touchend', onImageTouchEnd, false);
+    };
+    viewer.listenToTouches(true);
+
+    if (VT.noBackdrop) {
+        modal.attr('data-backdrop', 'false'); // read by Bootstrap on first use
+    }
+    if (VT.driver) {
+        setupTestViewer();
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -1702,6 +1793,9 @@ $(document).on('click', '.not-found-link', function (event) {
 // --------------------------------------------------------------------------
 
 function spawnNewsletterFloat() {
+    if (VT.noBlur) {
+        return; // test switch
+    }
     try {
         if (sessionStorage.getItem('newsletterFloatDismissed')) {
             return;
@@ -1793,10 +1887,189 @@ window.ensureDropdownOpen = function (sublinksId) {
 };
 
 // --------------------------------------------------------------------------
+// TEMPORARY test switch (see VIEWER_TESTS at the top): the pieces that run
+// only when ?vt= is in the address
+// --------------------------------------------------------------------------
+
+// Shows which test is on, and sets up the ones that change the whole page
+function setupViewerTests() {
+    if (!VT.id && !VT.menu) {
+        return;
+    }
+    $('<div class="vt-label" aria-hidden="true">').text(VT.menu ? 'TESTS' : 'TEST ' + VT.id).appendTo('#modifyZIndex');
+    $('html').toggleClass('vt-no-blur', !!VT.noBlur).toggleClass('vt-no-will-change', !!VT.noWillChange);
+    if (VT.syncDecode) {
+        $('img[decoding="async"]').attr('decoding', 'sync');
+    }
+}
+
+// ?vt=menu: the list of tests, each a link that loads the works page fresh
+function drawTestMenu() {
+    var list = $('<ol>');
+    VIEWER_TESTS.forEach(function (test) {
+        list.append($('<li>').append(
+            $('<a>').attr('href', '/select-works?vt=' + test.id).append(
+                $('<b>').text(test.id),
+                $('<span>').text(test.name),
+                $('<small>').text(test.about)
+            )
+        ));
+    });
+    $('#imagesAndContent').empty().append($('<div class="vt-menu">').append(
+        $('<h2>').text('iPhone flash tests'),
+        $('<p>').text('For each test: open it, scroll well down (ten paintings or more), tap a painting and watch ' +
+            'the first moment. Try three spots, each further down the page. Then press Back to return here.'),
+        list
+    ));
+}
+
+// A tap on a painting: true when the test takes over from opening it
+function testInsteadOfOpening(card) {
+    if (VT.probe) {
+        runFlashProbe(VT.probe);
+        return true;
+    }
+    if (VT.predecode) {
+        decodePicturesOnScreen().then(function () {
+            openViewer(galleryItems, Number(card.getAttribute('data-index')), { from: card });
+        });
+        return true;
+    }
+    return false;
+}
+
+// Decodes the pictures on (and just around) the screen. Resolves once they
+// are, or after half a second at most.
+function decodePicturesOnScreen() {
+    var waits = [];
+    var height = window.innerHeight;
+    $('#imagesAndContent img').each(function () {
+        var rect = this.getBoundingClientRect();
+        if (this.decode && this.complete && this.naturalWidth && rect.bottom > -height / 2 && rect.top < height * 1.5) {
+            waits.push(this.decode().catch(function () {}));
+        }
+    });
+    return Promise.race([
+        Promise.all(waits),
+        new Promise(function (resolve) {
+            setTimeout(resolve, 500);
+        })
+    ]);
+}
+
+// The probes: one change on its own, then put back
+var probeRunning = false;
+
+function runFlashProbe(kind) {
+    if (probeRunning) {
+        return;
+    }
+    probeRunning = true;
+    var finished = function () {
+        probeRunning = false;
+    };
+
+    if (kind === 'redraw') {
+        // The page's own background changes colour, so all of it is drawn
+        // again, with no new layers
+        document.body.style.backgroundColor = '#f6d9e6';
+        setTimeout(function () {
+            document.body.style.backgroundColor = '';
+            finished();
+        }, 1200);
+    } else if (kind === 'layer') {
+        // A new layer of its own, over the margin, away from the paintings
+        var dot = $('<div class="vt-dot" aria-hidden="true">').appendTo('body');
+        setTimeout(function () {
+            dot.remove();
+            finished();
+        }, 1200);
+    } else if (kind === 'backdrop') {
+        // The viewer's dark background, exactly as opening starts it
+        var dim = $('<div class="modal-backdrop vt-dim" aria-hidden="true">')
+            .css('opacity', String(VIEWER_MIN_OPACITY)).appendTo('body');
+        setTimeout(function () {
+            requestAnimationFrame(function () {
+                dim.css({ transition: 'opacity 336ms ease-out', opacity: '0.6' });
+            });
+        }, 60);
+        setTimeout(function () {
+            dim.css({ transition: 'opacity 250ms ease', opacity: '0' });
+            setTimeout(function () {
+                dim.remove();
+                finished();
+            }, 260);
+        }, 1300);
+    }
+}
+
+// Tests 6 and 7 open the viewer without Bootstrap. 'manual': it's put on
+// the page when opening, as Bootstrap does, minus Bootstrap's extras.
+// 'persist': it and its dark background are on the page all the time,
+// invisible, and opening only makes them visible.
+var testBackdrop = null;
+
+function setupTestViewer() {
+    var modal = document.getElementById('bigPicModal');
+    document.addEventListener('keydown', function (event) {
+        if (viewer.open && event.key === 'Escape') {
+            closeViewer();
+        }
+    });
+    if (VT.driver !== 'persist') {
+        return;
+    }
+    var preopened = modal.hasAttribute('data-preopened');
+    testBackdrop = $('<div class="modal-backdrop vt-backdrop" aria-hidden="true">')
+        .toggleClass('show', preopened).appendTo('body')[0];
+    $(modal).addClass('vt-persist').toggleClass('vt-idle', !preopened);
+    viewer.listenToTouches(preopened);
+}
+
+// Does what Bootstrap's modal('show') / modal('hide') do for the viewer,
+// including the show / hide / hidden events setupViewer listens to
+function testViewerModal(command) {
+    var modal = $('#bigPicModal');
+    var asking = $.Event(command + '.bs.modal');
+    modal.trigger(asking);
+    if (asking.isDefaultPrevented()) {
+        return;
+    }
+    if (command === 'show') {
+        modal.attr({ 'aria-modal': 'true', role: 'dialog' }).removeAttr('aria-hidden');
+        if (VT.driver === 'persist') {
+            modal.removeClass('vt-idle');
+            $(testBackdrop).addClass('show');
+            viewer.listenToTouches(true);
+        } else {
+            modal.css('display', 'block');
+            $('<div class="modal-backdrop show">').appendTo('body');
+        }
+        modal.addClass('show').trigger('shown.bs.modal');
+        return;
+    }
+    modal.removeClass('show').attr('aria-hidden', 'true').removeAttr('aria-modal');
+    if (VT.driver === 'persist') {
+        // (still on the page, so let go of the focus it was given)
+        if (modal[0].contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+        modal.addClass('vt-idle');
+        $(testBackdrop).removeClass('show').css({ transition: 'none', opacity: '' });
+        viewer.listenToTouches(false);
+    } else {
+        modal.css('display', 'none');
+        $('.modal-backdrop').remove();
+    }
+    modal.trigger('hidden.bs.modal');
+}
+
+// --------------------------------------------------------------------------
 // Start-up
 // --------------------------------------------------------------------------
 
 $(function () {
+    setupViewerTests();
     setupResponsiveLayout();
     setupViewer();
 
@@ -1858,13 +2131,16 @@ $(function () {
     var section = location.hash && location.hash.indexOf('#section-') === 0 ? location.hash.slice(1) : null;
 
     if (view === 'works' && route.view === 'home') {
-        history.replaceState({ path: '/select-works' }, '', '/select-works');
+        // (keeping the test switch's ?vt= if there is one)
+        history.replaceState({ path: '/select-works' }, '', '/select-works' + (VT.id || VT.menu ? location.search : ''));
     } else {
         history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
     }
 
     renderView(view).then(function () {
-        if (view === 'works' && route.workId) {
+        if (VT.menu) {
+            drawTestMenu();
+        } else if (view === 'works' && route.workId) {
             openSharedWork(route.workId, {});
         } else if (section) {
             scrollToSection(section, false);
