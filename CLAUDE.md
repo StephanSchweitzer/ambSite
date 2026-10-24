@@ -382,9 +382,14 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   back, then `finishClosing()` hides it instantly. The motion starts only
   once the viewer's copy is decoded, and the gallery picture is hidden at
   that moment, not before (phones can take a frame to draw a new image).
-  The page behind is held with `overflow: hidden` on `html` (`.no-scroll`),
-  not `position: fixed` — fixed body made phones' browser bars jump; body
-  gets `padding-right` equal to the scrollbar so nothing widens. The viewer image is sized
+  On computers the page behind is held with `overflow: hidden` on `html`
+  (`.no-scroll`) and body gets `padding-right` equal to the scrollbar so
+  nothing widens. **On phones/tablets (`isTouchScreen()`) nothing about the
+  page may change when the viewer opens** — switching the root's scrolling
+  off (that, `position: fixed`, or Bootstrap's `body.modal-open`, which
+  ambar.css neutralises for touch) makes iOS Safari repaint the whole page
+  white for a few frames. A `touchmove` handler on the modal stops page
+  scrolling instead (one finger only, so pinch-zoom still works). The viewer image is sized
   in CSS from `--w`/`--h` (its proportions), so its box is right before it
   loads; `viewerImageWidth()` mirrors that CSS. Hover effects on the gallery
   are inside `@media (hover: hover)` so a tap on a phone doesn't set them off.

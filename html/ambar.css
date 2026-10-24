@@ -1416,6 +1416,19 @@ html.no-scroll {
   overscroll-behavior: contain;
 }
 
+/* Phones and tablets: opening the viewer changes nothing at all about the
+   page underneath. Switching its scrolling off (as Bootstrap's "modal-open"
+   and .no-scroll do) makes Safari repaint the whole page, and the paintings
+   blink white before the dark background arrives. The viewer stops the
+   finger scrolling the page instead (setupViewer). These are the values
+   body has anyway, so nothing changes. */
+@media (hover: none), (pointer: coarse) {
+  body.modal-open {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
 .error-message {
   padding: 22px 26px;
   text-align: center;

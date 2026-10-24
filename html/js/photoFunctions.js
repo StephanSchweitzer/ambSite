@@ -121,6 +121,11 @@ function originalImageUrl(location) {
     return '/baseImages/' + encodeURIComponent(location);
 }
 
+// A phone or tablet (touch is how it's used), whatever its width
+function isTouchScreen() {
+    return !!window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+}
+
 function isTouchDevice() {
     return window.innerWidth <= BREAKPOINT && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
@@ -770,13 +775,16 @@ function animateOpening(source) {
             viewer.openTimer = setTimeout(finishOpening, ms + 40);
         }
     };
-    // Start on the frame after the copy is decoded (it's normally ready at
-    // once: it's the same file the page is already showing), but never wait
-    // long for it
-    viewer.openTimer = setTimeout(start, 120);
+    // Start once the copy is decoded and has been on screen for a couple of
+    // frames, sitting exactly over the picture on the page (it's normally
+    // ready at once: it's the same file the page is already showing), but
+    // never wait long for it
+    viewer.openTimer = setTimeout(start, 150);
     var nextFrame = function () {
-        requestAnimationFrame(start);
-        setTimeout(start, 50); // (in case frames aren't being drawn)
+        requestAnimationFrame(function () {
+            requestAnimationFrame(start);
+        });
+        setTimeout(start, 80); // (in case frames aren't being drawn)
     };
     if (img.getAttribute('src') && img.decode) {
         img.decode().then(nextFrame, nextFrame);
@@ -1156,15 +1164,45 @@ function makeBigPic(imageUrl) {
 function setupViewer() {
     var modal = $('#bigPicModal');
 
-    // Freeze the page behind the viewer exactly where it is. Freezing takes
-    // away the scrollbar (on computers that show one), which would let the
-    // works widen a little; keeping that much space empty holds them still.
+    // Hold the page behind the viewer exactly where it is.
+    // Computers: switch its scrolling off. That takes away the scrollbar (on
+    // computers that show one), which would let the works widen a little;
+    // keeping that much space empty holds them still.
+    // Phones and tablets: leave the page completely alone (switching its
+    // scrolling off makes Safari repaint it, blinking white); the touch
+    // handlers below stop it scrolling instead.
     modal.on('show.bs.modal', function () {
         scrollPosition = window.pageYOffset;
+        if (isTouchScreen()) {
+            return;
+        }
         var scrollbar = window.innerWidth - document.documentElement.clientWidth;
         $('html').addClass('no-scroll');
         $('body').css('padding-right', scrollbar > 0 ? scrollbar + 'px' : '');
     });
+
+    // A finger dragging on the viewer scrolls the viewer (a very tall
+    // painting) but never the page behind it, or the browser's bars
+    var modalEl = modal[0];
+    var lastTouchY = 0;
+    modalEl.addEventListener('touchstart', function (e) {
+        if (e.touches.length === 1) {
+            lastTouchY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+    modalEl.addEventListener('touchmove', function (e) {
+        if (e.touches.length !== 1 || !e.cancelable) {
+            return; // two fingers: let pinch-zoom work
+        }
+        var y = e.touches[0].clientY;
+        var down = y > lastTouchY;
+        lastTouchY = y;
+        var atTop = modalEl.scrollTop <= 0;
+        var atBottom = modalEl.scrollTop + modalEl.clientHeight >= modalEl.scrollHeight - 1;
+        if ((down && atTop) || (!down && atBottom)) {
+            e.preventDefault();
+        }
+    }, { passive: false });
 
     // Every way of closing (the close button, the dark background, Escape,
     // swipe down, Back) comes through here: animate first, then hide
@@ -1185,7 +1223,9 @@ function setupViewer() {
         $('#spinner').hide();
         $('html').removeClass('no-scroll');
         $('body').css('padding-right', '');
-        instantScrollTo(scrollPosition);
+        if (Math.abs(window.pageYOffset - scrollPosition) > 1) {
+            instantScrollTo(scrollPosition);
+        }
         document.title = PAGE_TITLES[currentView] || PAGE_TITLES.home;
         pauseSlideshow(false);
 
