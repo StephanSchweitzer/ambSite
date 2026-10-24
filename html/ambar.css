@@ -492,9 +492,13 @@ a:hover .ambarNamePic {
   transition: transform 0.6s var(--ease-out-soft), box-shadow 0.6s ease;
 }
 
-.carousel-pic:hover {
-  transform: scale(1.012);
-  box-shadow: var(--shadow-lifted);
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .carousel-pic:hover {
+    transform: scale(1.012);
+    box-shadow: var(--shadow-lifted);
+  }
 }
 
 .carousel-item {
@@ -622,9 +626,13 @@ a:hover .ambarNamePic {
   position: relative;
 }
 
-.img-container:hover {
-  box-shadow: var(--shadow-medium);
-  transform: translateY(-4px);
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .img-container:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-4px);
+  }
 }
 
 .img-container img {
@@ -647,8 +655,12 @@ a:hover .ambarNamePic {
   max-height: none;
 }
 
-.img-container:hover img {
-  transform: scale(1.015);
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .img-container:hover img {
+    transform: scale(1.015);
+  }
 }
 
 /* Title reveal on hover — soft dark gradient, serif caption */
@@ -665,9 +677,13 @@ a:hover .ambarNamePic {
   pointer-events: none;
 }
 
-.img-container:hover .img-overlay {
-  transform: translateY(0);
-  opacity: 1;
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .img-container:hover .img-overlay {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .overlay-title {
@@ -709,14 +725,8 @@ a:hover .ambarNamePic {
   opacity: 0.93;
 }
 
-.modal.fade .modal-dialog {
-  transform: scale(0.97);
-  transition: transform 0.3s var(--ease-out-soft);
-}
-
-.modal.show .modal-dialog {
-  transform: scale(1);
-}
+/* The viewer has no Bootstrap "fade": openViewer() / closeViewer() animate
+   it themselves (the painting grows out of the one that was tapped) */
 
 .centerLargePhoto {
   display: flex;
@@ -725,9 +735,16 @@ a:hover .ambarNamePic {
   position: relative;
 }
 
+/* The painting's size is worked out from its proportions (--w / --h, the
+   web copy's pixel size, set on the image) so the space is right before it
+   has loaded and it never jumps. Without them the max- limits still apply.
+   viewerImageUrl() in photoFunctions.js does the same sums. */
 .popUpImage {
   max-height: 82vh;
   max-width: 90vw;
+  width: min(90vw, calc(82vh * var(--w) / var(--h)), calc(var(--w) * 1px));
+  aspect-ratio: var(--w) / var(--h);
+  height: auto;
   border-radius: 3px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
   margin-top: 4vh;
@@ -736,10 +753,11 @@ a:hover .ambarNamePic {
 .popUpImageMobile {
   max-height: 90vh;
   max-width: 90vw;
-  min-width: 90vw;
+  width: min(90vw, calc(90vh * var(--w) / var(--h)));
+  width: min(90vw, calc(90svh * var(--w) / var(--h)));
+  aspect-ratio: var(--w) / var(--h);
+  height: auto;
   border-radius: 3px;
-  transition: transform 0.3s ease;
-  transform: translate3d(0, 0, 0);
 }
 
 #imageTitle, #imageDescription, #popUpImage { cursor: pointer; }
@@ -747,6 +765,31 @@ a:hover .ambarNamePic {
 /* While the next painting loads, the current one dims instead of vanishing */
 #popUpImage {
   transition: opacity 0.2s ease;
+  transform-origin: 0 0; /* the open / close zoom is worked out from the top-left corner */
+}
+
+/* Opening: the caption, close button and arrows follow just after the
+   painting; closing: they go first */
+.modal.is-opening .imageInfo,
+.modal.is-opening .modal-close,
+.modal.is-opening .modal-nav-arrows,
+.modal.is-closing .imageInfo,
+.modal.is-closing .modal-close,
+.modal.is-closing .modal-nav-arrows {
+  opacity: 0;
+  transition: none;
+}
+
+.modal.is-arriving .imageInfo,
+.modal.is-arriving .modal-close,
+.modal.is-arriving .modal-nav-arrows {
+  transition: opacity 0.35s ease 0.12s;
+}
+
+.modal.is-closing .imageInfo,
+.modal.is-closing .modal-close,
+.modal.is-closing .modal-nav-arrows {
+  transition: opacity 0.14s ease;
 }
 
 #popUpImage.is-loading {
@@ -1413,6 +1456,7 @@ a:hover .ambarNamePic {
   display: flex !important;
   flex-direction: column;
   justify-content: center;
+  justify-content: safe center; /* a very tall painting can still be scrolled to its top */
   align-content: center;
   align-items: center;
 }

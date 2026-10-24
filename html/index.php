@@ -214,7 +214,7 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="<?= $work ? '#222220' : '#ffffff' ?>">
 
     <title><?= e($title) ?></title>
     <meta name="description" content="<?= e($description) ?>">
@@ -297,8 +297,9 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     </div>
 
     <!-- Artwork viewer. A painting link arrives with it already open, so the
-         page doesn't show the light gallery first and then fade to dark -->
-    <div class="modal <?= $work ? 'show' : 'fade' ?>" id="bigPicModal" tabindex="-1" role="dialog" aria-labelledby="imageTitle"<?= $work ? ' aria-modal="true" style="display: block;" data-preopened' : ' aria-hidden="true"' ?>>
+         page doesn't show the light gallery first and then fade to dark.
+         No Bootstrap "fade": photoFunctions.js animates opening and closing. -->
+    <div class="modal<?= $work ? ' show' : '' ?>" id="bigPicModal" tabindex="-1" role="dialog" aria-labelledby="imageTitle"<?= $work ? ' aria-modal="true" style="display: block;" data-preopened' : ' aria-hidden="true"' ?>>
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <button type="button" class="modal-close" data-dismiss="modal" aria-label="Close image view">
@@ -307,7 +308,7 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
                     </svg>
                 </button>
                 <div class="centerLargePhoto">
-                    <img id="popUpImage" class="popUpImage" alt="<?= $work ? e($work['name']) : '' ?>"<?= $work ? ' src="' . e(ambWebImageUrl($work['location'])) . '"' : '' ?>>
+                    <img id="popUpImage" class="popUpImage" alt="<?= $work ? e($work['name']) : '' ?>"<?= $work ? ' src="' . e(ambWebImageUrl($work['location'])) . '"' : '' ?><?= $work && $work['width'] && $work['height'] ? ' style="--w: ' . (int) $work['width'] . '; --h: ' . (int) $work['height'] . '"' : '' ?>>
                     <div id="spinner" class="spinner-border text-light position-absolute" role="status" style="display: none;">
                         <span class="sr-only">Loading...</span>
                     </div>

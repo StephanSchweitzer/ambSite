@@ -44,7 +44,14 @@ var viewer = {
     open: false,
     basePath: '/select-works',  // the page underneath, restored on close
     closingFromHistory: false,
-    loadToken: 0
+    loadToken: 0,
+    opening: false,          // the open / close animations are running
+    closing: false,
+    waitingForImage: false,  // opened with nothing to show yet: appears once loaded
+    afterOpening: null,      // swap in the sharper copy once the opening has finished
+    source: null,            // { index, img }: the picture on the page it grew out of
+    hiddenInPage: [],        // pictures on the page hidden while their twin is in the viewer
+    hidingNow: false         // closeViewer's own final, instant hide
 };
 var scrollPosition = 0;
 var startX, startY;
@@ -85,17 +92,22 @@ function workSrcset(work) {
     return sources.join(', ');
 }
 
+// How wide a painting is drawn in the viewer, in CSS pixels (the same sums
+// as .popUpImage / .popUpImageMobile in ambar.css)
+function viewerImageWidth(work) {
+    var ratio = work.width / work.height;
+    if (window.innerWidth <= BREAKPOINT) {
+        return Math.min(window.innerWidth * 0.9, window.innerHeight * 0.9 * ratio);
+    }
+    return Math.min(window.innerWidth * 0.9, window.innerHeight * 0.82 * ratio, work.width);
+}
+
 // The smallest copy that still fills the viewer sharply on this screen
-// (sized like .popUpImage / .popUpImageMobile in ambar.css)
 function viewerImageUrl(work) {
     if (!work.width || !work.height) {
         return webImageUrl(work.location);
     }
-    var mobile = window.innerWidth <= BREAKPOINT;
-    var boxWidth = window.innerWidth * 0.9;
-    var boxHeight = window.innerHeight * (mobile ? 0.9 : 0.82);
-    var shownWidth = mobile ? boxWidth : Math.min(boxWidth, boxHeight * work.width / work.height);
-    var needed = shownWidth * (window.devicePixelRatio || 1);
+    var needed = viewerImageWidth(work) * (window.devicePixelRatio || 1);
     for (var i = 0; i < WEB_VARIANT_WIDTHS.length; i++) {
         var width = WEB_VARIANT_WIDTHS[i];
         if (width < work.width && width >= needed) {
@@ -310,7 +322,7 @@ function renderView(view) {
 function goTo(path, options) {
     options = options || {};
     if (viewer.open) {
-        closeViewer({ fromHistory: true });
+        closeViewer({ fromHistory: true, instantly: true });
     }
 
     var route = parseRoute(path);
@@ -349,8 +361,10 @@ window.addEventListener('popstate', function (event) {
         return;
     }
 
+    // Back from a painting to the page it was opened from: it shrinks back
+    // into place. Anywhere else: close at once, the page is about to change.
     if (viewer.open) {
-        closeViewer({ fromHistory: true });
+        closeViewer({ fromHistory: true, instantly: view !== currentView || !!route.workId });
     }
 
     // e.g. Back after closing the viewer: the right page is already showing
@@ -461,7 +475,7 @@ $(document).on('click', '.work-card', function (event) {
         return; // let "open in new tab" and friends work as normal
     }
     event.preventDefault();
-    openViewer(galleryItems, Number(this.getAttribute('data-index')), {});
+    openViewer(galleryItems, Number(this.getAttribute('data-index')), { from: this });
 });
 
 // Scroll so a painting sits in the middle of the screen (or near the top if
@@ -505,7 +519,10 @@ function openSharedWork(workId, options) {
         if (!options.fromHistory) {
             scrollWorkIntoView(index);
         }
-        openViewer(galleryItems, index, { addressIsSet: true });
+        openViewer(galleryItems, index, {
+            addressIsSet: true,
+            from: document.querySelector('.work-card[data-index="' + index + '"]')
+        });
         return;
     }
 
@@ -530,16 +547,33 @@ function openSharedWork(workId, options) {
 // The artwork viewer
 // --------------------------------------------------------------------------
 
+// Opening: the painting grows out of the picture that was clicked while the
+// room dims around it; closing, it shrinks back into its place. Without a
+// picture to start from (a shared link, Back / Forward) it fades up gently.
+var VIEWER_OPEN_MS = 420;
+var VIEWER_CLOSE_MS = 320;
+var VIEWER_OPEN_EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';   // quick to start, long soft landing
+var VIEWER_CLOSE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+// The browser's bar colour (phones): the page's, and the viewer's dark
+// background as it looks over the page
+var PAGE_THEME_COLOR = '#ffffff';
+var VIEWER_THEME_COLOR = '#222220';
+
 // options.addressIsSet: the address bar already shows this work (a shared
 // link, or Back/Forward), so don't add a history entry
+// options.from: the picture (or card) on the page that was clicked
 function openViewer(items, index, options) {
     if (!items.length) {
         return;
+    }
+    if (viewer.closing) {
+        finishClosing();
     }
     var wasOpen = viewer.open;
     var modal = document.getElementById('bigPicModal');
     // A shared painting link arrives with the viewer already drawn open
     var preopened = modal.hasAttribute('data-preopened');
+    var source = null;
     viewer.items = items;
     viewer.index = index;
 
@@ -547,6 +581,7 @@ function openViewer(items, index, options) {
         // Start clean rather than flashing the last painting viewed
         if (!preopened) {
             document.getElementById('popUpImage').removeAttribute('src');
+            source = pageImageToGrowFrom(options.from);
         }
         var here = parseRoute(location.pathname);
         viewer.basePath = here.workId ? '/select-works' : here.path;
@@ -558,23 +593,203 @@ function openViewer(items, index, options) {
         history.pushState({ path: work.path, viewer: true }, '', work.path);
     }
 
-    showViewerImage();
+    if (wasOpen) {
+        showViewerImage();
+        return;
+    }
 
-    if (!wasOpen) {
-        viewer.open = true;
-        if (preopened) {
-            // Hand the open viewer to Bootstrap without replaying the fade-in
-            // (no "fade" class means it opens instantly), then swap the
-            // page's own dark background for Bootstrap's identical one and
-            // turn the fade back on so closing still fades out
-            modal.removeAttribute('data-preopened');
-            $(modal).modal('show');
-            $('#preopenedBackdrop').remove();
-            $(modal).add('.modal-backdrop').addClass('fade');
-        } else {
-            $(modal).modal('show');
+    viewer.open = true;
+    viewer.source = source ? { index: index, img: source } : null;
+    // The picture on the page is already loaded: it stands in until the
+    // sharper copy is ready, so the painting is there from the first frame
+    showViewerImage(0, preopened ? null : { placeholder: source ? (source.currentSrc || source.src) : null });
+    // (no "fade" class on the modal, so Bootstrap opens it instantly and the
+    // animation below is the only one)
+    $(modal).modal('show');
+    setThemeColor(VIEWER_THEME_COLOR);
+    pauseSlideshow(true);
+
+    if (preopened) {
+        // Hand the open viewer to Bootstrap and swap the page's own dark
+        // background for Bootstrap's identical one
+        modal.removeAttribute('data-preopened');
+        $('#preopenedBackdrop').remove();
+    } else {
+        animateOpening(source);
+    }
+}
+
+// The picture to grow the painting out of, if it's loaded and on screen
+function pageImageToGrowFrom(el) {
+    if (!el || prefersReducedMotion()) {
+        return null;
+    }
+    var img = el.tagName === 'IMG' ? el : el.querySelector('img');
+    return isUsablePageImage(img) ? img : null;
+}
+
+// ...and the one to shrink it back into: where it came from, or the current
+// painting's picture if it's on screen
+function pageImageToShrinkInto() {
+    if (prefersReducedMotion()) {
+        return null;
+    }
+    var candidates = [];
+    if (viewer.source && viewer.source.index === viewer.index) {
+        candidates.push(viewer.source.img);
+    }
+    if (viewer.items === galleryItems) {
+        candidates.push(document.querySelector('.work-card[data-index="' + viewer.index + '"] img'));
+        candidates.push(document.querySelector('.carousel-link[data-index="' + viewer.index + '"] img'));
+    }
+    for (var i = 0; i < candidates.length; i++) {
+        if (isUsablePageImage(candidates[i])) {
+            return candidates[i];
         }
     }
+    return null;
+}
+
+function isUsablePageImage(img) {
+    if (!img || !img.complete || !img.naturalWidth || !document.body.contains(img)) {
+        return false;
+    }
+    var rect = img.getBoundingClientRect();
+    return rect.width > 4 && rect.height > 4 &&
+        rect.bottom > 0 && rect.top < window.innerHeight &&
+        rect.right > 0 && rect.left < window.innerWidth;
+}
+
+// The transform that draws the viewer's picture (laid out at `at`) exactly
+// over `target` (the viewer image's transform-origin is its top-left corner)
+function transformOnto(at, target) {
+    return 'translate(' + (target.left - at.left) + 'px, ' + (target.top - at.top) + 'px) ' +
+        'scale(' + (target.width / at.width) + ', ' + (target.height / at.height) + ')';
+}
+
+// A slight shrink about the middle (for the fade in / out)
+function shrunkAboutMiddle(at, scale) {
+    return 'translate(' + (at.width * (1 - scale) / 2) + 'px, ' + (at.height * (1 - scale) / 2) + 'px) scale(' + scale + ')';
+}
+
+// While the painting is in the viewer, its picture on the page is hidden,
+// so there's only ever one of it on screen
+function hideInPage(img) {
+    var el = $(img).closest('.img-container')[0] || img;
+    el.style.visibility = 'hidden';
+    viewer.hiddenInPage.push(el);
+}
+
+function showInPage() {
+    viewer.hiddenInPage.forEach(function (el) {
+        el.style.visibility = '';
+    });
+    viewer.hiddenInPage = [];
+}
+
+function setThemeColor(color) {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+        meta.setAttribute('content', color);
+    }
+}
+
+// The home slideshow holds still while a painting is open
+function pauseSlideshow(pause) {
+    var slideshow = $('#homePageCarousel');
+    if (slideshow.data('bs.carousel')) {
+        slideshow.carousel(pause ? 'pause' : 'cycle');
+    }
+}
+
+function animateOpening(source) {
+    var modal = document.getElementById('bigPicModal');
+    var img = document.getElementById('popUpImage');
+    var backdrop = document.querySelector('.modal-backdrop');
+    var ms = prefersReducedMotion() ? 0 : VIEWER_OPEN_MS;
+    var at = img.getBoundingClientRect();
+    if (!(at.width > 0 && at.height > 0)) {
+        source = null; // nothing to measure the painting by: just fade it up
+    }
+
+    // Where it starts: the room still light, the painting sitting exactly
+    // over the picture that was clicked
+    viewer.opening = true;
+    $(modal).addClass('is-opening');
+    if (backdrop) {
+        backdrop.style.transition = 'none';
+        backdrop.style.opacity = '0';
+    }
+    if (source) {
+        img.style.transition = 'none';
+        img.style.transform = transformOnto(at, source.getBoundingClientRect());
+        hideInPage(source);
+    }
+    void modal.offsetWidth; // let the browser take in the starting point
+
+    // ...and off it goes
+    if (backdrop) {
+        backdrop.style.transition = 'opacity ' + Math.round(ms * 0.8) + 'ms ease-out';
+        backdrop.style.opacity = '';
+    }
+    $(modal).removeClass('is-opening').addClass('is-arriving');
+    if (source) {
+        img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_OPEN_EASE;
+        img.style.transform = '';
+        viewer.openTimer = setTimeout(finishOpening, ms + 40);
+    } else if (img.getAttribute('src')) {
+        fadeUpViewerImage();
+    } else {
+        // Nothing to show yet: the room dims now, the painting fades up as
+        // soon as it has loaded (showViewerImage)
+        viewer.openTimer = setTimeout(finishOpening, ms + 40);
+    }
+}
+
+// The painting appears where it is, rising gently into place
+function fadeUpViewerImage() {
+    var img = document.getElementById('popUpImage');
+    var ms = prefersReducedMotion() ? 0 : VIEWER_OPEN_MS;
+    var at = img.getBoundingClientRect();
+    viewer.opening = true;
+    img.style.transition = 'none';
+    img.style.opacity = '0';
+    img.style.transform = at.width ? shrunkAboutMiddle(at, 0.96) : '';
+    void img.offsetWidth;
+    img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_OPEN_EASE + ', opacity ' + Math.round(ms * 0.7) + 'ms ease';
+    img.style.opacity = '';
+    img.style.transform = '';
+    clearTimeout(viewer.openTimer);
+    viewer.openTimer = setTimeout(finishOpening, ms + 40);
+}
+
+function finishOpening() {
+    clearTimeout(viewer.openTimer);
+    if (!viewer.opening) {
+        return;
+    }
+    viewer.opening = false;
+    $('#bigPicModal').removeClass('is-opening is-arriving');
+    var img = document.getElementById('popUpImage');
+    img.style.transition = '';
+    img.style.transform = '';
+    if (!viewer.waitingForImage) {
+        img.style.opacity = '';
+    }
+    if (viewer.afterOpening) {
+        var then = viewer.afterOpening;
+        viewer.afterOpening = null;
+        then();
+    }
+}
+
+// Stepping to another painting (or a swipe) part-way through the opening:
+// that movement takes over from wherever the opening had got to
+function stopOpening() {
+    clearTimeout(viewer.openTimer);
+    viewer.opening = false;
+    viewer.afterOpening = null;
+    $('#bigPicModal').removeClass('is-opening is-arriving');
 }
 
 // Stepping between paintings: the current one drifts away and fades, the
@@ -588,8 +803,11 @@ function prefersReducedMotion() {
 }
 
 // direction: -1 / 1 when stepping to the previous / next painting; leave it
-// out when opening the viewer (the modal has its own opening animation)
-function showViewerImage(direction) {
+// out when opening the viewer.
+// opening: { placeholder }: the viewer is opening; placeholder is an
+// already-loaded picture of the same painting to show until the right-sized
+// copy is ready (without one, the painting fades up once it has loaded)
+function showViewerImage(direction, opening) {
     var work = viewer.items[viewer.index];
     var img = document.getElementById('popUpImage');
     var src = viewerImageUrl(work);
@@ -600,6 +818,7 @@ function showViewerImage(direction) {
     }
     var token = ++viewer.loadToken;
     var animate = !!direction && !prefersReducedMotion();
+    var placeholder = opening && opening.placeholder;
     var leftAt = Date.now();
 
     $('.modal-nav-arrows').toggle(viewer.items.length > 1);
@@ -612,8 +831,17 @@ function showViewerImage(direction) {
         img.alt = work.name;
         img.setAttribute('data-original', originalImageUrl(work.location));
         img.removeAttribute('data-fell-back');
+        // Its proportions, so it's drawn at the right size before it loads
+        if (work.width && work.height) {
+            img.style.setProperty('--w', work.width);
+            img.style.setProperty('--h', work.height);
+        } else {
+            img.style.removeProperty('--w');
+            img.style.removeProperty('--h');
+        }
     }
 
+    viewer.waitingForImage = false;
     if (animate) {
         // Send the current painting and its caption away; the details change
         // once the next painting is ready to come in
@@ -629,11 +857,17 @@ function showViewerImage(direction) {
         img.style.opacity = '';
         $('#imageInfo').removeClass('is-changing');
         showDetails();
+        if (placeholder) {
+            img.src = placeholder;
+        } else if (opening) {
+            viewer.waitingForImage = true;
+            img.style.opacity = '0';
+        }
     }
 
     // Keep the previous picture up until the next one is ready (no blank
     // flash), and only show a spinner if it takes a moment
-    var spinnerTimer = setTimeout(function () {
+    var spinnerTimer = placeholder ? null : setTimeout(function () {
         if (token === viewer.loadToken) {
             $('#spinner').show();
             $(img).addClass('is-loading');
@@ -664,6 +898,48 @@ function showViewerImage(direction) {
         }
     }
 
+    // Swap the stand-in for the sharper copy (same size, so nothing moves),
+    // once that copy is decoded and the opening has finished
+    function sharpen(finalSrc) {
+        var swap = function () {
+            if (token === viewer.loadToken && img.src !== finalSrc) {
+                img.src = finalSrc;
+            }
+        };
+        var whenDecoded = function () {
+            if (token !== viewer.loadToken) {
+                return;
+            }
+            if (viewer.opening) {
+                viewer.afterOpening = swap;
+            } else {
+                swap();
+            }
+        };
+        if (loader.decode) {
+            loader.decode().then(whenDecoded, whenDecoded);
+        } else {
+            whenDecoded();
+        }
+    }
+
+    // Opened with nothing to show: fade the painting up once it's decoded
+    function appear(finalSrc) {
+        var show = function () {
+            if (token !== viewer.loadToken) {
+                return;
+            }
+            viewer.waitingForImage = false;
+            img.src = finalSrc;
+            fadeUpViewerImage();
+        };
+        if (loader.decode) {
+            loader.decode().then(show, show);
+        } else {
+            show();
+        }
+    }
+
     var loader = new Image();
     loader.onload = loader.onerror = function (event) {
         if (token !== viewer.loadToken) {
@@ -673,6 +949,14 @@ function showViewerImage(direction) {
         $('#spinner').hide();
         $(img).removeClass('is-loading');
         var finalSrc = event.type === 'error' ? originalImageUrl(work.location) : src;
+        if (placeholder) {
+            sharpen(event.type === 'error' ? finalSrc : loader.src);
+            return;
+        }
+        if (opening) {
+            appear(finalSrc);
+            return;
+        }
         if (!animate) {
             img.src = finalSrc;
             return;
@@ -696,9 +980,13 @@ function showViewerImage(direction) {
 }
 
 function changeImage(step) {
-    if (!viewer.open || viewer.items.length < 2) {
+    if (!viewer.open || viewer.closing || viewer.items.length < 2) {
         return;
     }
+    if (viewer.opening) {
+        stopOpening();
+    }
+    showInPage();
     viewer.index = (viewer.index + step + viewer.items.length) % viewer.items.length;
     var work = viewer.items[viewer.index];
     // Stepping through paintings updates the address without piling up history
@@ -708,12 +996,98 @@ function changeImage(step) {
 
 // options.fromHistory: the address bar has already moved (Back button), so
 // only the modal needs closing
+// options.instantly: no animation (another page is about to be drawn)
 function closeViewer(options) {
     if (!viewer.open) {
         return;
     }
-    viewer.closingFromHistory = !!(options && options.fromHistory);
+    options = options || {};
+    viewer.closingFromHistory = !!options.fromHistory;
+    if (options.instantly) {
+        finishClosing();
+        return;
+    }
+    // Bootstrap asks first (hide.bs.modal), which starts animateClosing()
     $('#bigPicModal').modal('hide');
+}
+
+function animateClosing() {
+    var modal = document.getElementById('bigPicModal');
+    var img = document.getElementById('popUpImage');
+    var backdrop = document.querySelector('.modal-backdrop');
+    var ms = prefersReducedMotion() ? 0 : VIEWER_CLOSE_MS;
+
+    viewer.closing = true;
+    viewer.loadToken++; // nothing still loading may change the picture now
+    clearTimeout(viewer.openTimer);
+    viewer.opening = false;
+    viewer.afterOpening = null;
+    $('#spinner').hide();
+    $(img).removeClass('is-loading');
+    setThemeColor(PAGE_THEME_COLOR);
+    if (!ms) {
+        finishClosing();
+        return;
+    }
+
+    // Carry on from exactly how things look now (even part-way through
+    // opening, or stepping to the next painting)
+    var shown = getComputedStyle(img);
+    var transform = shown.transform;
+    var opacity = shown.opacity;
+    var backdropOpacity = backdrop ? getComputedStyle(backdrop).opacity : null;
+    $(modal).removeClass('is-opening is-arriving').addClass('is-closing');
+    img.style.transition = 'none';
+    img.style.transform = 'none';
+    var at = img.getBoundingClientRect();
+    img.style.transform = transform === 'none' ? '' : transform;
+    img.style.opacity = opacity;
+    if (backdrop) {
+        backdrop.style.transition = 'none';
+        backdrop.style.opacity = backdropOpacity;
+    }
+    var target = (at.width > 0 && at.height > 0 && img.getAttribute('src')) ? pageImageToShrinkInto() : null;
+    void modal.offsetWidth;
+
+    if (backdrop) {
+        backdrop.style.transition = 'opacity ' + ms + 'ms ease';
+        backdrop.style.opacity = '0';
+    }
+    if (target) {
+        img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_CLOSE_EASE + ', opacity ' + Math.round(ms * 0.5) + 'ms ease';
+        img.style.transform = transformOnto(at, target.getBoundingClientRect());
+        img.style.opacity = '1';
+        hideInPage(target);
+    } else {
+        img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_CLOSE_EASE + ', opacity ' + Math.round(ms * 0.8) + 'ms ease';
+        img.style.transform = at.width ? shrunkAboutMiddle(at, 0.96) : '';
+        img.style.opacity = '0';
+    }
+    viewer.closeTimer = setTimeout(finishClosing, ms + 30);
+}
+
+// Put the picture back on the page and take the viewer away, in the same
+// moment, so the hand-over can't be seen
+function finishClosing() {
+    clearTimeout(viewer.closeTimer);
+    clearTimeout(viewer.openTimer);
+    if (!viewer.open) {
+        return;
+    }
+    viewer.closing = false;
+    viewer.opening = false;
+    viewer.afterOpening = null;
+    viewer.waitingForImage = false;
+    setThemeColor(PAGE_THEME_COLOR);
+    showInPage();
+    viewer.hidingNow = true;
+    $('#bigPicModal').modal('hide'); // instant; hidden.bs.modal tidies up
+    viewer.hidingNow = false;
+    $('#bigPicModal').removeClass('is-opening is-arriving is-closing');
+    var img = document.getElementById('popUpImage');
+    img.style.transition = 'none';
+    img.style.transform = '';
+    img.style.opacity = '';
 }
 
 // Kept for anything that still calls it by its old name
@@ -735,13 +1109,27 @@ function setupViewer() {
         $('body').addClass('no-scroll').css('top', -scrollPosition + 'px');
     });
 
+    // Every way of closing (the close button, the dark background, Escape,
+    // swipe down, Back) comes through here: animate first, then hide
+    modal.on('hide.bs.modal', function (event) {
+        if (viewer.hidingNow) {
+            return;
+        }
+        event.preventDefault();
+        if (!viewer.closing) {
+            animateClosing();
+        }
+    });
+
     modal.on('hidden.bs.modal', function () {
         viewer.open = false;
+        viewer.source = null;
         viewer.loadToken++;
         $('#spinner').hide();
         $('body').removeClass('no-scroll').css('top', '');
         instantScrollTo(scrollPosition);
         document.title = PAGE_TITLES[currentView] || PAGE_TITLES.home;
+        pauseSlideshow(false);
 
         if (viewer.closingFromHistory) {
             viewer.closingFromHistory = false;
@@ -785,11 +1173,14 @@ function setupViewer() {
     $('#prevImage').on('click', function () { changeImage(-1); });
     $('#nextImage').on('click', function () { changeImage(1); });
 
-    // Touch: swipe sideways to step through, swipe down to close
+    // Touch: swipe sideways to step through, swipe down to close (not while
+    // the painting is still flying in or out)
     var image = document.getElementById('popUpImage');
+    var tracking = false;
     image.addEventListener('touchstart', function (e) {
         isPinching = e.touches.length > 1;
-        if (e.touches.length === 1) {
+        tracking = e.touches.length === 1 && !viewer.opening && !viewer.closing;
+        if (tracking) {
             this.style.transition = 'none';
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
@@ -799,7 +1190,7 @@ function setupViewer() {
     image.addEventListener('touchmove', function (e) {
         if (e.touches.length > 1) {
             isPinching = true;
-        } else if (e.touches.length === 1 && !isPinching) {
+        } else if (tracking && e.touches.length === 1 && !isPinching) {
             var deltaX = Math.round((e.touches[0].clientX - startX) * 0.3);
             var deltaY = e.touches[0].clientY - startY;
             if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -810,6 +1201,10 @@ function setupViewer() {
     }, false);
 
     image.addEventListener('touchend', function (e) {
+        if (!tracking) {
+            return;
+        }
+        tracking = false;
         this.style.transition = 'transform 0.3s ease';
         if (isPinching || e.changedTouches.length !== 1) {
             return;
@@ -891,12 +1286,20 @@ function createCarousel(works) {
     }
 }
 
+// The slideshow doesn't move on underneath an open painting (so closing
+// can shrink it back into its slide)
+$(document).on('slide.bs.carousel', '#homePageCarousel', function (event) {
+    if (viewer.open) {
+        event.preventDefault();
+    }
+});
+
 $(document).on('click', '.carousel-link', function (event) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
         return;
     }
     event.preventDefault();
-    openViewer(galleryItems, Number(this.getAttribute('data-index')), {});
+    openViewer(galleryItems, Number(this.getAttribute('data-index')), { from: this });
 });
 
 // --------------------------------------------------------------------------
@@ -1070,7 +1473,7 @@ function createCurrentProjectCard(work, index) {
     });
 
     imageContainer.on('click', function () {
-        openViewer(galleryItems, index, {});
+        openViewer(galleryItems, index, { from: image });
     });
 
     buttons.on('click', function () {
