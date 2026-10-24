@@ -379,7 +379,12 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   `openViewer()` grows the painting out of the clicked picture (a transform
   from its rect) while the backdrop fades; every close goes through
   `hide.bs.modal`, which is cancelled so `animateClosing()` can shrink it
-  back, then `finishClosing()` hides it instantly. The viewer image is sized
+  back, then `finishClosing()` hides it instantly. The motion starts only
+  once the viewer's copy is decoded, and the gallery picture is hidden at
+  that moment, not before (phones can take a frame to draw a new image).
+  The page behind is held with `overflow: hidden` on `html` (`.no-scroll`),
+  not `position: fixed` — fixed body made phones' browser bars jump; body
+  gets `padding-right` equal to the scrollbar so nothing widens. The viewer image is sized
   in CSS from `--w`/`--h` (its proportions), so its box is right before it
   loads; `viewerImageWidth()` mirrors that CSS. Hover effects on the gallery
   are inside `@media (hover: hover)` so a tap on a phone doesn't set them off.

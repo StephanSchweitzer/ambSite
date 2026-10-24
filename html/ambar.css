@@ -1399,11 +1399,21 @@ a:hover .ambarNamePic {
 /* ==========================================================================
    Misc / utilities
    ========================================================================== */
-/* Page frozen behind the artwork viewer (top is set from JS) */
-.no-scroll {
+/* Page held still behind the artwork viewer: it just can't scroll. (Not
+   pinned with position: fixed, which on phones counts as scrolling to the top
+   and brings the browser's bars sliding back in as the viewer opens.) */
+html.no-scroll,
+html.no-scroll body {
   overflow: hidden;
-  position: fixed;
-  width: 100%;
+}
+
+html.no-scroll {
+  overscroll-behavior: none;
+}
+
+/* A swipe inside the viewer never scrolls or pull-to-refreshes the page */
+#bigPicModal {
+  overscroll-behavior: contain;
 }
 
 .error-message {

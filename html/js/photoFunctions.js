@@ -602,14 +602,17 @@ function openViewer(items, index, options) {
     viewer.source = source ? { index: index, img: source } : null;
     // The picture on the page is already loaded: it stands in until the
     // sharper copy is ready, so the painting is there from the first frame
-    showViewerImage(0, preopened ? null : { placeholder: source ? (source.currentSrc || source.src) : null });
+    showViewerImage(0, preopened ? null : {
+        placeholder: source ? (source.currentSrc || source.src) : null,
+        placeholderWidth: source ? source.naturalWidth : 0
+    });
     // (no "fade" class on the modal, so Bootstrap opens it instantly and the
     // animation below is the only one)
     $(modal).modal('show');
-    setThemeColor(VIEWER_THEME_COLOR);
     pauseSlideshow(true);
 
     if (preopened) {
+        setThemeColor(VIEWER_THEME_COLOR);
         // Hand the open viewer to Bootstrap and swap the page's own dark
         // background for Bootstrap's identical one
         modal.removeAttribute('data-preopened');
@@ -687,7 +690,16 @@ function showInPage() {
     viewer.hiddenInPage = [];
 }
 
-function setThemeColor(color) {
+// delay: change it part-way through the fade, when the screen is about as
+// dark (or light) as the colour, rather than with a jump at the start
+function setThemeColor(color, delay) {
+    clearTimeout(viewer.themeTimer);
+    if (delay) {
+        viewer.themeTimer = setTimeout(function () {
+            setThemeColor(color);
+        }, delay);
+        return;
+    }
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
         meta.setAttribute('content', color);
@@ -713,7 +725,9 @@ function animateOpening(source) {
     }
 
     // Where it starts: the room still light, the painting sitting exactly
-    // over the picture that was clicked
+    // over the picture that was clicked. The picture on the page stays
+    // visible underneath until the viewer's copy is ready to be drawn, so
+    // there's never a frame with neither (phones can take a frame to draw it).
     viewer.opening = true;
     $(modal).addClass('is-opening');
     if (backdrop) {
@@ -723,26 +737,51 @@ function animateOpening(source) {
     if (source) {
         img.style.transition = 'none';
         img.style.transform = transformOnto(at, source.getBoundingClientRect());
-        hideInPage(source);
     }
-    void modal.offsetWidth; // let the browser take in the starting point
 
-    // ...and off it goes
-    if (backdrop) {
-        backdrop.style.transition = 'opacity ' + Math.round(ms * 0.8) + 'ms ease-out';
-        backdrop.style.opacity = '';
-    }
-    $(modal).removeClass('is-opening').addClass('is-arriving');
-    if (source) {
-        img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_OPEN_EASE;
-        img.style.transform = '';
-        viewer.openTimer = setTimeout(finishOpening, ms + 40);
-    } else if (img.getAttribute('src')) {
-        fadeUpViewerImage();
+    var started = false;
+    var start = function () {
+        if (started || !viewer.opening || !viewer.open) {
+            return;
+        }
+        started = true;
+        clearTimeout(viewer.openTimer);
+        if (source) {
+            hideInPage(source);
+        }
+        void modal.offsetWidth; // let the browser take in the starting point
+
+        // ...and off it goes
+        if (backdrop) {
+            backdrop.style.transition = 'opacity ' + Math.round(ms * 0.8) + 'ms ease-out';
+            backdrop.style.opacity = '';
+        }
+        setThemeColor(VIEWER_THEME_COLOR, ms * 0.35);
+        $(modal).removeClass('is-opening').addClass('is-arriving');
+        if (source) {
+            img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_OPEN_EASE;
+            img.style.transform = '';
+            viewer.openTimer = setTimeout(finishOpening, ms + 40);
+        } else if (img.getAttribute('src')) {
+            fadeUpViewerImage();
+        } else {
+            // Nothing to show yet: the room dims now, the painting fades up
+            // as soon as it has loaded (showViewerImage)
+            viewer.openTimer = setTimeout(finishOpening, ms + 40);
+        }
+    };
+    // Start on the frame after the copy is decoded (it's normally ready at
+    // once: it's the same file the page is already showing), but never wait
+    // long for it
+    viewer.openTimer = setTimeout(start, 120);
+    var nextFrame = function () {
+        requestAnimationFrame(start);
+        setTimeout(start, 50); // (in case frames aren't being drawn)
+    };
+    if (img.getAttribute('src') && img.decode) {
+        img.decode().then(nextFrame, nextFrame);
     } else {
-        // Nothing to show yet: the room dims now, the painting fades up as
-        // soon as it has loaded (showViewerImage)
-        viewer.openTimer = setTimeout(finishOpening, ms + 40);
+        nextFrame();
     }
 }
 
@@ -770,6 +809,7 @@ function finishOpening() {
     }
     viewer.opening = false;
     $('#bigPicModal').removeClass('is-opening is-arriving');
+    setThemeColor(VIEWER_THEME_COLOR);
     var img = document.getElementById('popUpImage');
     img.style.transition = '';
     img.style.transform = '';
@@ -790,6 +830,12 @@ function stopOpening() {
     viewer.opening = false;
     viewer.afterOpening = null;
     $('#bigPicModal').removeClass('is-opening is-arriving');
+    var backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop && backdrop.style.opacity) {
+        backdrop.style.transition = 'opacity 250ms ease-out';
+        backdrop.style.opacity = '';
+    }
+    setThemeColor(VIEWER_THEME_COLOR);
 }
 
 // Stepping between paintings: the current one drifts away and fades, the
@@ -819,6 +865,13 @@ function showViewerImage(direction, opening) {
     var token = ++viewer.loadToken;
     var animate = !!direction && !prefersReducedMotion();
     var placeholder = opening && opening.placeholder;
+    // The page's copy is often already sharp enough for the viewer (always,
+    // on phones, where the works are drawn wider than the viewer): keep it,
+    // so there's no swap at all
+    if (placeholder && work.width && work.height &&
+        opening.placeholderWidth >= Math.min(work.width, viewerImageWidth(work) * (window.devicePixelRatio || 1)) - 1) {
+        src = placeholder;
+    }
     var leftAt = Date.now();
 
     $('.modal-nav-arrows').toggle(viewer.items.length > 1);
@@ -1024,7 +1077,7 @@ function animateClosing() {
     viewer.afterOpening = null;
     $('#spinner').hide();
     $(img).removeClass('is-loading');
-    setThemeColor(PAGE_THEME_COLOR);
+    setThemeColor(PAGE_THEME_COLOR, ms * 0.5);
     if (!ms) {
         finishClosing();
         return;
@@ -1109,10 +1162,8 @@ function setupViewer() {
     modal.on('show.bs.modal', function () {
         scrollPosition = window.pageYOffset;
         var scrollbar = window.innerWidth - document.documentElement.clientWidth;
-        $('body').addClass('no-scroll').css({
-            top: -scrollPosition + 'px',
-            'padding-right': scrollbar > 0 ? scrollbar + 'px' : ''
-        });
+        $('html').addClass('no-scroll');
+        $('body').css('padding-right', scrollbar > 0 ? scrollbar + 'px' : '');
     });
 
     // Every way of closing (the close button, the dark background, Escape,
@@ -1132,7 +1183,8 @@ function setupViewer() {
         viewer.source = null;
         viewer.loadToken++;
         $('#spinner').hide();
-        $('body').removeClass('no-scroll').css({ top: '', 'padding-right': '' });
+        $('html').removeClass('no-scroll');
+        $('body').css('padding-right', '');
         instantScrollTo(scrollPosition);
         document.title = PAGE_TITLES[currentView] || PAGE_TITLES.home;
         pauseSlideshow(false);
