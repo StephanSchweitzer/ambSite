@@ -1,6 +1,7 @@
 <?php
-// Serves the web-sized copy of an artwork, making it the first time it's asked
-// for. .htaccess only sends /baseImages/web/<file> here while that file does
+// Serves a web-sized copy of an artwork, making it the first time it's asked
+// for. .htaccess only sends /baseImages/web/<file> (the full web copy) and
+// /baseImages/web/<width>/<file> (a narrower one) here while that file does
 // not exist yet; once it has been written, Apache serves it as a plain file.
 // Nothing has to be placed on the server by hand: the copies fill themselves
 // in as visitors look at the works.
@@ -14,11 +15,17 @@ function notFound()
 }
 
 $file = isset($_GET['f']) ? (string) $_GET['f'] : '';
+$width = isset($_GET['w']) ? (string) $_GET['w'] : '';
 
 // A bare file name only — never a path into another folder
 if ($file === '' || $file !== basename($file) || $file[0] === '.') {
     notFound();
 }
+// Only the narrower sizes the site itself asks for
+if ($width !== '' && !in_array((int) $width, AMB_WEB_VARIANT_WIDTHS, true)) {
+    notFound();
+}
+$width = (int) $width;
 
 $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 if (!in_array($extension, array('jpg', 'jpeg', 'png', 'gif'), true)) {
@@ -28,7 +35,8 @@ if (!in_array($extension, array('jpg', 'jpeg', 'png', 'gif'), true)) {
 $baseDir = dirname(__DIR__) . '/baseImages/';
 $webDir = $baseDir . 'web/';
 $source = $baseDir . $file;
-$serve = $webDir . $file;
+$webPath = $webDir . $file;
+$serve = $width ? $webDir . $width . '/' . $file : $webPath;
 
 if (!is_file($source)) {
     notFound();
@@ -47,14 +55,18 @@ if (!is_file($serve)) {
         if ($lock) {
             flock($lock, LOCK_EX);
         }
-        // Another request may have made it while this one waited
-        if (!is_file($serve)) {
-            createWebImage($source, $serve);
+        // Another request may have made them while this one waited. The
+        // narrower copies are made from the full web copy, so that comes first.
+        if (!is_file($webPath)) {
+            createWebImage($source, $webPath);
+        }
+        if ($width && !is_file($serve)) {
+            createWebImageVariant($webPath, $serve, $width);
         }
     } catch (Throwable $e) {
-        // Show the original rather than a broken image, and try again later
-        error_log('webImage.php: ' . $file . ': ' . $e->getMessage());
-        $serve = $source;
+        // Show a bigger copy rather than a broken image, and try again later
+        error_log('webImage.php: ' . ($width ? $width . '/' : '') . $file . ': ' . $e->getMessage());
+        $serve = is_file($webPath) ? $webPath : $source;
         $isFallback = true;
     }
     if ($lock) {
@@ -66,6 +78,7 @@ if (!is_file($serve)) {
 $info = @getimagesize($serve);
 header('Content-Type: ' . ($info ? $info['mime'] : 'application/octet-stream'));
 header('Content-Length: ' . filesize($serve));
-header('Cache-Control: public, max-age=' . ($isFallback ? 3600 : 604800));
+// Same as the artwork rule in .htaccess
+header('Cache-Control: public, max-age=' . ($isFallback ? 3600 : 2592000));
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($serve)) . ' GMT');
 readfile($serve);

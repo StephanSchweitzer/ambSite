@@ -48,20 +48,35 @@ function ambSectionId($title)
     return 'section-' . ($slug === '' ? 'project' : $slug);
 }
 
+// Same as workSrcset() in photoFunctions.js
+function ambWorkSrcset($work)
+{
+    $sources = array('/thumbnails/' . rawurlencode($work['location']) . ' 400w');
+    foreach (AMB_WEB_VARIANT_WIDTHS as $width) {
+        if ($width < $work['width']) {
+            $sources[] = '/baseImages/web/' . $width . '/' . rawurlencode($work['location']) . ' ' . $width . 'w';
+        }
+    }
+    $sources[] = ambWebImageUrl($work['location']) . ' ' . $work['width'] . 'w';
+    return implode(', ', $sources);
+}
+
 // Same as workImage() in photoFunctions.js
-function ambWorkImage($work, $lazy, $sizes = null, $className = null)
+function ambWorkImage($work, $lazy, $sizes = null, $className = null, $priority = false)
 {
     $attributes = array(
         'loading' => $lazy ? 'lazy' : 'eager',
         'decoding' => 'async',
     );
+    if ($priority) {
+        $attributes['fetchpriority'] = 'high';
+    }
     if ($work['width'] && $work['height']) {
         $attributes['width'] = $work['width'];
         $attributes['height'] = $work['height'];
         if ($sizes && $work['width'] > 400) {
             $attributes['sizes'] = $sizes;
-            $attributes['srcset'] = '/thumbnails/' . rawurlencode($work['location']) . ' 400w, '
-                . ambWebImageUrl($work['location']) . ' ' . $work['width'] . 'w';
+            $attributes['srcset'] = ambWorkSrcset($work);
         }
     }
     $attributes['src'] = ambWebImageUrl($work['location']);
@@ -171,7 +186,7 @@ function ambRenderWorks($projects)
             . '</div><div class="projectWorks">';
         foreach ($project['works'] as $work) {
             $html .= '<a class="card work-card" href="' . ambHtml($work['path']) . '" data-index="' . $index . '" aria-label="' . ambHtml($work['name']) . '">'
-                . '<div class="img-container">' . ambWorkImage($work, $index > 1, AMB_GALLERY_SIZES)
+                . '<div class="img-container">' . ambWorkImage($work, $index > 1, AMB_GALLERY_SIZES, null, $index === 0)
                 . '<div class="img-overlay" aria-hidden="true"><h3 class="overlay-title">' . ambHtml($work['name']) . '</h3></div>'
                 . '</div></a>';
             $index++;
@@ -191,7 +206,7 @@ function ambRenderCarousel($works)
     foreach ($works as $index => $work) {
         $html .= '<div class="carousel-item' . ($index === 0 ? ' active' : '') . '">'
             . '<a class="carousel-link" href="' . ambHtml($work['path']) . '" data-index="' . $index . '" aria-label="' . ambHtml($work['name']) . '">'
-            . ambWorkImage($work, $index > 0, AMB_GALLERY_SIZES, 'd-block carousel-pic')
+            . ambWorkImage($work, $index > 0, AMB_GALLERY_SIZES, 'd-block carousel-pic', $index === 0)
             . '</a></div>';
     }
     $html .= '</div>';

@@ -308,6 +308,13 @@ and, for anything older, on first request: `.htaccess` routes a missing
 time, memory-checked) so Apache serves it statically from then on. They live
 inside `baseImages/`, so they're gitignored and excluded from the deploy like
 all artwork. The size limits are in `actions/imageManipulationFunctions.php`.
+Narrower copies of the web copy live at `baseImages/web/800/` and
+`web/1200/` (`AMB_WEB_VARIANT_WIDTHS`, mirrored as `WEB_VARIANT_WIDTHS` in
+`photoFunctions.js`); they're made at upload or on first request the same
+way, and go into every gallery `srcset` (400 thumbnail, 800, 1200, full), so
+phones and ordinary screens download far less. The viewer picks the
+smallest copy that fills it sharply (`viewerImageUrl()`). Artwork is cached
+by browsers for 30 days (upload names are unique), design images for 7.
 
 | Area | Files |
 |---|---|

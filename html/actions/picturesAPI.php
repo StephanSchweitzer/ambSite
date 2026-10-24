@@ -323,7 +323,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $newFileName = uniqueArtworkFileName($conn, $photo['name'], array($baseImageDir, $thumbnailDir, $webDir));
+    $newFileName = uniqueArtworkFileName($conn, $photo['name'], artworkImageDirs());
     $destination = $baseImageDir . $newFileName;
 
     try {
@@ -336,11 +336,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         uploadFail("This picture could not be read. Please use a JPEG, PNG or GIF.", 415);
     }
 
-    // The web-sized copy the public site shows. If this fails, webImage.php
-    // makes it on the first visit instead.
+    // The web-sized copies the public site shows. If this fails, webImage.php
+    // makes them on the first visit instead.
     try {
         if (is_dir($webDir) || @mkdir($webDir, 0755, true)) {
             createWebImage($destination, $webDir . $newFileName);
+            createWebImageVariants($webDir . $newFileName, $webDir, $newFileName);
         }
     } catch (Throwable $webError) {
         error_log('Web copy not made at upload for ' . $newFileName . ': ' . $webError->getMessage());
@@ -360,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $carousel, $selectWork, $long_description));
     } catch (PDOException $e) {
         // Don't leave image files behind for a work that doesn't exist
-        foreach (array($baseImageDir, $thumbnailDir, $webDir) as $dir) {
+        foreach (artworkImageDirs() as $dir) {
             @unlink($dir . $newFileName);
         }
         error_log('Upload database error: ' . $e->getMessage());
@@ -627,7 +628,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
         $deletedFiles = array();
         if (!$isShared && $fileName !== '') {
-            foreach (array('../baseImages/', '../baseImages/web/', '../thumbnails/') as $dir) {
+            foreach (artworkImageDirs() as $dir) {
                 $path = $dir . $fileName;
                 if (is_file($path) && unlink($path)) {
                     $deletedFiles[] = $path;

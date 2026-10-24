@@ -7,6 +7,10 @@ if (!defined('AMB_WEB_MAX_WIDTH')) {
     define('AMB_WEB_MAX_WIDTH', 1600);
     define('AMB_WEB_MAX_HEIGHT', 2400);
     define('AMB_WEB_JPEG_QUALITY', 82);
+    // Narrower copies (baseImages/web/<width>/) so phones and ordinary
+    // screens can download a picture closer to the size they show it at.
+    // Same list as WEB_VARIANT_WIDTHS in photoFunctions.js.
+    define('AMB_WEB_VARIANT_WIDTHS', array(800, 1200));
 }
 
 // Size of the web copy for an original of $width x $height
@@ -140,6 +144,90 @@ function createWebImage($sourcePath, $destPath)
         throw new Exception('Could not encode web image');
     }
     $finish();
+}
+
+// Writes a copy of the web copy ($webPath) that is $width pixels wide. Made
+// from the web copy, not the original, so it's quick and needs little memory.
+function createWebImageVariant($webPath, $destPath, $width)
+{
+    $info = @getimagesize($webPath);
+    if (!$info) {
+        throw new Exception('Not a readable image');
+    }
+    list($srcWidth, $srcHeight, $type) = $info;
+
+    $dir = dirname($destPath);
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new Exception('Could not create ' . $dir);
+    }
+
+    $tmpPath = $destPath . '.tmp' . getmypid();
+
+    // Already narrow enough, or a GIF (keep any animation): use it as it is
+    if ($type === IMAGETYPE_GIF || $srcWidth <= $width) {
+        if (!@copy($webPath, $tmpPath) || !@rename($tmpPath, $destPath)) {
+            @unlink($tmpPath);
+            throw new Exception('Could not save web image copy');
+        }
+        return;
+    }
+    if ($type !== IMAGETYPE_JPEG && $type !== IMAGETYPE_PNG) {
+        throw new Exception('Unsupported image type');
+    }
+
+    $newHeight = max(1, (int) round($srcHeight * $width / $srcWidth));
+    if (!webImageMemoryAvailable(($srcWidth * $srcHeight + $width * $newHeight) * 5 + 32 * 1024 * 1024)) {
+        throw new Exception('Not enough memory');
+    }
+
+    $src = $type === IMAGETYPE_JPEG ? @imagecreatefromjpeg($webPath) : @imagecreatefrompng($webPath);
+    if (!$src) {
+        throw new Exception('Could not decode image');
+    }
+    $dst = imagecreatetruecolor($width, $newHeight);
+    if ($type === IMAGETYPE_PNG) {
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+    }
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $width, $newHeight, $srcWidth, $srcHeight);
+    imagedestroy($src);
+
+    if ($type === IMAGETYPE_JPEG) {
+        imageinterlace($dst, 1);
+        $ok = imagejpeg($dst, $tmpPath, AMB_WEB_JPEG_QUALITY);
+    } else {
+        $ok = imagepng($dst, $tmpPath, 6);
+    }
+    imagedestroy($dst);
+
+    if (!$ok || !@rename($tmpPath, $destPath)) {
+        @unlink($tmpPath);
+        throw new Exception('Could not save web image copy');
+    }
+}
+
+// Every narrower copy of the web copy, made now (at upload) rather than on
+// the first visit. Failures are left for webImage.php to retry later.
+function createWebImageVariants($webPath, $webDir, $fileName)
+{
+    foreach (AMB_WEB_VARIANT_WIDTHS as $width) {
+        try {
+            createWebImageVariant($webPath, $webDir . $width . '/' . $fileName, $width);
+        } catch (Throwable $e) {
+            error_log('Web copy ' . $width . ' not made for ' . $fileName . ': ' . $e->getMessage());
+        }
+    }
+}
+
+// Where every copy of an artwork lives, relative to html/actions/ — used to
+// keep upload names unique and to clean up after a permanent delete
+function artworkImageDirs()
+{
+    $dirs = array('../baseImages/', '../baseImages/web/', '../thumbnails/');
+    foreach (AMB_WEB_VARIANT_WIDTHS as $width) {
+        $dirs[] = '../baseImages/web/' . $width . '/';
+    }
+    return $dirs;
 }
 
 function createAndSaveThumbnail($filePath, $targetDirectory, $fileName, $newWidth = 400) {

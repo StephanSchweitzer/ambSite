@@ -14,6 +14,7 @@
 
 var BREAKPOINT = 992;
 var GALLERY_SIZES = '(max-width: 992px) 92vw, 62vw';
+var WEB_VARIANT_WIDTHS = [800, 1200]; // same as AMB_WEB_VARIANT_WIDTHS in imageManipulationFunctions.php
 var PAGE_TITLES = {
     'home': 'Ambar Velasco Portfolio',
     'works': 'Select Works - Ambar Velasco',
@@ -64,6 +65,44 @@ function webImageUrl(location) {
 
 function thumbnailUrl(location) {
     return '/thumbnails/' + encodeURIComponent(location);
+}
+
+// A narrower copy of the web copy (made on first request by webImage.php)
+function webVariantUrl(location, width) {
+    return '/baseImages/web/' + width + '/' + encodeURIComponent(location);
+}
+
+// Every size of a work for srcset, so each screen downloads only what it
+// needs. Same as ambWorkSrcset() in publicPageFunctions.php.
+function workSrcset(work) {
+    var sources = [thumbnailUrl(work.location) + ' 400w'];
+    WEB_VARIANT_WIDTHS.forEach(function (width) {
+        if (width < work.width) {
+            sources.push(webVariantUrl(work.location, width) + ' ' + width + 'w');
+        }
+    });
+    sources.push(webImageUrl(work.location) + ' ' + work.width + 'w');
+    return sources.join(', ');
+}
+
+// The smallest copy that still fills the viewer sharply on this screen
+// (sized like .popUpImage / .popUpImageMobile in ambar.css)
+function viewerImageUrl(work) {
+    if (!work.width || !work.height) {
+        return webImageUrl(work.location);
+    }
+    var mobile = window.innerWidth <= BREAKPOINT;
+    var boxWidth = window.innerWidth * 0.9;
+    var boxHeight = window.innerHeight * (mobile ? 0.9 : 0.82);
+    var shownWidth = mobile ? boxWidth : Math.min(boxWidth, boxHeight * work.width / work.height);
+    var needed = shownWidth * (window.devicePixelRatio || 1);
+    for (var i = 0; i < WEB_VARIANT_WIDTHS.length; i++) {
+        var width = WEB_VARIANT_WIDTHS[i];
+        if (width < work.width && width >= needed) {
+            return webVariantUrl(work.location, width);
+        }
+    }
+    return webImageUrl(work.location);
 }
 
 function originalImageUrl(location) {
@@ -155,12 +194,16 @@ function workImage(work, options) {
     var img = document.createElement('img');
     img.loading = options.lazy ? 'lazy' : 'eager';
     img.decoding = 'async';
+    // The page's first painting: fetch it ahead of everything else
+    if (options.priority) {
+        img.setAttribute('fetchpriority', 'high');
+    }
     if (work.width && work.height) {
         img.width = work.width;
         img.height = work.height;
         if (options.sizes && work.width > 400) {
             img.sizes = options.sizes;
-            img.srcset = thumbnailUrl(work.location) + ' 400w, ' + webImageUrl(work.location) + ' ' + work.width + 'w';
+            img.srcset = workSrcset(work);
         }
     }
     img.src = webImageUrl(work.location);
@@ -401,7 +444,7 @@ function createProjectElement(project) {
 // tab, copied and shared; a normal click opens the viewer instead
 function createWorkCard(work, index, lazy) {
     var container = $('<div>').addClass('img-container');
-    container.append(workImage(work, { sizes: GALLERY_SIZES, lazy: lazy }));
+    container.append(workImage(work, { sizes: GALLERY_SIZES, lazy: lazy, priority: index === 0 }));
     container.append(
         $('<div>').addClass('img-overlay').attr('aria-hidden', 'true')
             .append($('<h3>').addClass('overlay-title').text(work.name))
@@ -549,7 +592,12 @@ function prefersReducedMotion() {
 function showViewerImage(direction) {
     var work = viewer.items[viewer.index];
     var img = document.getElementById('popUpImage');
-    var src = webImageUrl(work.location);
+    var src = viewerImageUrl(work);
+    // A shared painting link arrives with the full web copy already showing:
+    // keep it rather than download a second, smaller copy
+    if (img.getAttribute('src') === webImageUrl(work.location)) {
+        src = webImageUrl(work.location);
+    }
     var token = ++viewer.loadToken;
     var animate = !!direction && !prefersReducedMotion();
     var leftAt = Date.now();
@@ -642,7 +690,7 @@ function showViewerImage(direction) {
     [-1, 1].forEach(function (step) {
         var neighbour = viewer.items[(viewer.index + step + viewer.items.length) % viewer.items.length];
         if (neighbour && neighbour !== work) {
-            new Image().src = webImageUrl(neighbour.location);
+            new Image().src = viewerImageUrl(neighbour);
         }
     });
 }
@@ -820,7 +868,7 @@ function createCarousel(works) {
 
     works.forEach(function (work, index) {
         var link = $('<a>').addClass('carousel-link').attr({ href: work.path, 'data-index': index, 'aria-label': work.name })
-            .append(workImage(work, { sizes: GALLERY_SIZES, lazy: index > 0, className: 'd-block carousel-pic' }));
+            .append(workImage(work, { sizes: GALLERY_SIZES, lazy: index > 0, priority: index === 0, className: 'd-block carousel-pic' }));
         inner.append($('<div>').addClass('carousel-item' + (index === 0 ? ' active' : '')).append(link));
     });
     carousel.append(inner);
