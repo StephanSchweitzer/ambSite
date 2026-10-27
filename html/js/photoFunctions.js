@@ -255,7 +255,7 @@ function fetchPublicWorks(view) {
 function workImage(work, options) {
     var img = document.createElement('img');
     img.loading = options.lazy ? 'lazy' : 'eager';
-    img.decoding = VT.syncDecode ? 'sync' : 'async';
+    img.decoding = 'sync';  // not async: iPhones blank async pictures for a few frames when a painting opens
     // The page's first painting: fetch it ahead of everything else
     if (options.priority) {
         img.setAttribute('fetchpriority', 'high');
@@ -1621,7 +1621,7 @@ function renderAbout(keepScroll) {
 
         aboutLayout = window.innerWidth <= 1206 ? 'stacked' : 'side';
         var content = document.getElementById('imagesAndContent');
-        var image = '<div class="ambPicDiv"><img id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async"></div>';
+        var image = '<div class="ambPicDiv"><img id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="sync"></div>';
         content.innerHTML = aboutLayout === 'stacked'
             ? '<div class="infoflexMobile">' + image + '<p>' + description + '</p></div>'
             : '<div class="infoflex"><div class="size1" id="aboutMeInfo"><p>' + description + '</p></div><div class="size2">' + image + '</div></div>';

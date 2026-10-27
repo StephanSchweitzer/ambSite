@@ -66,7 +66,7 @@ function ambWorkImage($work, $lazy, $sizes = null, $className = null, $priority 
 {
     $attributes = array(
         'loading' => $lazy ? 'lazy' : 'eager',
-        'decoding' => 'async',
+        'decoding' => 'sync',
     );
     if ($priority) {
         $attributes['fetchpriority'] = 'high';
@@ -252,7 +252,7 @@ function ambRenderAbout($about)
     return '<div class="infoflex"><div class="size1" id="aboutMeInfo"><p>'
         . ambLinkEmailAddresses(ambMultiline($about['description']))
         . '</p></div><div class="size2"><div class="ambPicDiv">'
-        . '<img id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async" src="' . ambHtml(ambAboutPicture($about)) . '">'
+        . '<img id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="sync" src="' . ambHtml(ambAboutPicture($about)) . '">'
         . '</div></div></div>';
 }
 
