@@ -1431,6 +1431,42 @@ html.no-scroll {
   will-change: opacity;
 }
 
+/* The viewer and its dark background stay on the page all the time,
+   invisible while closed (.is-idle), so opening a painting puts nothing new
+   on the page: it starts sooner and moves more smoothly on phones
+   (setupViewerLayer in photoFunctions.js) */
+#bigPicModal {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  justify-content: safe center;
+  align-content: center;
+  align-items: center;
+  will-change: opacity;
+}
+
+#bigPicModal.is-idle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#bigPicModal.is-idle * {
+  pointer-events: none !important;
+}
+
+#bigPicModal #popUpImage {
+  will-change: transform;
+}
+
+.modal-backdrop.viewer-backdrop {
+  opacity: 0.003;
+  pointer-events: none;
+}
+
+.modal-backdrop.viewer-backdrop.show {
+  opacity: 0.93;
+}
+
 /* Phones and tablets: opening the viewer changes nothing at all about the
    page underneath. Switching its scrolling off (as Bootstrap's "modal-open"
    and .no-scroll do) makes Safari repaint the whole page, and the paintings
@@ -1686,39 +1722,6 @@ html.no-scroll {
 /* Probe 3: the dark background on its own */
 .modal-backdrop.vt-dim {
   pointer-events: none;
-}
-
-/* Test 6: the viewer and its dark background stay on the page, invisible */
-#bigPicModal.vt-persist {
-  display: flex !important;
-  flex-direction: column;
-  justify-content: center;
-  justify-content: safe center;
-  align-content: center;
-  align-items: center;
-  will-change: opacity;
-}
-
-#bigPicModal.vt-persist.vt-idle {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#bigPicModal.vt-persist.vt-idle * {
-  pointer-events: none !important;
-}
-
-#bigPicModal.vt-persist #popUpImage {
-  will-change: transform;
-}
-
-.modal-backdrop.vt-backdrop {
-  opacity: 0.003;
-  pointer-events: none;
-}
-
-.modal-backdrop.vt-backdrop.show {
-  opacity: 0.93;
 }
 
 /* Test 10: no blurred backgrounds */

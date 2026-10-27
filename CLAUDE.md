@@ -375,7 +375,17 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   `;`-separated names that `navLinksFunctions.js` maps to functions
   (`getProjectsAndWorks`, `openInfo`, `toggleSublinks`, ...). Those names now
   route through `goTo()`; keep them working if renaming anything.
-- **The viewer modal has no Bootstrap `fade` class on purpose.**
+- **The iPhone white blink when a painting opened was `decoding="async"`
+  on the page's pictures** (Safari blanked them while redrawing). They are
+  `decoding="sync"` — in `workImage()` and `ambWorkImage()` both. Don't
+  switch back.
+- **The viewer is not Bootstrap's modal any more.** It and its backdrop
+  (`.viewer-backdrop`) are built once at load (`setupViewerLayer()`) and
+  stay on the page invisible and `inert` (`#bigPicModal.is-idle`);
+  `viewerModal('show'|'hide')` only toggles them. Nothing is added to the
+  page on open, which made opening start sooner and move more smoothly on
+  phones. `viewerModal` still fires `show/hide/hidden.bs.modal` jQuery
+  events, which `setupViewer()` listens to.
   `openViewer()` grows the painting out of the clicked picture (a transform
   from its rect) while the backdrop fades; every close goes through
   `hide.bs.modal`, which is cancelled so `animateClosing()` can shrink it
@@ -394,9 +404,8 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   on touch screens the gallery picture is never hidden (`hideInPage` is a
   no-op); the backdrop starts at `VIEWER_MIN_OPACITY` (0.003), never 0; the
   viewer is `overflow: hidden` except `.can-scroll` (only when a tall
-  painting's caption doesn't fit, never while animating); Bootstrap's own
-  focusing is off (`data-focus="false"`) and the viewer is focused with
-  `preventScroll`; the motion starts after decode, ≥50ms, ≤250ms. The viewer image is sized
+  painting's caption doesn't fit, never while animating); the viewer is
+  focused with `preventScroll`; the motion starts after decode, ≥50ms, ≤250ms. The viewer image is sized
   in CSS from `--w`/`--h` (its proportions), so its box is right before it
   loads; `viewerImageWidth()` mirrors that CSS. Hover effects on the gallery
   are inside `@media (hover: hover)` so a tap on a phone doesn't set them off.

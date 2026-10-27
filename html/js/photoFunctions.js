@@ -82,12 +82,6 @@ var VIEWER_TESTS = [
       about: 'The page\'s pictures use decoding="sync" instead of "async".' },
     { id: '5', name: 'Pictures on screen decoded first', predecode: true,
       about: 'The pictures on screen are decoded before the viewer opens.' },
-    { id: '6', name: 'Viewer built in advance', driver: 'persist',
-      about: 'The viewer and its dark background sit on the page from the start, invisible, so opening creates nothing new.' },
-    { id: '7', name: 'Viewer without Bootstrap', driver: 'manual',
-      about: 'The viewer opens without Bootstrap\'s modal code (no body class, no scrollbar measuring).' },
-    { id: '8', name: 'No dark background', noBackdrop: true,
-      about: 'The viewer opens without its dark background.' },
     { id: '9', name: 'Address and title unchanged', noHistory: true,
       about: 'Opening changes neither the address (no pushState) nor the page title.' },
     { id: '10', name: 'No blur, no newsletter bubble', noBlur: true,
@@ -662,11 +656,9 @@ function openViewer(items, index, options) {
         placeholder: source ? (source.currentSrc || source.src) : null,
         placeholderWidth: source ? source.naturalWidth : 0
     });
-    // (no "fade" class on the modal, so Bootstrap opens it instantly and the
-    // animation below is the only one)
+    // (shown at once: the animation below is the only motion)
     viewerModal('show');
-    // Bootstrap's own focusing is off (data-focus="false" in index.php): a
-    // plain focus() can nudge the page's scroll on iPhones, which makes
+    // A plain focus() can nudge the page's scroll on iPhones, which makes
     // Safari redraw it. Focus without scrolling, so Escape still closes.
     if (!VT.noFocus) {
         modal.focus({ preventScroll: true });
@@ -675,8 +667,8 @@ function openViewer(items, index, options) {
 
     if (preopened) {
         setThemeColor(VIEWER_THEME_COLOR);
-        // Hand the open viewer to Bootstrap and swap the page's own dark
-        // background for Bootstrap's identical one
+        // Take over the open viewer, and swap the page's own dark
+        // background for the viewer's identical one
         modal.removeAttribute('data-preopened');
         $('#preopenedBackdrop').remove();
         updateViewerScrolling();
@@ -1172,18 +1164,59 @@ function closeViewer(options) {
         finishClosing();
         return;
     }
-    // Bootstrap asks first (hide.bs.modal), which starts animateClosing()
+    // Asks first (hide.bs.modal), which starts animateClosing()
     viewerModal('hide');
 }
 
-// Bootstrap's modal opens and closes the viewer (the test switch can swap in
-// a stand-in: testViewerModal)
+// The viewer and its dark background are built once, when the page loads,
+// and stay on the page invisibly (.is-idle); opening only makes them
+// visible. Nothing new is put on the page when a painting opens, so phones
+// start the motion sooner and draw it more smoothly. This used to be
+// Bootstrap's modal; it still sends the same show / hide / hidden events
+// (named *.bs.modal) that setupViewer listens to.
+var viewerBackdrop = null;
+
+function setupViewerLayer() {
+    var modal = document.getElementById('bigPicModal');
+    var preopened = modal.hasAttribute('data-preopened');
+    viewerBackdrop = $('<div class="modal-backdrop viewer-backdrop" aria-hidden="true">')
+        .toggleClass('show', preopened).appendTo('body')[0];
+    $(modal).toggleClass('is-idle', !preopened);
+    modal.inert = !preopened; // nothing in it can be tabbed to while idle
+    viewer.listenToTouches(preopened);
+    document.addEventListener('keydown', function (event) {
+        if (viewer.open && event.key === 'Escape') {
+            closeViewer();
+        }
+    });
+}
+
 function viewerModal(command) {
-    if (VT.driver) {
-        testViewerModal(command);
+    var modal = $('#bigPicModal');
+    var asking = $.Event(command + '.bs.modal');
+    modal.trigger(asking);
+    if (asking.isDefaultPrevented()) {
         return;
     }
-    $('#bigPicModal').modal(command);
+    if (command === 'show') {
+        modal.attr({ 'aria-modal': 'true', role: 'dialog' }).removeAttr('aria-hidden');
+        modal[0].inert = false;
+        modal.removeClass('is-idle').addClass('show');
+        $(viewerBackdrop).addClass('show');
+        viewer.listenToTouches(true);
+        modal.trigger('shown.bs.modal');
+        return;
+    }
+    modal.removeClass('show').attr('aria-hidden', 'true').removeAttr('aria-modal');
+    // (still on the page, so let go of the focus it was given)
+    if (modal[0].contains(document.activeElement)) {
+        document.activeElement.blur();
+    }
+    modal.addClass('is-idle');
+    modal[0].inert = true;
+    $(viewerBackdrop).removeClass('show').css({ transition: 'none', opacity: '' });
+    viewer.listenToTouches(false);
+    modal.trigger('hidden.bs.modal');
 }
 
 function animateClosing() {
@@ -1442,7 +1475,7 @@ function setupViewer() {
         }
     }
 
-    // (the test switch's viewer built in advance listens only while open)
+    // (listens only while open: the viewer stays on the page when closed)
     viewer.listenToTouches = function (on) {
         var method = on ? 'addEventListener' : 'removeEventListener';
         modalEl[method]('touchstart', onViewerTouchStart, { passive: true });
@@ -1451,14 +1484,7 @@ function setupViewer() {
         image[method]('touchmove', onImageTouchMove, false);
         image[method]('touchend', onImageTouchEnd, false);
     };
-    viewer.listenToTouches(true);
-
-    if (VT.noBackdrop) {
-        modal.attr('data-backdrop', 'false'); // read by Bootstrap on first use
-    }
-    if (VT.driver) {
-        setupTestViewer();
-    }
+    setupViewerLayer();
 }
 
 // --------------------------------------------------------------------------
@@ -2003,66 +2029,6 @@ function runFlashProbe(kind) {
     }
 }
 
-// Tests 6 and 7 open the viewer without Bootstrap. 'manual': it's put on
-// the page when opening, as Bootstrap does, minus Bootstrap's extras.
-// 'persist': it and its dark background are on the page all the time,
-// invisible, and opening only makes them visible.
-var testBackdrop = null;
-
-function setupTestViewer() {
-    var modal = document.getElementById('bigPicModal');
-    document.addEventListener('keydown', function (event) {
-        if (viewer.open && event.key === 'Escape') {
-            closeViewer();
-        }
-    });
-    if (VT.driver !== 'persist') {
-        return;
-    }
-    var preopened = modal.hasAttribute('data-preopened');
-    testBackdrop = $('<div class="modal-backdrop vt-backdrop" aria-hidden="true">')
-        .toggleClass('show', preopened).appendTo('body')[0];
-    $(modal).addClass('vt-persist').toggleClass('vt-idle', !preopened);
-    viewer.listenToTouches(preopened);
-}
-
-// Does what Bootstrap's modal('show') / modal('hide') do for the viewer,
-// including the show / hide / hidden events setupViewer listens to
-function testViewerModal(command) {
-    var modal = $('#bigPicModal');
-    var asking = $.Event(command + '.bs.modal');
-    modal.trigger(asking);
-    if (asking.isDefaultPrevented()) {
-        return;
-    }
-    if (command === 'show') {
-        modal.attr({ 'aria-modal': 'true', role: 'dialog' }).removeAttr('aria-hidden');
-        if (VT.driver === 'persist') {
-            modal.removeClass('vt-idle');
-            $(testBackdrop).addClass('show');
-            viewer.listenToTouches(true);
-        } else {
-            modal.css('display', 'block');
-            $('<div class="modal-backdrop show">').appendTo('body');
-        }
-        modal.addClass('show').trigger('shown.bs.modal');
-        return;
-    }
-    modal.removeClass('show').attr('aria-hidden', 'true').removeAttr('aria-modal');
-    if (VT.driver === 'persist') {
-        // (still on the page, so let go of the focus it was given)
-        if (modal[0].contains(document.activeElement)) {
-            document.activeElement.blur();
-        }
-        modal.addClass('vt-idle');
-        $(testBackdrop).removeClass('show').css({ transition: 'none', opacity: '' });
-        viewer.listenToTouches(false);
-    } else {
-        modal.css('display', 'none');
-        $('.modal-backdrop').remove();
-    }
-    modal.trigger('hidden.bs.modal');
-}
 
 // --------------------------------------------------------------------------
 // Start-up
