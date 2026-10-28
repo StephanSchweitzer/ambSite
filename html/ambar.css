@@ -71,6 +71,15 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* The tape scraps on the right-hand works reach a few pixels past a phone's
+   edge. iPhones ignore body's overflow-x and let the page be dragged
+   sideways, so trim at the page wrapper too. clip (not hidden) keeps it from
+   becoming a scroll box; hidden is the fallback for older Safari. */
+.page-container {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
 ::selection {
   background: rgba(239, 127, 174, 0.25); /* logo pink */
   color: var(--color-ink);
