@@ -1183,6 +1183,9 @@ function changeImage(step) {
     exitZoom(false);
     viewer.index = (viewer.index + step + viewer.items.length) % viewer.items.length;
     var work = viewer.items[viewer.index];
+    if (viewerTools.scale) {
+        leaveScaleScene(step);
+    }
     // Stepping through paintings updates the address without piling up history
     history.replaceState($.extend({}, history.state, { path: work.path }), '', work.path);
     showViewerImage(step);
@@ -1489,8 +1492,10 @@ function setupViewer() {
     $('#nextImage').on('click', function () { changeImage(1); });
 
     // Touch: swipe sideways to step through, swipe down to close (not while
-    // the painting is still flying in or out)
+    // the painting is still flying in or out). The same on the See to scale
+    // scene, which takes the painting's place while it's showing.
     var image = document.getElementById('popUpImage');
+    var scene = document.getElementById('scaleScene');
     var tracking = false;
     function onImageTouchStart(e) {
         isPinching = e.touches.length > 1;
@@ -1541,9 +1546,11 @@ function setupViewer() {
         var method = on ? 'addEventListener' : 'removeEventListener';
         modalEl[method]('touchstart', onViewerTouchStart, { passive: true });
         modalEl[method]('touchmove', onViewerTouchMove, { passive: false });
-        image[method]('touchstart', onImageTouchStart, false);
-        image[method]('touchmove', onImageTouchMove, false);
-        image[method]('touchend', onImageTouchEnd, false);
+        [image, scene].forEach(function (el) {
+            el[method]('touchstart', onImageTouchStart, false);
+            el[method]('touchmove', onImageTouchMove, false);
+            el[method]('touchend', onImageTouchEnd, false);
+        });
     };
     setupViewerTools();
     setupViewerLayer();
@@ -1923,6 +1930,13 @@ function setScale(on) {
         exitZoom(false);
     }
     viewerTools.scale = on;
+    if (!on) {
+        var scene = document.getElementById('scaleScene');
+        scene.removeAttribute('data-arriving-from');
+        scene.style.transition = '';
+        scene.style.transform = '';
+        scene.style.opacity = '';
+    }
     $('#bigPicModal').toggleClass('is-scale', on);
     $('#scaleScene').attr('aria-hidden', String(!on));
     var label = on ? 'Back to the painting' : 'See to scale';
@@ -2007,6 +2021,39 @@ function drawScaleScene(work, size) {
         formatInches(size.w) + ' × ' + formatInches(size.h) + ' in   —   ' +
         (small ? 'beside a coffee mug 9.5 cm (3¾″) tall' : 'beside a figure 165 cm (5′5″) tall')
     );
+    arriveScaleScene();
+}
+
+// Stepping to another painting while the scale scene is showing: the scene
+// slides away and the next one slides in from the other side, as the
+// paintings themselves do
+var SCALE_SLIDE_PX = 40;
+
+function leaveScaleScene(step) {
+    var scene = document.getElementById('scaleScene');
+    if (prefersReducedMotion()) {
+        return;
+    }
+    scene.style.transition = 'transform 0.16s ease-in, opacity 0.16s ease-in';
+    scene.style.transform = 'translateX(' + (-step * SCALE_SLIDE_PX) + 'px)';
+    scene.style.opacity = '0';
+    scene.setAttribute('data-arriving-from', String(step));
+}
+
+function arriveScaleScene() {
+    var scene = document.getElementById('scaleScene');
+    var from = scene.getAttribute('data-arriving-from');
+    if (!from) {
+        return;
+    }
+    scene.removeAttribute('data-arriving-from');
+    scene.style.transition = 'none';
+    scene.style.transform = 'translateX(' + (Number(from) * SCALE_SLIDE_PX) + 'px)';
+    scene.style.opacity = '0';
+    void scene.offsetWidth;
+    scene.style.transition = 'transform 0.28s var(--ease-out-soft), opacity 0.28s ease';
+    scene.style.transform = '';
+    scene.style.opacity = '';
 }
 
 function setupViewerTools() {
