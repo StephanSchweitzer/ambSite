@@ -12,6 +12,7 @@ global $conn;
 $pdoSoftFail = true; // the page still loads if the database is unreachable
 include __DIR__ . '/database/pdo.php';
 include_once __DIR__ . '/actions/publicPageFunctions.php';
+include_once __DIR__ . '/actions/aboutMeCache.php';
 
 function e($text)
 {
@@ -103,6 +104,12 @@ if ($conn) {
         $navLinks = ambGetNavLinks($conn);
         $pageData['projects'] = $projects;
         $pageData['navLinks'] = $navLinks;
+        // So the script can ask for the About text by its version, which
+        // browsers may keep (see aboutMeCache.php)
+        $aboutCache = ambGetAbout($conn);
+        if ($aboutCache) {
+            $pageData['aboutVersion'] = $aboutCache['version'];
+        }
         $navHtml = ambRenderNav($navLinks, $projects);
 
         foreach ($navLinks as $link) {
@@ -130,7 +137,7 @@ if ($conn) {
             $content = ambRenderCarousel($carousel);
             $shareWork = $carousel ? $carousel[0] : null;
         } elseif ($view === 'about') {
-            $about = $conn->query('SELECT * FROM aboutMe ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+            $about = $aboutCache ? $aboutCache['about'] : null;
             if ($about) {
                 $pageData['about'] = $about;
                 $content = ambRenderAbout($about);

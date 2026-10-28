@@ -1576,7 +1576,10 @@ function fetchAboutMe() {
         cachedRequests.about = $.Deferred().resolve(pageData.about).promise();
     }
     if (!cachedRequests.about) {
-        cachedRequests.about = $.ajax({ url: '/actions/aboutMeAPI.php', dataType: 'json' });
+        // Asked for by its version, so the browser can keep the reply until
+        // the text or photo changes (see aboutMeCache.php)
+        var version = pageData.aboutVersion ? '?v=' + encodeURIComponent(pageData.aboutVersion) : '';
+        cachedRequests.about = $.ajax({ url: '/actions/aboutMeAPI.php' + version, dataType: 'json' });
         cachedRequests.about.fail(function () {
             delete cachedRequests.about;
         });

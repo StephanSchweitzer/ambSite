@@ -1,23 +1,61 @@
 <?php
 global $conn;
+include_once __DIR__ . '/aboutMeCache.php';
+
+// Reading the About content: public, and answered from the cached copy
+// (aboutMeCache.php) whenever there is one, without touching the database or
+// starting a sign-in session (which would tell browsers never to keep it).
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    include __DIR__ . '/../database/env.php';
+    $cache = ambReadAboutCache();
+    if ($cache === null) {
+        $pdoSoftFail = true;
+        include __DIR__ . '/../database/pdo.php';
+        $cache = ambRefreshAboutCache($conn);
+    }
+    if ($cache === null) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store');
+        echo json_encode(array('status' => 'error', 'message' => 'The About information could not be loaded.'));
+        exit;
+    }
+
+    // Asked for by its current version (?v=...): browsers keep it a week, and
+    // a change gets a new version, so no one is left with the old text.
+    // Asked for without one (the admin page), browsers check every time but
+    // get a tiny "unchanged" answer when it is.
+    $etag = '"about-' . $cache['version'] . '"';
+    header('Content-Type: application/json');
+    header('ETag: ' . $etag);
+    if (isset($_GET['v']) && $_GET['v'] === $cache['version']) {
+        header('Cache-Control: public, max-age=604800');
+    } else {
+        header('Cache-Control: no-cache');
+    }
+
+    // Apache adds "-gzip" to the tag when it compresses the reply, so the
+    // browser sends it back that way
+    $sent = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? explode(',', $_SERVER['HTTP_IF_NONE_MATCH']) : array();
+    foreach ($sent as $tag) {
+        $tag = preg_replace('#^W/#', '', trim($tag));
+        $tag = preg_replace('#-(gzip|br|deflate)"$#', '"', $tag);
+        if ($tag === $etag || $tag === '*') {
+            http_response_code(304);
+            exit;
+        }
+    }
+
+    // false when nothing has been saved yet, as the page expects
+    echo json_encode($cache['about'] ?: false, JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+
 include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
 include_once __DIR__ . '/adminAuth.php';
 
-// Handle GET request - no authentication required
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Fetch the most recent entry
-    $stmt = $conn->prepare("SELECT * FROM aboutMe ORDER BY id DESC LIMIT 1");
-    $stmt->execute();
-    $mostRecentEntry = $stmt->fetch();
-
-    // Output the most recent entry as JSON
-    header('Content-Type: application/json');
-    echo json_encode($mostRecentEntry);
-    exit;
-}
-
-// For POST requests, check authentication
+// Saving needs the admin to be signed in
 requireAdminApi();
 
 // Handle POST request for About Me updates
@@ -81,6 +119,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Commit the transaction
         $conn->commit();
+
+        // Visitors see the new text and photo straight away
+        ambRefreshAboutCache($conn);
 
         // Return success response
         header('Content-Type: application/json');

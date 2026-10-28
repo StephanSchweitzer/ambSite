@@ -316,6 +316,16 @@ phones and ordinary screens download far less. The viewer picks the
 smallest copy that fills it sharply (`viewerImageUrl()`). Artwork is cached
 by browsers for 30 days (upload names are unique), design images for 7.
 
+About cache: `actions/aboutMeCache.php` keeps the latest `aboutMe` row in a
+JSON file in `sys_get_temp_dir()` (survives deploys). The admin save rewrites
+it; it's re-read from the DB after 7 days (60 s outside `APP_ENV=production`,
+since the practice DB is replaced on refresh). Each content version gets a
+fingerprint: `index.php` puts it in `AMB_PAGE_DATA.aboutVersion`, the JS asks
+for `aboutMeAPI.php?v=<it>` (browsers keep that a week), and unversioned GETs
+(admin page) get `no-cache` + ETag/304. The GET never starts a session and
+only connects to the DB on a cache miss — that's why `database/env.php` is
+split out of `pdo.php`.
+
 | Area | Files |
 |---|---|
 | Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
