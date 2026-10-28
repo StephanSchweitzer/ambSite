@@ -52,7 +52,8 @@ var viewer = {
     source: null,            // { index, img }: the picture on the page it grew out of
     hiddenInPage: [],        // pictures on the page hidden while their twin is in the viewer
     hidingNow: false,        // closeViewer's own final, instant hide
-    room: 0                  // height left for the painting (fitViewerToScreen)
+    room: 0,                 // height left for the painting (fitViewerToScreen)
+    loading: null            // { work, src }: the copy being shown / loaded
 };
 var scrollPosition = 0;
 var startX, startY;
@@ -1162,6 +1163,8 @@ function showViewerImage(direction, opening) {
         }, Math.max(0, VIEWER_LEAVE_MS - (Date.now() - leftAt)));
     };
     loader.src = src;
+    // (the scale scene shows this same file, already downloaded)
+    viewer.loading = { work: work, src: src };
 
     // Get the neighbours ready so the arrows feel instant
     [-1, 1].forEach(function (step) {
@@ -1931,6 +1934,7 @@ function setScale(on) {
     }
     viewerTools.scale = on;
     if (!on) {
+        scaleSlideToken++;
         var scene = document.getElementById('scaleScene');
         scene.removeAttribute('data-arriving-from');
         scene.style.transition = '';
@@ -2007,14 +2011,15 @@ function drawScaleScene(work, size) {
         height: artH + 'px',
         '--tape-w': Math.max(18, Math.min(48, artW * 0.32)) + 'px'
     });
+    // The same copy the viewer has just loaded for this painting, so it's
+    // already downloaded and the scene can show it at once
     var img = art.find('img')[0];
-    if (work.width > 400) {
-        img.sizes = Math.ceil(artW) + 'px';
-        img.srcset = workSrcset(work);
-    } else {
-        img.removeAttribute('srcset');
+    img.removeAttribute('srcset');
+    img.removeAttribute('sizes');
+    var src = viewer.loading && viewer.loading.work === work ? viewer.loading.src : webImageUrl(work.location);
+    if (img.getAttribute('src') !== src) {
+        img.src = src;
     }
-    img.src = webImageUrl(work.location);
 
     $(scene).find('.scale-label').text(
         formatCm(size.w) + ' × ' + formatCm(size.h) + ' cm  ·  ' +
@@ -2025,19 +2030,29 @@ function drawScaleScene(work, size) {
 }
 
 // Stepping to another painting while the scale scene is showing: the scene
-// slides away and the next one slides in from the other side, as the
-// paintings themselves do
+// carries on in the direction of the swipe and fades, then the next one
+// slides in from the other side, as the paintings themselves do. It only
+// comes in once its picture is ready to draw, so the old painting never
+// shows in the new scene.
 var SCALE_SLIDE_PX = 40;
+var SCALE_LEAVE_MS = 170;
+var SCALE_ARRIVE_MS = 300;
+var scaleSlideToken = 0;
 
 function leaveScaleScene(step) {
     var scene = document.getElementById('scaleScene');
+    scaleSlideToken++;
+    scene.setAttribute('data-arriving-from', String(step));
     if (prefersReducedMotion()) {
+        scene.style.transition = 'none';
+        scene.style.opacity = '0';
         return;
     }
-    scene.style.transition = 'transform 0.16s ease-in, opacity 0.16s ease-in';
-    scene.style.transform = 'translateX(' + (-step * SCALE_SLIDE_PX) + 'px)';
+    // (after a swipe, keep going from wherever the finger left it)
+    var dragged = Math.abs(parseFloat((scene.style.transform.match(/translateX\((-?[\d.]+)px\)/) || [])[1]) || 0);
+    scene.style.transition = 'transform ' + SCALE_LEAVE_MS + 'ms ease-in, opacity ' + SCALE_LEAVE_MS + 'ms ease-in';
+    scene.style.transform = 'translateX(' + (-step * Math.max(SCALE_SLIDE_PX, dragged + SCALE_SLIDE_PX)) + 'px)';
     scene.style.opacity = '0';
-    scene.setAttribute('data-arriving-from', String(step));
 }
 
 function arriveScaleScene() {
@@ -2047,13 +2062,45 @@ function arriveScaleScene() {
         return;
     }
     scene.removeAttribute('data-arriving-from');
+    var token = ++scaleSlideToken;
+    var img = scene.querySelector('.scale-art img');
+    var started = false;
+
+    // Waiting just off to the side, invisible
     scene.style.transition = 'none';
-    scene.style.transform = 'translateX(' + (Number(from) * SCALE_SLIDE_PX) + 'px)';
+    scene.style.transform = prefersReducedMotion() ? '' : 'translateX(' + (Number(from) * SCALE_SLIDE_PX) + 'px)';
     scene.style.opacity = '0';
-    void scene.offsetWidth;
-    scene.style.transition = 'transform 0.28s var(--ease-out-soft), opacity 0.28s ease';
-    scene.style.transform = '';
-    scene.style.opacity = '';
+
+    var slideIn = function () {
+        if (started || token !== scaleSlideToken || !viewerTools.scale) {
+            return;
+        }
+        started = true;
+        // Still downloading (a slow connection): the scene comes in, and its
+        // picture fades up once it's here, rather than show the last one
+        if (!img.complete || !img.naturalWidth) {
+            img.style.opacity = '0';
+            img.addEventListener('load', function () {
+                img.style.transition = 'opacity 0.25s ease';
+                img.style.opacity = '';
+            }, { once: true });
+        }
+        void scene.offsetWidth; // let the browser take in the starting point
+        scene.style.transition = 'transform ' + SCALE_ARRIVE_MS + 'ms var(--ease-out-soft), opacity ' + SCALE_ARRIVE_MS + 'ms ease';
+        scene.style.transform = '';
+        scene.style.opacity = '';
+    };
+    // Normally ready at once; never wait more than half a second
+    setTimeout(slideIn, 500);
+    if (img.complete && img.naturalWidth && !img.decode) {
+        slideIn();
+    } else if (img.decode) {
+        img.decode().then(function () {
+            requestAnimationFrame(slideIn);
+        }, slideIn);
+    } else {
+        img.onload = img.onerror = slideIn;
+    }
 }
 
 function setupViewerTools() {
