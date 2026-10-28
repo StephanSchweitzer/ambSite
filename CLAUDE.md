@@ -316,6 +316,15 @@ phones and ordinary screens download far less. The viewer picks the
 smallest copy that fills it sharply (`viewerImageUrl()`). Artwork is cached
 by browsers for 30 days (upload names are unique), design images for 7.
 
+Zooming in loads the zoom copy, `baseImages/web/zoom/<file>` (max 4000px on
+the longest side, JPEG q85; `AMB_ZOOM_MAX_SIDE`), never the original. It's
+made by `webImage.php` (`?zoom=1`) the first time anyone zooms into that
+work; if it can't be made, the request 404s rather than serving the original.
+Uploads are capped at 4000px on the longest side too (`AMB_UPLOAD_MAX_SIDE`,
+`MAX_SIDE` in `imagePrep.js`): a small file can still be enormous in pixels
+(MoonFace 37 was 1.2 MB but 10084×13984, over 500 MB once decoded), so the
+cap is on pixels, not just bytes. The server rejects anything over it.
+
 About cache: `actions/aboutMeCache.php` keeps the latest `aboutMe` row in a
 JSON file in `sys_get_temp_dir()` (survives deploys). The admin save rewrites
 it; it's re-read from the DB after 7 days (60 s outside `APP_ENV=production`,
@@ -332,10 +341,10 @@ split out of `pdo.php`.
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
 | SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
-| Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB). |
+| Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB and 4000px). |
 | Auth | `html/signIn/` — session-based; every entry point includes `database/session.php` (cookie flags) instead of calling `session_start()`; admin pages check `$_SESSION["ambar"] === "connected"`, admin APIs call `requireAdminApi()` from `actions/adminAuth.php` (401 JSON, never a redirect); `login_attempts` rate-limits (5 per hour, cleared on success) |
 | DB connection | `html/database/pdo.php` — loads `.env` from project root, exposes global `$conn` (PDO) and `env()` helper. Every entry point `include`s it. |
-| Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
+| Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf, `tape/` scraps). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
 
 The local `.env` points at the scratch database `ambar_site_local`; production
 credentials live in a separate `.env` on the server and are deliberately not on
@@ -409,7 +418,7 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   off (that, `position: fixed`, or Bootstrap's `body.modal-open`, which
   ambar.css neutralises for touch) makes iOS Safari repaint the whole page
   white for a few frames. A `touchmove` handler on the modal stops page
-  scrolling instead (one finger only, so pinch-zoom still works).
+  scrolling instead (one finger only; two fingers are the viewer's zoom).
   Further iPhone rules, taken from PhotoSwipe after a white flash persisted:
   on touch screens the gallery picture is never hidden (`hideInPage` is a
   no-op); the backdrop starts at `VIEWER_MIN_OPACITY` (0.003), never 0; the
@@ -419,6 +428,30 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
   in CSS from `--w`/`--h` (its proportions), so its box is right before it
   loads; `viewerImageWidth()` mirrors that CSS. Hover effects on the gallery
   are inside `@media (hover: hover)` so a tap on a phone doesn't set them off.
+- **The viewer always fits on one screen.** `fitViewerToScreen()` measures
+  the caption (`#imageInfo`) for each painting and sets `--room` on the
+  modal: the height left for the painting once the top buttons
+  (`--viewer-top`) and caption have theirs. `.popUpImage`, the scale scene
+  and `viewerImageWidth()` all size from it. Descriptions are clamped to 3
+  lines with a "more" button (`setUpDescription()`). Zoom and See to scale
+  are icon buttons in `.viewer-toolbar` beside the close button — don't put
+  controls under the caption, people won't scroll to find them.
+- **Zoom** (viewer tools section of `photoFunctions.js`): `enterZoom()`
+  lifts a copy of the painting into `#zoomLayer` over the whole viewer and
+  scales/moves that, so the viewer's own open/close/step animations are
+  untouched. Pinch (touch), double-tap (touch — so a single tap on the
+  painting waits `ZOOM_TAP_MS` before stepping), scroll up over the painting
+  when the viewer is scrolled to the top, trackpad pinch, `+`/`-`, or the
+  button. Safari's `gesturestart` is cancelled while the viewer is open.
+- **See to scale** reads the size from the description (`workSizeCm()`:
+  "50 x 64 cm", inches, mm, A2–A6). Works up to 45 cm stand on a table beside
+  a 9.5 cm mug; bigger ones hang beside a 165 cm figure. The picture keeps
+  the photo's proportions with its longest side the stated length.
+- **The painted tape** on the gallery (two `::before`/`::after` scraps per
+  `.projectWorks .work-card`, placement in a 3-card rhythm, colour in a
+  4-card one), under project titles and behind menu links on hover is
+  CSS only, from the SVGs in `miscIcons/tape/` (`--tape-*` on `:root`).
+  They're drawn stand-ins; Ambar's own scanned tape can replace the files.
 - Security headers (nosniff, Referrer-Policy, X-Frame-Options, HSTS) are set
   in `html/.htaccess`.
 

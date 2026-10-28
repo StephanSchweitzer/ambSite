@@ -1,8 +1,10 @@
 <?php
 // Serves a web-sized copy of an artwork, making it the first time it's asked
-// for. .htaccess only sends /baseImages/web/<file> (the full web copy) and
-// /baseImages/web/<width>/<file> (a narrower one) here while that file does
-// not exist yet; once it has been written, Apache serves it as a plain file.
+// for. .htaccess only sends /baseImages/web/<file> (the full web copy),
+// /baseImages/web/<width>/<file> (a narrower one) and
+// /baseImages/web/zoom/<file> (the bigger copy for zooming in) here while
+// that file does not exist yet; once it has been written, Apache serves it
+// as a plain file.
 // Nothing has to be placed on the server by hand: the copies fill themselves
 // in as visitors look at the works.
 
@@ -16,6 +18,7 @@ function notFound()
 
 $file = isset($_GET['f']) ? (string) $_GET['f'] : '';
 $width = isset($_GET['w']) ? (string) $_GET['w'] : '';
+$zoom = !empty($_GET['zoom']);
 
 // A bare file name only — never a path into another folder
 if ($file === '' || $file !== basename($file) || $file[0] === '.') {
@@ -36,7 +39,7 @@ $baseDir = dirname(__DIR__) . '/baseImages/';
 $webDir = $baseDir . 'web/';
 $source = $baseDir . $file;
 $webPath = $webDir . $file;
-$serve = $width ? $webDir . $width . '/' . $file : $webPath;
+$serve = $zoom ? $webDir . 'zoom/' . $file : ($width ? $webDir . $width . '/' . $file : $webPath);
 
 if (!is_file($source)) {
     notFound();
@@ -56,16 +59,21 @@ if (!is_file($serve)) {
             flock($lock, LOCK_EX);
         }
         // Another request may have made them while this one waited. The
-        // narrower copies are made from the full web copy, so that comes first.
-        if (!is_file($webPath)) {
+        // zoom copy is made from the original; the narrower copies from the
+        // full web copy, so that comes first.
+        if ($zoom) {
+            if (!is_file($serve)) {
+                createWebImage($source, $serve, zoomCopyLimits());
+            }
+        } elseif (!is_file($webPath)) {
             createWebImage($source, $webPath);
         }
-        if ($width && !is_file($serve)) {
+        if (!$zoom && $width && !is_file($serve)) {
             createWebImageVariant($webPath, $serve, $width);
         }
     } catch (Throwable $e) {
         // Show a bigger copy rather than a broken image, and try again later
-        error_log('webImage.php: ' . ($width ? $width . '/' : '') . $file . ': ' . $e->getMessage());
+        error_log('webImage.php: ' . ($zoom ? 'zoom/' : ($width ? $width . '/' : '')) . $file . ': ' . $e->getMessage());
         $serve = is_file($webPath) ? $webPath : $source;
         $isFallback = true;
     }
@@ -73,6 +81,13 @@ if (!is_file($serve)) {
         flock($lock, LOCK_UN);
         fclose($lock);
     }
+}
+
+// A zoom copy that couldn't be made is never replaced by the original
+// itself, which can be big enough to crash a phone: the viewer just keeps
+// the copy it's already showing
+if ($zoom && $isFallback && $serve === $source) {
+    notFound();
 }
 
 $info = @getimagesize($serve);

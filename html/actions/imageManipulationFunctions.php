@@ -17,6 +17,11 @@ if (!defined('AMB_WEB_MAX_WIDTH')) {
     // A picture's memory use depends on its pixels, not its file size: a
     // 1 MB file can be 10000 x 14000 pixels and take over 500 MB to open.
     define('AMB_UPLOAD_MAX_SIDE', 4000);
+    // The zoom copy (baseImages/web/zoom/): what the viewer loads when a
+    // visitor zooms in, never the original itself. Made the first time
+    // someone zooms into that work.
+    define('AMB_ZOOM_MAX_SIDE', 4000);
+    define('AMB_ZOOM_JPEG_QUALITY', 85);
 }
 
 // The message to show if an uploaded picture is over AMB_UPLOAD_MAX_SIDE,
@@ -36,8 +41,29 @@ function uploadTooLargeMessage($path)
 // Size of the web copy for an original of $width x $height
 function webImageSize($width, $height)
 {
-    $scale = min(1, AMB_WEB_MAX_WIDTH / $width, AMB_WEB_MAX_HEIGHT / $height);
+    return fitImageSize($width, $height, AMB_WEB_MAX_WIDTH, AMB_WEB_MAX_HEIGHT);
+}
+
+// $width x $height shrunk (never enlarged) to fit inside $maxWidth x $maxHeight
+function fitImageSize($width, $height, $maxWidth, $maxHeight)
+{
+    $scale = min(1, $maxWidth / $width, $maxHeight / $height);
     return array(max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale)));
+}
+
+// The limits for each kind of copy made by createWebImage()
+function webCopyLimits()
+{
+    // keepUnder: an original already within the size is used as it is if
+    // its file is at most this big
+    return array('width' => AMB_WEB_MAX_WIDTH, 'height' => AMB_WEB_MAX_HEIGHT,
+        'quality' => AMB_WEB_JPEG_QUALITY, 'keepUnder' => 600 * 1024);
+}
+
+function zoomCopyLimits()
+{
+    return array('width' => AMB_ZOOM_MAX_SIDE, 'height' => AMB_ZOOM_MAX_SIDE,
+        'quality' => AMB_ZOOM_JPEG_QUALITY, 'keepUnder' => PHP_INT_MAX);
 }
 
 // GD decodes the whole original into memory (about 5 bytes per pixel, so a
@@ -74,16 +100,23 @@ function webImageMemoryAvailable($bytesNeeded)
     return @ini_set('memory_limit', (string) ceil($wanted / 1048576) . 'M') !== false;
 }
 
-// Writes the web-sized copy of $sourcePath to $destPath. Written to a temp
-// file and renamed into place, so a visitor can never be served half a file.
-function createWebImage($sourcePath, $destPath)
+// Writes the web-sized copy of $sourcePath to $destPath (or, with
+// zoomCopyLimits(), the zoom copy). Written to a temp file and renamed into
+// place, so a visitor can never be served half a file.
+function createWebImage($sourcePath, $destPath, $limits = null)
 {
+    $limits = $limits ?: webCopyLimits();
     $info = @getimagesize($sourcePath);
     if (!$info) {
         throw new Exception('Not a readable image');
     }
     list($width, $height, $type) = $info;
-    list($newWidth, $newHeight) = webImageSize($width, $height);
+    list($newWidth, $newHeight) = fitImageSize($width, $height, $limits['width'], $limits['height']);
+
+    $dir = dirname($destPath);
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new Exception('Could not create ' . $dir);
+    }
 
     $tmpPath = $destPath . '.tmp' . getmypid();
     $finish = function () use ($tmpPath, $destPath) {
@@ -95,7 +128,7 @@ function createWebImage($sourcePath, $destPath)
 
     // Already small, or a GIF (re-encoding would drop any animation): the
     // original bytes are fine as they are
-    if ($type === IMAGETYPE_GIF || ($newWidth === $width && filesize($sourcePath) <= 600 * 1024)) {
+    if ($type === IMAGETYPE_GIF || ($newWidth === $width && filesize($sourcePath) <= $limits['keepUnder'])) {
         if (!@copy($sourcePath, $tmpPath)) {
             throw new Exception('Could not write web image');
         }
@@ -119,7 +152,7 @@ function createWebImage($sourcePath, $destPath)
             $im->thumbnailImage($newWidth, $newHeight);
             if ($type === IMAGETYPE_JPEG) {
                 $im->setImageFormat('jpeg');
-                $im->setImageCompressionQuality(AMB_WEB_JPEG_QUALITY);
+                $im->setImageCompressionQuality($limits['quality']);
                 $im->setInterlaceScheme(Imagick::INTERLACE_PLANE);
             } else {
                 $im->setImageFormat('png');
@@ -153,7 +186,7 @@ function createWebImage($sourcePath, $destPath)
 
     if ($type === IMAGETYPE_JPEG) {
         imageinterlace($dst, 1);
-        $ok = imagejpeg($dst, $tmpPath, AMB_WEB_JPEG_QUALITY);
+        $ok = imagejpeg($dst, $tmpPath, $limits['quality']);
     } else {
         $ok = imagepng($dst, $tmpPath, 6);
     }
@@ -243,7 +276,7 @@ function createWebImageVariants($webPath, $webDir, $fileName)
 // keep upload names unique and to clean up after a permanent delete
 function artworkImageDirs()
 {
-    $dirs = array('../baseImages/', '../baseImages/web/', '../thumbnails/');
+    $dirs = array('../baseImages/', '../baseImages/web/', '../baseImages/web/zoom/', '../thumbnails/');
     foreach (AMB_WEB_VARIANT_WIDTHS as $width) {
         $dirs[] = '../baseImages/web/' . $width . '/';
     }

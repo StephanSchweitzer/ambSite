@@ -39,6 +39,15 @@
   --shadow-lifted: 0 18px 44px rgba(29, 29, 27, 0.16);
 
   --header-clearance: 12vh;
+
+  /* Painted tape scraps (stand-ins until Ambar's own scanned tape replaces
+     the files in miscIcons/tape/) */
+  --tape-blue: url('/miscIcons/tape/tape-blue.svg');
+  --tape-pink: url('/miscIcons/tape/tape-pink.svg');
+  --tape-yellow: url('/miscIcons/tape/tape-yellow.svg');
+  --tape-green: url('/miscIcons/tape/tape-green.svg');
+  --tape-lilac: url('/miscIcons/tape/tape-lilac.svg');
+  --tape-coral: url('/miscIcons/tape/tape-coral.svg');
 }
 
 /* ---------- Base ---------- */
@@ -261,24 +270,39 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   padding-bottom: 4px;
 }
 
-/* Rainbow hairline underline — the site's signature hover */
+/* On hover a strip of painted tape is laid down behind the label, left to
+   right — the site's signature hover */
+.mainLinkGenres,
+.nav-link-container .mainLinkGenres {
+  isolation: isolate; /* keeps the tape behind the words, not behind the page */
+  text-decoration: none !important;
+}
+
 .mainLinkGenres:after,
 .nav-link-container .mainLinkGenres:after {
   content: '';
   position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  background: var(--amb-rainbow);
-  border-radius: 2px;
-  transition: width 0.35s var(--ease-out-soft);
+  z-index: -1;
+  left: -9px;
+  right: -5px;
+  top: 50%;
+  height: 1.75em;
+  margin-top: -1em;
+  background: var(--tape-menu, var(--tape-yellow)) center / 100% 100% no-repeat;
+  opacity: 0.85;
+  transform: rotate(-1.5deg);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.4s var(--ease-out-soft);
 }
 
 .mainLinkGenres:hover:after,
 .nav-link-container .mainLinkGenres:hover:after {
-  width: 100%;
+  clip-path: inset(0 0 0 0);
 }
+
+.nav-link-container:nth-child(4n+2) .mainLinkGenres:after { --tape-menu: var(--tape-pink); transform: rotate(1deg); }
+.nav-link-container:nth-child(4n+3) .mainLinkGenres:after { --tape-menu: var(--tape-blue); }
+.nav-link-container:nth-child(4n+4) .mainLinkGenres:after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
 
 /* ---------- Sub-links dropdown (Works → Painting / Drawing / …) ---------- */
 .hiddenLinkStuff {
@@ -382,8 +406,8 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 .navLinksBoxMobile .mainLinkGenres:after {
-  height: 2px;
-  bottom: 6px;
+  height: 1.6em;
+  margin-top: -0.85em;
 }
 
 /* Overlay behind the drawer */
@@ -558,17 +582,20 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   letter-spacing: 0.04em;
 }
 
-/* Small rainbow tick under each project title */
+/* A torn strip of painted tape under each project title (see "Painted
+   tape" below) */
 .project-header:after {
   content: '';
   display: block;
-  width: 44px;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--amb-rainbow);
-  margin: 0.9rem auto 0;
-  opacity: 0.85;
+  width: 104px;
+  aspect-ratio: 160 / 44;
+  background: var(--tape-title, var(--tape-blue)) center / 100% 100% no-repeat;
+  margin: 0.7rem auto 0;
+  transform: rotate(-2.5deg);
 }
+
+.project:nth-of-type(3n+2) .project-header:after { --tape-title: var(--tape-pink); transform: rotate(1.5deg); }
+.project:nth-of-type(3n+3) .project-header:after { --tape-title: var(--tape-yellow); transform: rotate(-1deg); }
 
 .project-description {
   color: var(--color-text-secondary);
@@ -711,6 +738,83 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   user-select: none;
 }
 
+/* ---------- Painted tape: the works are taped to the page ----------
+   Each painting is held up by scraps of painted tape, as Ambar's tape works
+   are made of. Colours and placement change from one painting to the next
+   (in a repeating pattern) so it looks done by hand. The tape is two
+   pseudo-elements on the card, so the server-drawn and JS-drawn galleries
+   both get it with no change to their markup. */
+.projectWorks .work-card {
+  --tape-w: clamp(72px, 9vw, 132px);
+  --tape-a: var(--tape-yellow);
+  --tape-b: var(--tape-blue);
+}
+
+.projectWorks .work-card:before,
+.projectWorks .work-card:after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  width: var(--tape-w);
+  aspect-ratio: 160 / 44;
+  background: var(--tape-a) center / 100% 100% no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
+  transition: transform 0.45s var(--ease-out-soft);
+}
+
+.projectWorks .work-card:after {
+  background-image: var(--tape-b);
+}
+
+/* Pattern 1: across both top corners */
+.projectWorks .work-card:before {
+  left: 14px;
+  top: 12px;
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+
+.projectWorks .work-card:after {
+  right: 14px;
+  top: 12px;
+  transform: translate(50%, -50%) rotate(41deg);
+}
+
+/* Pattern 2: one strip over the top edge, one across the bottom-right corner */
+.projectWorks .work-card:nth-child(3n+2):before {
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -45%) rotate(-3deg);
+}
+
+.projectWorks .work-card:nth-child(3n+2):after {
+  top: auto;
+  right: 12px;
+  bottom: 12px;
+  transform: translate(50%, 50%) rotate(-36deg);
+}
+
+/* Pattern 3: top-left and bottom-right corners */
+.projectWorks .work-card:nth-child(3n+3):after {
+  top: auto;
+  right: 14px;
+  bottom: 14px;
+  transform: translate(50%, 50%) rotate(-42deg);
+}
+
+/* Colours, in a different rhythm to the placement */
+.projectWorks .work-card:nth-child(4n+2) { --tape-a: var(--tape-pink); --tape-b: var(--tape-green); }
+.projectWorks .work-card:nth-child(4n+3) { --tape-a: var(--tape-lilac); --tape-b: var(--tape-coral); }
+.projectWorks .work-card:nth-child(4n+4) { --tape-a: var(--tape-blue); --tape-b: var(--tape-yellow); }
+
+/* A taped-up painting doesn't float up on hover: the shadow deepens a
+   little, as if the tape were lifting */
+@media (hover: hover) {
+  .projectWorks .img-container:hover {
+    transform: none;
+  }
+}
+
 /* ==========================================================================
    Image modal
    ========================================================================== */
@@ -740,24 +844,24 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 /* The painting's size is worked out from its proportions (--w / --h, the
    web copy's pixel size, set on the image) so the space is right before it
-   has loaded and it never jumps. Without them the max- limits still apply.
-   viewerImageUrl() in photoFunctions.js does the same sums. */
+   has loaded and it never jumps, and from --room: the height left for it
+   once the buttons above and the caption below have theirs, so the whole
+   viewer fits on the screen (fitViewerToScreen in photoFunctions.js, which
+   sets it). viewerImageWidth() there does the same sums. */
 .popUpImage {
-  max-height: 82vh;
+  max-height: var(--room, 74vh);
   max-width: 90vw;
-  width: min(90vw, calc(82vh * var(--w) / var(--h)), calc(var(--w) * 1px));
+  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)), calc(var(--w) * 1px));
   aspect-ratio: var(--w) / var(--h);
   height: auto;
   border-radius: 3px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
-  margin-top: 4vh;
 }
 
 .popUpImageMobile {
-  max-height: 90vh;
+  max-height: var(--room, 74vh);
   max-width: 90vw;
-  width: min(90vw, calc(90vh * var(--w) / var(--h)));
-  width: min(90vw, calc(90svh * var(--w) / var(--h)));
+  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)));
   aspect-ratio: var(--w) / var(--h);
   height: auto;
   border-radius: 3px;
@@ -775,9 +879,11 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
    painting; closing: they go first */
 .modal.is-opening .imageInfo,
 .modal.is-opening .modal-close,
+.modal.is-opening .viewer-toolbar,
 .modal.is-opening .modal-nav-arrows,
 .modal.is-closing .imageInfo,
 .modal.is-closing .modal-close,
+.modal.is-closing .viewer-toolbar,
 .modal.is-closing .modal-nav-arrows {
   opacity: 0;
   transition: none;
@@ -785,14 +891,90 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 .modal.is-arriving .imageInfo,
 .modal.is-arriving .modal-close,
+.modal.is-arriving .viewer-toolbar,
 .modal.is-arriving .modal-nav-arrows {
   transition: opacity 0.35s ease 0.12s;
 }
 
 .modal.is-closing .imageInfo,
 .modal.is-closing .modal-close,
+.modal.is-closing .viewer-toolbar,
 .modal.is-closing .modal-nav-arrows {
   transition: opacity 0.14s ease;
+}
+
+/* Room above the painting for the buttons, and a little below the caption
+   (sizes from fitViewerToScreen) */
+#bigPicModal .modal-dialog {
+  margin-top: var(--viewer-top, 66px);
+  margin-bottom: var(--viewer-bottom, 14px);
+}
+
+/* A long description shows three lines; "more" opens it up */
+#imageDescription {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.imageInfo.is-expanded #imageDescription {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.image-more {
+  background: none;
+  border: 0;
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.image-more[hidden] { display: none; }
+
+.image-more:hover { color: #fff; }
+
+/* Zoom and See to scale: round buttons beside the close button */
+.viewer-toolbar {
+  position: fixed;
+  top: 18px;
+  right: 74px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+}
+
+.viewer-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.viewer-icon[hidden] { display: none; }
+
+.viewer-icon:hover { background: rgba(255, 255, 255, 0.22); }
+
+.viewer-icon[aria-pressed="true"] {
+  background: #fff;
+  border-color: #fff;
+  color: var(--color-ink);
 }
 
 #popUpImage.is-loading {
@@ -902,6 +1084,252 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 .nav-arrow:focus { outline: none; }
+
+/* ---------- Viewer tools: zoom and "See to scale" ---------- */
+.viewer-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 15px 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.viewer-tool[hidden] { display: none; }
+
+.viewer-tool:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+.viewer-tool[aria-pressed="true"] {
+  background: #fff;
+  border-color: #fff;
+  color: var(--color-ink);
+}
+
+/* Zooming in: the painting lifted into a layer over the whole viewer
+   (enterZoom in photoFunctions.js), dragged and pinched there */
+.zoom-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 8; /* under the close button */
+  display: none;
+  overflow: hidden;
+  background: rgba(18, 18, 16, 0.97);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.25s ease;
+}
+
+#bigPicModal.is-zoomed .zoom-layer {
+  display: block;
+  animation: zoomLayerIn 0.2s ease;
+}
+
+#bigPicModal.is-unzooming .zoom-layer {
+  background: rgba(18, 18, 16, 0);
+}
+
+@keyframes zoomLayerIn {
+  from { background: rgba(18, 18, 16, 0); }
+}
+
+.zoom-layer.is-dragging { cursor: grabbing; }
+
+.zoom-layer img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  border-radius: 3px;
+  -webkit-user-drag: none;
+}
+
+.zoom-bar {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 5px 5px 16px;
+  border-radius: 999px;
+  background: rgba(18, 18, 16, 0.72);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: default;
+  transition: opacity 0.15s ease;
+}
+
+#bigPicModal.is-unzooming .zoom-bar { opacity: 0; }
+
+/* Phones: no double-tap zoom of the whole page on the painting (the viewer
+   has its own), so taps aren't held up waiting for one */
+#popUpImage { touch-action: manipulation; }
+
+/* "See to scale": a wall, a floor, a figure and the painting, taped up */
+.scale-scene {
+  display: none;
+  position: relative;
+  width: min(90vw, 980px);
+  height: min(var(--room, 66vh), 580px);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--color-paper);
+  background-image: radial-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+#bigPicModal.is-scale .scale-scene {
+  display: block;
+  animation: scaleSceneIn 0.35s var(--ease-out-soft);
+}
+
+#bigPicModal.is-scale #popUpImage { display: none; }
+
+/* The arrows sit over the light wall now: draw them dark */
+#bigPicModal.is-scale .nav-arrow {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(29, 29, 27, 0.18);
+  opacity: 0.8;
+}
+
+#bigPicModal.is-scale .nav-arrow path { stroke: var(--color-ink); }
+
+@keyframes scaleSceneIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.scale-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #e9e4da;
+  border-top: 1px solid #d8d1c3;
+}
+
+.scale-person {
+  position: absolute;
+  fill: #c9c3b6;
+}
+
+/* Small works: close up, standing on a table beside a mug */
+.scale-mug {
+  position: absolute;
+  display: none;
+  fill: #c9c3b6;
+}
+
+.scale-scene.is-table .scale-mug { display: block; }
+.scale-scene.is-table .scale-person { display: none; }
+
+.scale-scene.is-table .scale-floor {
+  background: #ddcbae;
+  border-top: 1px solid #c9b28d;
+}
+
+/* Leaning on the wall rather than taped to it */
+.scale-scene.is-table .scale-art:before,
+.scale-scene.is-table .scale-art:after { display: none; }
+
+.scale-scene.is-table .scale-art {
+  box-shadow: 3px 4px 10px rgba(29, 29, 27, 0.25);
+}
+
+.scale-art {
+  position: absolute;
+  box-shadow: 0 6px 18px rgba(29, 29, 27, 0.22);
+  --tape-w: 40px;
+}
+
+.scale-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.scale-art:before,
+.scale-art:after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: var(--tape-w);
+  aspect-ratio: 160 / 44;
+  background: var(--tape-yellow) center / 100% 100% no-repeat;
+}
+
+.scale-art:before {
+  left: 3px;
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+
+.scale-art:after {
+  right: 3px;
+  background-image: var(--tape-pink);
+  transform: translate(50%, -50%) rotate(40deg);
+}
+
+.scale-back {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(29, 29, 27, 0.18);
+  color: var(--color-ink);
+}
+
+.scale-back:hover {
+  background: #fff;
+  border-color: rgba(29, 29, 27, 0.35);
+  color: var(--color-ink);
+}
+
+.scale-label {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  right: 18px;
+  margin: 0 !important;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem !important;
+  letter-spacing: 0.06em;
+  opacity: 1 !important;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 992px) {
+  .scale-scene {
+    width: 92vw;
+    height: min(var(--room, 60vh), 520px);
+  }
+}
 
 #spinner {
   position: absolute;
@@ -1563,8 +1991,6 @@ html.no-scroll {
 
   .navLinksBox { display: none; }
 
-  .navLinksBoxMobile .mainLinkGenres:after { height: 2px; }
-
   #imagesAndContent {
     width: 92vw;
     margin-left: 4vw;
@@ -1654,6 +2080,17 @@ html.no-scroll {
   .modal-close {
     top: 12px;
     right: 12px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .viewer-toolbar {
+    top: 12px;
+    right: 58px;
+    gap: 8px;
+  }
+
+  .viewer-icon {
     width: 38px;
     height: 38px;
   }

@@ -51,7 +51,8 @@ var viewer = {
     afterOpening: null,      // swap in the sharper copy once the opening has finished
     source: null,            // { index, img }: the picture on the page it grew out of
     hiddenInPage: [],        // pictures on the page hidden while their twin is in the viewer
-    hidingNow: false         // closeViewer's own final, instant hide
+    hidingNow: false,        // closeViewer's own final, instant hide
+    room: 0                  // height left for the painting (fitViewerToScreen)
 };
 var scrollPosition = 0;
 var startX, startY;
@@ -135,10 +136,42 @@ function workSrcset(work) {
 // as .popUpImage / .popUpImageMobile in ambar.css)
 function viewerImageWidth(work) {
     var ratio = work.width / work.height;
-    if (window.innerWidth <= BREAKPOINT) {
-        return Math.min(window.innerWidth * 0.9, window.innerHeight * 0.9 * ratio);
+    var mobile = window.innerWidth <= BREAKPOINT;
+    var room = viewer.room || window.innerHeight * (mobile ? 0.9 : 0.82);
+    if (mobile) {
+        return Math.min(window.innerWidth * 0.9, room * ratio);
     }
-    return Math.min(window.innerWidth * 0.9, window.innerHeight * 0.82 * ratio, work.width);
+    return Math.min(window.innerWidth * 0.9, room * ratio, work.width);
+}
+
+// The viewer always fits on the screen, with nothing to scroll to: the
+// buttons along the top, then the painting, then its title and
+// description. This works out the height left for the painting once the
+// others have their room (the caption is measured, so it's right for each
+// painting) and gives it to ambar.css as --room. A description opened up
+// with "more" can make the painting smaller, but never below 40% of the
+// screen; past that the viewer scrolls (updateViewerScrolling).
+var VIEWER_TOP_PX = 66;          // clear of the close / zoom / scale buttons
+var VIEWER_TOP_PX_MOBILE = 58;
+var VIEWER_BOTTOM_PX = 14;
+
+function fitViewerToScreen() {
+    var modal = document.getElementById('bigPicModal');
+    var info = document.getElementById('imageInfo');
+    var top = window.innerWidth <= BREAKPOINT ? VIEWER_TOP_PX_MOBILE : VIEWER_TOP_PX;
+    var screenH = modal.clientHeight || window.innerHeight;
+    var room = screenH - top - VIEWER_BOTTOM_PX - info.offsetHeight;
+    viewer.room = Math.floor(Math.max(room, screenH * 0.4));
+    modal.style.setProperty('--viewer-top', top + 'px');
+    modal.style.setProperty('--viewer-bottom', VIEWER_BOTTOM_PX + 'px');
+    modal.style.setProperty('--room', viewer.room + 'px');
+}
+
+// A long description shows its first lines, with "more" to open it up
+function setUpDescription() {
+    var desc = document.getElementById('imageDescription');
+    $('#imageInfo').removeClass('is-expanded');
+    $('#imageMore').text('more').prop('hidden', desc.scrollHeight <= desc.clientHeight + 1);
 }
 
 // The smallest copy that still fills the viewer sharply on this screen
@@ -995,6 +1028,9 @@ function showViewerImage(direction, opening) {
             img.style.removeProperty('--w');
             img.style.removeProperty('--h');
         }
+        setUpDescription();
+        fitViewerToScreen();
+        updateViewerTools(work);
     }
 
     viewer.waitingForImage = false;
@@ -1144,6 +1180,7 @@ function changeImage(step) {
         stopOpening();
     }
     showInPage();
+    exitZoom(false);
     viewer.index = (viewer.index + step + viewer.items.length) % viewer.items.length;
     var work = viewer.items[viewer.index];
     // Stepping through paintings updates the address without piling up history
@@ -1186,7 +1223,13 @@ function setupViewerLayer() {
     viewer.listenToTouches(preopened);
     document.addEventListener('keydown', function (event) {
         if (viewer.open && event.key === 'Escape') {
-            closeViewer();
+            if (zoom.active) {
+                exitZoom(true);
+            } else if (viewerTools.scale) {
+                setScale(false);
+            } else {
+                closeViewer();
+            }
         }
     });
 }
@@ -1225,6 +1268,7 @@ function animateClosing() {
     var backdrop = document.querySelector('.modal-backdrop');
     var ms = prefersReducedMotion() || VT.noAnim ? 0 : VIEWER_CLOSE_MS;
 
+    resetViewerTools(); // the painting itself must be showing to shrink back
     viewer.closing = true;
     viewer.loadToken++; // nothing still loading may change the picture now
     clearTimeout(viewer.openTimer);
@@ -1286,6 +1330,7 @@ function finishClosing() {
     viewer.opening = false;
     viewer.afterOpening = null;
     viewer.waitingForImage = false;
+    resetViewerTools();
     setThemeColor(PAGE_THEME_COLOR);
     showInPage();
     viewer.hidingNow = true;
@@ -1401,16 +1446,32 @@ function setupViewer() {
 
     // Click on the dark background closes; click on the picture steps through
     modal.on('click', function (event) {
-        if (!$(event.target).closest('#popUpImage, .nav-arrow').length) {
+        if (!$(event.target).closest('#popUpImage, .nav-arrow, .viewer-toolbar, .image-more, .scale-scene, .zoom-layer').length) {
             closeViewer();
         }
     });
 
     document.getElementById('popUpImage').addEventListener('click', function (event) {
-        if (isPinching) {
+        if (isPinching || zoom.active) {
             return;
         }
-        changeImage(event.offsetX < this.clientWidth / 2 ? -1 : 1);
+        var step = event.offsetX < this.clientWidth / 2 ? -1 : 1;
+        if (!isTouchScreen()) {
+            changeImage(step);
+            return;
+        }
+        // Phones and tablets: a second tap straight after zooms in there, so
+        // a single tap waits a moment before stepping to the next painting
+        if (zoom.tapTimer) {
+            clearTimeout(zoom.tapTimer);
+            zoom.tapTimer = null;
+            zoomInAt(event.clientX, event.clientY);
+            return;
+        }
+        zoom.tapTimer = setTimeout(function () {
+            zoom.tapTimer = null;
+            changeImage(step);
+        }, ZOOM_TAP_MS);
     });
 
     document.addEventListener('keydown', function (event) {
@@ -1433,7 +1494,7 @@ function setupViewer() {
     var tracking = false;
     function onImageTouchStart(e) {
         isPinching = e.touches.length > 1;
-        tracking = e.touches.length === 1 && !viewer.opening && !viewer.closing;
+        tracking = e.touches.length === 1 && !viewer.opening && !viewer.closing && !zoom.active;
         if (tracking) {
             this.style.transition = 'none';
             startX = e.touches[0].clientX;
@@ -1484,7 +1545,639 @@ function setupViewer() {
         image[method]('touchmove', onImageTouchMove, false);
         image[method]('touchend', onImageTouchEnd, false);
     };
+    setupViewerTools();
     setupViewerLayer();
+}
+
+// --------------------------------------------------------------------------
+// Viewer tools: zooming in (pinch, double-tap, scroll wheel or the Zoom in
+// button) and "See to scale" (the painting beside something everyone knows
+// the size of, from the dimensions in its description)
+// --------------------------------------------------------------------------
+
+var SCALE_PERSON_CM = 165;
+var SCALE_PERSON_WIDTH_CM = 50;
+var SCALE_HANG_CENTRE_CM = 150; // galleries hang a painting's middle at about eye level
+var SCALE_SMALL_CM = 45;        // up to this (longest side): shown on a table beside a mug
+var SCALE_MUG_CM = 9.5;         // the mug's height
+var SCALE_MUG_WIDTH_CM = 11.5;  // with its handle
+
+var viewerTools = {
+    scale: false
+};
+
+// Its size in cm from its description ("50 x 64 cm", "18 x 24\"", "A4"...),
+// as { w, h } matched to the picture's orientation, or null if there isn't one
+var PAPER_SIZES_CM = { 2: [42, 59.4], 3: [29.7, 42], 4: [21, 29.7], 5: [14.8, 21], 6: [10.5, 14.8] };
+
+function workSizeCm(work) {
+    var text = [work.firstDescription, work.secondDescription].join(' ');
+    var a, b;
+    var m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(cm|mm|in(?:ches)?\b|["”″])?/i);
+    if (m) {
+        a = parseFloat(m[1].replace(',', '.'));
+        b = parseFloat(m[2].replace(',', '.'));
+        var unit = (m[3] || 'cm').toLowerCase();
+        var toCm = unit === 'mm' ? 0.1 : unit === 'cm' ? 1 : 2.54;
+        a *= toCm;
+        b *= toCm;
+    } else {
+        var paper = text.match(/\bA([2-6])\b/);
+        if (!paper) {
+            return null;
+        }
+        a = PAPER_SIZES_CM[paper[1]][0];
+        b = PAPER_SIZES_CM[paper[1]][1];
+    }
+    if (!(a >= 3 && b >= 3 && a <= 600 && b <= 600)) {
+        return null;
+    }
+    var landscape = work.width && work.height ? work.width > work.height : false;
+    var longSide = Math.max(a, b);
+    var shortSide = Math.min(a, b);
+    return landscape ? { w: longSide, h: shortSide } : { w: shortSide, h: longSide };
+}
+
+// The web copy was made smaller than the original, so there's a bigger
+// zoom copy to load
+function hasLargeOriginal(work) {
+    return work.width >= 1590 || work.height >= 2390;
+}
+
+function formatCm(cm) {
+    return (Math.round(cm * 10) / 10).toString();
+}
+
+function formatInches(cm) {
+    return (Math.round(cm / 2.54 * 10) / 10).toString();
+}
+
+// Called whenever the viewer shows a painting: which tools it can have
+function updateViewerTools(work) {
+    var size = workSizeCm(work);
+    $('#seeToScale').prop('hidden', !size);
+    if (viewerTools.scale) {
+        if (size) {
+            drawScaleScene(work, size);
+        } else {
+            setScale(false);
+        }
+    }
+}
+
+// Everything back to plain viewing at once (closing the viewer)
+function resetViewerTools() {
+    exitZoom(false);
+    setScale(false);
+}
+
+// ---- Zoom ----
+//
+// Zooming lifts a copy of the painting into a layer over the whole viewer,
+// exactly where the painting is, and scales and moves that. The viewer
+// underneath is left alone, so none of its opening, closing and stepping
+// animations are affected. The copy starts as the picture already showing
+// and swaps to the zoom copy (up to 4000px, baseImages/web/zoom/) once that
+// has loaded — never the original upload.
+
+var ZOOM_TAP_MS = 280;  // a second tap within this is a double-tap
+
+var zoom = {
+    active: false,
+    s: 1, x: 0, y: 0,   // scale, and where the picture's top-left corner is on screen
+    baseW: 0, baseH: 0, // its size at scale 1 (as the viewer shows it)
+    maxS: 2,
+    gesture: null,      // the drag or pinch in progress
+    lastTap: null,      // { t, x, y }: for double-taps while zoomed
+    tapTimer: null,     // a single tap on the painting, waiting to see if a second comes
+    exitTimer: null
+};
+
+function zoomCopyUrl(location) {
+    return '/baseImages/web/zoom/' + encodeURIComponent(location);
+}
+
+function zoomImage() {
+    return document.querySelector('#zoomLayer img');
+}
+
+function viewportSize() {
+    return { w: document.documentElement.clientWidth, h: window.innerHeight };
+}
+
+// Puts the zoom layer over the painting at scale 1. Returns false if there's
+// nothing to zoom into yet.
+function enterZoom() {
+    if (zoom.active) {
+        return true;
+    }
+    var work = viewer.items[viewer.index];
+    if (!work || !viewer.open || viewer.opening || viewer.closing) {
+        return false;
+    }
+    if (viewerTools.scale) {
+        setScale(false);
+    }
+    var img = document.getElementById('popUpImage');
+    var rect = img.getBoundingClientRect();
+    if (!rect.width || !img.getAttribute('src')) {
+        return false;
+    }
+    clearTimeout(zoom.exitTimer);
+    zoom.active = true;
+    zoom.gesture = null;
+    zoom.lastTap = null;
+    zoom.s = 1;
+    zoom.x = rect.left;
+    zoom.y = rect.top;
+    zoom.baseW = rect.width;
+    zoom.baseH = rect.height;
+    // How far it can go: until each pixel of the biggest copy is about a
+    // pixel on screen (guessed until that copy has arrived), and at least 2x
+    var bigWidth = hasLargeOriginal(work) ? work.width * 2.5 : work.width;
+    zoom.maxS = Math.max(2, bigWidth / rect.width);
+
+    var layerImg = zoomImage();
+    layerImg.style.width = rect.width + 'px';
+    layerImg.style.height = rect.height + 'px';
+    layerImg.src = img.currentSrc || img.src;
+    renderZoom(false);
+    $('#bigPicModal').removeClass('is-unzooming').addClass('is-zoomed');
+    $('#zoomLayer').attr('aria-hidden', 'false');
+    $('#zoomIn').attr({ 'aria-pressed': 'true', 'aria-label': 'Zoom out', title: 'Zoom out' });
+
+    var bigSrc = hasLargeOriginal(work) ? zoomCopyUrl(work.location) : webImageUrl(work.location);
+    if (layerImg.getAttribute('src') !== bigSrc) {
+        var big = new Image();
+        big.onload = function () {
+            var swap = function () {
+                if (zoom.active && viewer.items[viewer.index] === work) {
+                    layerImg.src = big.src;
+                    zoom.maxS = Math.max(2, big.naturalWidth / zoom.baseW);
+                }
+            };
+            if (big.decode) {
+                big.decode().then(swap, swap);
+            } else {
+                swap();
+            }
+        };
+        big.src = bigSrc;
+    }
+    return true;
+}
+
+// Back to the painting: it shrinks back into its place in the viewer
+function exitZoom(animate) {
+    clearTimeout(zoom.tapTimer);
+    zoom.tapTimer = null;
+    if (!zoom.active) {
+        return;
+    }
+    zoom.active = false;
+    zoom.gesture = null;
+    $('#zoomIn').attr({ 'aria-pressed': 'false', 'aria-label': 'Zoom in', title: 'Zoom in' });
+    $('#zoomLayer').removeClass('is-dragging');
+    var rect = document.getElementById('popUpImage').getBoundingClientRect();
+    if (animate && rect.width && !prefersReducedMotion()) {
+        zoom.s = rect.width / zoom.baseW;
+        zoom.x = rect.left;
+        zoom.y = rect.top;
+        renderZoom(true);
+        $('#bigPicModal').addClass('is-unzooming');
+        zoom.exitTimer = setTimeout(hideZoomLayer, 300);
+    } else {
+        hideZoomLayer();
+    }
+}
+
+function hideZoomLayer() {
+    clearTimeout(zoom.exitTimer);
+    $('#bigPicModal').removeClass('is-zoomed is-unzooming');
+    $('#zoomLayer').attr('aria-hidden', 'true');
+}
+
+function renderZoom(animate) {
+    var layerImg = zoomImage();
+    layerImg.style.transition = animate ? 'transform 0.3s var(--ease-out-soft)' : 'none';
+    layerImg.style.transform = 'translate(' + zoom.x + 'px, ' + zoom.y + 'px) scale(' + zoom.s + ')';
+}
+
+// Where the picture may sit: covering the screen where it's bigger than the
+// screen, and wholly on it where it's smaller
+function clampedZoomPosition(s, x, y) {
+    var view = viewportSize();
+    var w = zoom.baseW * s;
+    var h = zoom.baseH * s;
+    return {
+        x: w > view.w ? Math.min(0, Math.max(view.w - w, x)) : Math.min(view.w - w, Math.max(0, x)),
+        y: h > view.h ? Math.min(0, Math.max(view.h - h, y)) : Math.min(view.h - h, Math.max(0, y))
+    };
+}
+
+// Zooms to scale s, keeping the point (cx, cy) on screen where it is
+function zoomAt(s, cx, cy, animate) {
+    s = Math.max(1, Math.min(zoom.maxS, s));
+    var ratio = s / zoom.s;
+    var at = clampedZoomPosition(s, cx - (cx - zoom.x) * ratio, cy - (cy - zoom.y) * ratio);
+    zoom.s = s;
+    zoom.x = at.x;
+    zoom.y = at.y;
+    renderZoom(animate);
+}
+
+// Double-tap, the button, or + on the keyboard
+function zoomInAt(cx, cy) {
+    if (enterZoom()) {
+        zoomAt(Math.min(zoom.maxS, 2.5), cx, cy, true);
+    }
+}
+
+function zoomInAtMiddle() {
+    var rect = document.getElementById('popUpImage').getBoundingClientRect();
+    zoomInAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+// After a gesture: back within the limits, gently
+function settleZoom(cx, cy) {
+    if (zoom.s < 1.05) {
+        exitZoom(true);
+        return;
+    }
+    var view = viewportSize();
+    zoomAt(zoom.s, cx === undefined ? view.w / 2 : cx, cy === undefined ? view.h / 2 : cy, true);
+}
+
+// A drag past the edge moves only part of the way: it resists, then springs back
+function resist(value, min, max) {
+    if (value > max) {
+        return max + (value - max) * 0.35;
+    }
+    if (value < min) {
+        return min + (value - min) * 0.35;
+    }
+    return value;
+}
+
+// ---- Zoom: touch ----
+
+function touchDistance(a, b) {
+    return Math.sqrt(Math.pow(a.clientX - b.clientX, 2) + Math.pow(a.clientY - b.clientY, 2));
+}
+
+function startTouchGesture(touches) {
+    if (touches.length >= 2) {
+        var a = touches[0];
+        var b = touches[1];
+        zoom.gesture = {
+            type: 'pinch',
+            d0: Math.max(1, touchDistance(a, b)),
+            s0: zoom.s,
+            mx0: (a.clientX + b.clientX) / 2,
+            my0: (a.clientY + b.clientY) / 2,
+            x0: zoom.x,
+            y0: zoom.y
+        };
+        zoom.gesture.mx = zoom.gesture.mx0;
+        zoom.gesture.my = zoom.gesture.my0;
+    } else if (touches.length === 1) {
+        zoom.gesture = {
+            type: 'pan',
+            sx: touches[0].clientX,
+            sy: touches[0].clientY,
+            x0: zoom.x,
+            y0: zoom.y,
+            t0: Date.now(),
+            moved: false
+        };
+    }
+}
+
+function moveTouchGesture(touches) {
+    var g = zoom.gesture;
+    if (g.type === 'pinch' && touches.length >= 2) {
+        var a = touches[0];
+        var b = touches[1];
+        var s = g.s0 * touchDistance(a, b) / g.d0;
+        // Past the limits it still gives a little
+        if (s > zoom.maxS) {
+            s = zoom.maxS * Math.pow(s / zoom.maxS, 0.3);
+        } else if (s < 1) {
+            s = Math.max(0.5, 1 - (1 - s) * 0.5);
+        }
+        g.mx = (a.clientX + b.clientX) / 2;
+        g.my = (a.clientY + b.clientY) / 2;
+        zoom.x = g.mx - (g.mx0 - g.x0) * s / g.s0;
+        zoom.y = g.my - (g.my0 - g.y0) * s / g.s0;
+        zoom.s = s;
+        renderZoom(false);
+    } else if (g.type === 'pan' && touches.length === 1) {
+        var dx = touches[0].clientX - g.sx;
+        var dy = touches[0].clientY - g.sy;
+        if (Math.abs(dx) + Math.abs(dy) > 8) {
+            g.moved = true;
+        }
+        var view = viewportSize();
+        var w = zoom.baseW * zoom.s;
+        var h = zoom.baseH * zoom.s;
+        zoom.x = resist(g.x0 + dx, Math.min(0, view.w - w), Math.max(0, view.w - w));
+        zoom.y = resist(g.y0 + dy, Math.min(0, view.h - h), Math.max(0, view.h - h));
+        renderZoom(false);
+    }
+}
+
+function endTouchGesture(remaining) {
+    var g = zoom.gesture;
+    zoom.gesture = null;
+    if (!g || !zoom.active) {
+        return;
+    }
+    // One finger lifted from a pinch: carry on with the other
+    if (remaining.length) {
+        startTouchGesture(remaining);
+        return;
+    }
+    if (g.type === 'pan' && !g.moved && Date.now() - g.t0 < 300) {
+        // A tap. Two in a row zooms back out.
+        var last = zoom.lastTap;
+        if (last && Date.now() - last.t < ZOOM_TAP_MS + 100 && Math.abs(last.x - g.sx) + Math.abs(last.y - g.sy) < 40) {
+            zoom.lastTap = null;
+            exitZoom(true);
+            return;
+        }
+        zoom.lastTap = { t: Date.now(), x: g.sx, y: g.sy };
+    }
+    settleZoom(g.mx, g.my);
+}
+
+// ---- See to scale ----
+
+function setScale(on) {
+    on = !!on;
+    var work = viewer.items[viewer.index];
+    var size = on && work ? workSizeCm(work) : null;
+    if (on && !size) {
+        return;
+    }
+    if (on) {
+        exitZoom(false);
+    }
+    viewerTools.scale = on;
+    $('#bigPicModal').toggleClass('is-scale', on);
+    $('#scaleScene').attr('aria-hidden', String(!on));
+    var label = on ? 'Back to the painting' : 'See to scale';
+    $('#seeToScale').attr({ 'aria-pressed': String(on), 'aria-label': label, title: label });
+    if (on) {
+        drawScaleScene(work, size);
+    }
+    updateViewerScrolling();
+}
+
+// The painting at its real size beside something everyone knows: hung on a
+// wall next to a 165 cm figure, or (a small work) standing on a table next
+// to a mug, close up. Everything in the scene is drawn at the same scale.
+function drawScaleScene(work, size) {
+    var scene = document.getElementById('scaleScene');
+    var sceneW = scene.clientWidth;
+    var sceneH = scene.clientHeight;
+    if (!sceneW || !sceneH) {
+        return;
+    }
+    var small = Math.max(size.w, size.h) <= SCALE_SMALL_CM;
+    // The picture keeps the photo's own proportions (so nothing is cropped),
+    // with its longest side the length given in the description
+    var box = { w: size.w, h: size.h };
+    if (work.width && work.height) {
+        var ratio = work.width / work.height;
+        box = ratio >= 1 ? { w: Math.max(size.w, size.h), h: Math.max(size.w, size.h) / ratio }
+                         : { w: Math.max(size.w, size.h) * ratio, h: Math.max(size.w, size.h) };
+    }
+    var floorPx = Math.round(sceneH * (small ? 0.2 : 0.1));
+    var refW, refH, artBottomCm, viewCm, gapCm, marginCm;
+    if (small) {
+        // On the table, leaning on the wall; enough wall shown above it that
+        // the work fills a good part of the view
+        refW = SCALE_MUG_WIDTH_CM;
+        refH = SCALE_MUG_CM;
+        artBottomCm = 0;
+        viewCm = Math.max(box.h * 1.45, 26);
+        gapCm = Math.max(4, box.w * 0.18);
+        marginCm = 6;
+    } else {
+        refW = SCALE_PERSON_WIDTH_CM;
+        refH = SCALE_PERSON_CM;
+        artBottomCm = Math.max(30, SCALE_HANG_CENTRE_CM - box.h / 2);
+        viewCm = Math.max(205, artBottomCm + box.h + 25);
+        gapCm = Math.max(35, Math.min(60, box.w * 0.4));
+        marginCm = 25;
+    }
+    var rowCm = marginCm + refW + gapCm + box.w + marginCm;
+    var cmPx = Math.min((sceneH - floorPx) / viewCm, sceneW / rowCm);
+    var left = (sceneW - rowCm * cmPx) / 2 + marginCm * cmPx;
+
+    $(scene).toggleClass('is-table', small);
+    $(scene).find('.scale-floor').css('height', floorPx + 'px');
+    $(scene).find(small ? '.scale-mug' : '.scale-person').css({
+        left: left + 'px',
+        bottom: floorPx + 'px',
+        width: (refW * cmPx) + 'px',
+        height: (refH * cmPx) + 'px'
+    });
+
+    var artW = box.w * cmPx;
+    var artH = box.h * cmPx;
+    var art = $(scene).find('.scale-art').css({
+        left: (left + (refW + gapCm) * cmPx) + 'px',
+        bottom: (floorPx + artBottomCm * cmPx) + 'px',
+        width: artW + 'px',
+        height: artH + 'px',
+        '--tape-w': Math.max(18, Math.min(48, artW * 0.32)) + 'px'
+    });
+    var img = art.find('img')[0];
+    if (work.width > 400) {
+        img.sizes = Math.ceil(artW) + 'px';
+        img.srcset = workSrcset(work);
+    } else {
+        img.removeAttribute('srcset');
+    }
+    img.src = webImageUrl(work.location);
+
+    $(scene).find('.scale-label').text(
+        formatCm(size.w) + ' × ' + formatCm(size.h) + ' cm  ·  ' +
+        formatInches(size.w) + ' × ' + formatInches(size.h) + ' in   —   ' +
+        (small ? 'beside a coffee mug 9.5 cm (3¾″) tall' : 'beside a figure 165 cm (5′5″) tall')
+    );
+}
+
+function setupViewerTools() {
+    var image = document.getElementById('popUpImage');
+    var layer = document.getElementById('zoomLayer');
+
+    $('#zoomIn').on('click', function () {
+        if (zoom.active) {
+            exitZoom(true);
+        } else {
+            zoomInAtMiddle();
+        }
+    });
+    $('#zoomOut').on('click', function () {
+        exitZoom(true);
+    });
+    $('#seeToScale').on('click', function () {
+        setScale(!viewerTools.scale);
+    });
+    $('.scale-back').on('click', function () {
+        setScale(false);
+    });
+    $('#imageMore').on('click', function () {
+        var open = !$('#imageInfo').hasClass('is-expanded');
+        $('#imageInfo').toggleClass('is-expanded', open);
+        $(this).text(open ? 'less' : 'more');
+        fitViewerToScreen();
+        if (viewerTools.scale) {
+            var shown = viewer.items[viewer.index];
+            drawScaleScene(shown, workSizeCm(shown));
+        }
+        updateViewerScrolling();
+    });
+
+    // The zoom layer's own hints, for a mouse or a finger
+    $('#zoomHint').text(isTouchScreen()
+        ? 'Pinch to zoom · double-tap to go back'
+        : 'Drag to look around · scroll to zoom · click to go back');
+
+    // Scroll wheel / trackpad: zooms toward the pointer. Over the painting
+    // it only starts zooming on a scroll up from the top: scrolling down
+    // still scrolls a tall painting's caption into view, and back up to
+    // the top, and only then zooms (a trackpad pinch always zooms).
+    function onWheel(event) {
+        if (!zoom.active) {
+            if (event.deltaY >= 0 || (!event.ctrlKey && document.getElementById('bigPicModal').scrollTop > 0)) {
+                return;
+            }
+            if (!enterZoom()) {
+                return;
+            }
+        }
+        event.preventDefault();
+        var delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
+        zoomAt(zoom.s * Math.exp(-delta * (event.ctrlKey ? 0.01 : 0.002)), event.clientX, event.clientY, false);
+        if (zoom.s <= 1.001) {
+            exitZoom(false);
+        }
+    }
+    image.addEventListener('wheel', onWheel, { passive: false });
+    layer.addEventListener('wheel', onWheel, { passive: false });
+
+    // Mouse: drag to look around; a click without dragging zooms back out
+    layer.addEventListener('mousedown', function (event) {
+        if (event.button !== 0 || $(event.target).closest('.zoom-bar').length) {
+            return;
+        }
+        event.preventDefault();
+        zoom.gesture = { type: 'drag', sx: event.clientX, sy: event.clientY, x0: zoom.x, y0: zoom.y, moved: false };
+        $(layer).addClass('is-dragging');
+    });
+    window.addEventListener('mousemove', function (event) {
+        var g = zoom.gesture;
+        if (!g || g.type !== 'drag') {
+            return;
+        }
+        var dx = event.clientX - g.sx;
+        var dy = event.clientY - g.sy;
+        if (Math.abs(dx) + Math.abs(dy) > 4) {
+            g.moved = true;
+        }
+        var at = clampedZoomPosition(zoom.s, g.x0 + dx, g.y0 + dy);
+        zoom.x = at.x;
+        zoom.y = at.y;
+        renderZoom(false);
+    });
+    window.addEventListener('mouseup', function () {
+        var g = zoom.gesture;
+        if (!g || g.type !== 'drag') {
+            return;
+        }
+        zoom.gesture = null;
+        $(layer).removeClass('is-dragging');
+        if (!g.moved) {
+            exitZoom(true);
+        }
+    });
+
+    // Touch: two fingers on the painting start zooming (instead of zooming
+    // the whole page); once zoomed, one finger drags and two pinch
+    image.addEventListener('touchstart', function (event) {
+        if (!zoom.active && event.touches.length === 2 && event.cancelable && enterZoom()) {
+            event.preventDefault();
+            startTouchGesture(event.touches);
+        }
+    }, { passive: false });
+    layer.addEventListener('touchstart', function (event) {
+        if ($(event.target).closest('.zoom-bar').length) {
+            return;
+        }
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        startTouchGesture(event.touches);
+    }, { passive: false });
+    document.addEventListener('touchmove', function (event) {
+        if (zoom.active && zoom.gesture) {
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+            moveTouchGesture(event.touches);
+        }
+    }, { passive: false });
+    function onTouchEnd(event) {
+        if (zoom.active && zoom.gesture) {
+            endTouchGesture(event.touches);
+        }
+    }
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+    // Safari's own pinch-to-zoom of the page, while a painting is open
+    document.addEventListener('gesturestart', function (event) {
+        if (viewer.open) {
+            event.preventDefault();
+        }
+    });
+
+    // Keyboard: + and - zoom
+    document.addEventListener('keydown', function (event) {
+        if (!viewer.open) {
+            return;
+        }
+        if (event.key === '+' || event.key === '=') {
+            if (zoom.active) {
+                var view = viewportSize();
+                zoomAt(zoom.s * 1.5, view.w / 2, view.h / 2, true);
+            } else {
+                zoomInAtMiddle();
+            }
+        } else if (event.key === '-' && zoom.active) {
+            if (zoom.s / 1.5 <= 1.05) {
+                exitZoom(true);
+            } else {
+                var middle = viewportSize();
+                zoomAt(zoom.s / 1.5, middle.w / 2, middle.h / 2, true);
+            }
+        }
+    });
+
+    $(window).on('resize', function () {
+        exitZoom(false);
+        if (viewer.open) {
+            fitViewerToScreen();
+            updateViewerScrolling();
+        }
+        // Redraw the scale scene for the new screen size
+        if (viewerTools.scale && viewer.open) {
+            var work = viewer.items[viewer.index];
+            drawScaleScene(work, workSizeCm(work));
+        }
+    });
 }
 
 // --------------------------------------------------------------------------

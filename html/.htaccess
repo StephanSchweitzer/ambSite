@@ -8,9 +8,12 @@ RewriteRule ^(.*)$ https://ambarvelasco.com/$1 [R=301,L]
 # Certificate files from the old SSL setup are never for visitors
 RewriteRule ^sslStuff(/|$) - [R=404,L]
 
-# Web-sized artwork copies (web/<file>, and narrower ones at web/<width>/<file>).
-# The first request for one runs webImage.php, which makes and saves it; after
-# that Apache serves the saved file directly.
+# Web-sized artwork copies (web/<file>, narrower ones at web/<width>/<file>,
+# and the bigger zoom copy at web/zoom/<file>). The first request for one runs
+# webImage.php, which makes and saves it; after that Apache serves the saved
+# file directly.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^baseImages/web/zoom/([^/]+)$ actions/webImage.php?zoom=1&f=$1 [B,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^baseImages/web/([0-9]+)/([^/]+)$ actions/webImage.php?w=$1&f=$2 [B,L]
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -314,7 +314,31 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
                         <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
+                <!-- Zoom and See to scale, beside the close button (photoFunctions.js) -->
+                <div class="viewer-toolbar">
+                    <button type="button" id="seeToScale" class="viewer-icon" aria-pressed="false" aria-label="See to scale" title="See to scale" hidden>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 16.5L16.5 3L21 7.5L7.5 21Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12.5l2 2M10 9.5l2 2M13 6.5l2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    </button>
+                    <button type="button" id="zoomIn" class="viewer-icon" aria-pressed="false" aria-label="Zoom in" title="Zoom in">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5L21 21M10.5 7.5v6M7.5 10.5h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
                 <div class="centerLargePhoto">
+                    <!-- "See to scale": the painting on a wall beside a person (photoFunctions.js) -->
+                    <div id="scaleScene" class="scale-scene" aria-hidden="true">
+                        <div class="scale-floor"></div>
+                        <svg class="scale-person" viewBox="0 0 50 165" preserveAspectRatio="none" aria-hidden="true">
+                            <ellipse cx="25" cy="11" rx="8.5" ry="11"/>
+                            <path d="M21 21 L29 21 L29 26 C38 26 44 28 45.5 32 C47 35 47.5 40 47.5 46 L47.5 96 C47.5 100 41 100 41 96 L40.5 48 L40 48 L40 86 L39 88 L36 162 C36 165 35 165 33 165 L29 165 C27.5 165 27 164 27 162 L25.8 92 L24.2 92 L23 162 C23 164 22.5 165 21 165 L17 165 C15 165 14 165 14 162 L11 88 L10 86 L10 48 L9.5 48 L9 96 C9 100 2.5 100 2.5 96 L2.5 46 C2.5 40 3 35 4.5 32 C6 28 12 26 21 26 Z"/>
+                        </svg>
+                        <svg class="scale-mug" viewBox="0 0 11.5 9.5" preserveAspectRatio="none" aria-hidden="true">
+                            <path d="M0.2 0.3 L8 0.3 L7.7 8.5 C7.65 9.2 7.3 9.5 6.6 9.5 L1.6 9.5 C0.9 9.5 0.55 9.2 0.5 8.5 Z"/>
+                            <path d="M7.9 2.3 C10.6 2.1 11.5 3.4 11.2 4.8 C10.9 6.3 9.6 7.1 7.7 7.1 L7.75 5.9 C9 5.9 9.8 5.4 10 4.6 C10.2 3.8 9.6 3.4 7.85 3.5 Z"/>
+                        </svg>
+                        <div class="scale-art"><img alt="" decoding="async"></div>
+                        <p class="scale-label"></p>
+                        <button type="button" class="scale-back viewer-tool">Back to the painting</button>
+                    </div>
                     <img id="popUpImage" class="popUpImage" alt="<?= $work ? e($work['name']) : '' ?>"<?= $work ? ' src="' . e(ambWebImageUrl($work['location'])) . '"' : '' ?><?= $work && $work['width'] && $work['height'] ? ' style="--w: ' . (int) $work['width'] . '; --h: ' . (int) $work['height'] . '"' : '' ?>>
                     <div id="spinner" class="spinner-border text-light position-absolute" role="status" style="display: none;">
                         <span class="sr-only">Loading...</span>
@@ -336,8 +360,17 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
                 <div id="imageInfo" class="imageInfo">
                     <h2 id="imageTitle"><?= $work ? e($work['name']) : '' ?></h2>
                     <p id="imageDescription"><?= $work ? ambMultiline($work['firstDescription']) : '' ?></p>
+                    <button type="button" id="imageMore" class="image-more" hidden>more</button>
                     <p id="imageCounter" class="image-counter"></p>
                 </div>
+            </div>
+        </div>
+        <!-- Zooming in: a copy of the painting that can be scaled and moved (photoFunctions.js) -->
+        <div id="zoomLayer" class="zoom-layer" aria-hidden="true">
+            <img alt="" draggable="false">
+            <div class="zoom-bar">
+                <span id="zoomHint" class="zoom-hint"></span>
+                <button type="button" id="zoomOut" class="viewer-tool">Back</button>
             </div>
         </div>
     </div>
