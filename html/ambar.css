@@ -163,8 +163,11 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   transition: transform 0.4s var(--ease-out-soft);
 }
 
-a:hover .ambarNamePic {
-  transform: rotate(-2deg) scale(1.03);
+/* A gentle lift, the same motion as the gallery pictures */
+@media (hover: hover) {
+  a:hover .ambarNamePic {
+    transform: translateY(-2px) scale(1.02);
+  }
 }
 
 .ambarNamePicMobile {
@@ -1094,9 +1097,12 @@ a:hover .ambarNamePic {
   padding: 0 2vw;
 }
 
-#ambarPersoPic:hover {
-  transform: scale(1.015) rotate(-0.5deg);
-  box-shadow: var(--shadow-lifted);
+/* Lifts like a print raised off the table, the same motion as the gallery */
+@media (hover: hover) {
+  #ambarPersoPic:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lifted);
+  }
 }
 
 /* Email addresses in the About text become links */
