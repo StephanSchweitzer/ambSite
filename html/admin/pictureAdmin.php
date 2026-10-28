@@ -1340,7 +1340,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 <div class="toast-container"></div>
 
 <!-- Custom JS -->
-<script src="../js/imagePrep.js"></script>
+<script src="../js/imagePrep.js?v=<?php echo filemtime(__DIR__ . '/../js/imagePrep.js'); ?>"></script>
 <script src="../js/photoAdminFunctions.js"></script>
 
 <script>

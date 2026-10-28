@@ -90,6 +90,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        $tooLarge = uploadTooLargeMessage($file['tmp_name']);
+        if ($tooLarge !== null) {
+            http_response_code(413);
+            echo json_encode(['status' => 'error', 'message' => $tooLarge]);
+            exit;
+        }
+
         $filename = 'about-' . date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '.jpeg';
         try {
             convertToProgressiveJPEGAndUpload($file['tmp_name'], $uploadDir . $filename);

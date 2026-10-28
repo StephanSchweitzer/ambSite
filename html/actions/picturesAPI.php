@@ -298,6 +298,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $photo = $_FILES['photo'];
 
+    $tooLarge = uploadTooLargeMessage($photo['tmp_name']);
+    if ($tooLarge !== null) {
+        uploadFail($tooLarge, 413);
+    }
+
     $name = $_POST["name"];
     $desc2 = $_POST["firstDescription"] ?? '';
     $desc3 = $_POST["secondDescription"] ?? '';

@@ -1,6 +1,6 @@
 <?php
 // The public site shows a web-sized copy of each artwork (baseImages/web/),
-// not the original upload, which is often 4000-14000px and several MB. These
+// not the original upload, which can be up to 4000px and 1.2 MB. These
 // limits are the copy's maximum size; the web pages, the link previews and
 // the copy-maker below all read them from here so they always agree.
 if (!defined('AMB_WEB_MAX_WIDTH')) {
@@ -11,6 +11,26 @@ if (!defined('AMB_WEB_MAX_WIDTH')) {
     // screens can download a picture closer to the size they show it at.
     // Same list as WEB_VARIANT_WIDTHS in photoFunctions.js.
     define('AMB_WEB_VARIANT_WIDTHS', array(800, 1200));
+    // The largest upload accepted, in pixels on its longest side. The admin
+    // pages shrink bigger pictures before sending them (MAX_SIDE in
+    // imagePrep.js); this turns away anything that arrives bigger anyway.
+    // A picture's memory use depends on its pixels, not its file size: a
+    // 1 MB file can be 10000 x 14000 pixels and take over 500 MB to open.
+    define('AMB_UPLOAD_MAX_SIDE', 4000);
+}
+
+// The message to show if an uploaded picture is over AMB_UPLOAD_MAX_SIDE,
+// or null if it's fine. Reads only the file's header, so it's cheap even for
+// a huge picture.
+function uploadTooLargeMessage($path)
+{
+    $size = @getimagesize($path);
+    if (!$size || max($size[0], $size[1]) <= AMB_UPLOAD_MAX_SIDE) {
+        return null;
+    }
+    return 'This picture is ' . number_format($size[0]) . ' x ' . number_format($size[1])
+        . ' pixels; the most the site takes is ' . number_format(AMB_UPLOAD_MAX_SIDE)
+        . ' on the longest side. Please reload the page and try again: it will shrink the picture for you.';
 }
 
 // Size of the web copy for an original of $width x $height

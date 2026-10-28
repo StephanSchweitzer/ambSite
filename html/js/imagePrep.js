@@ -1,11 +1,12 @@
 // Gets a picture ready to upload, so any photo works, including one taken
-// on a phone. JPEG, PNG and GIF files under the size limit are sent as they
-// are. Anything else (HEIC, WebP, a huge phone photo...) is redrawn in the
-// browser and sent as a JPEG small enough to fit. The browser applies the
+// on a phone. JPEG, PNG and GIF files within both limits (1.2 MB, and 4000
+// pixels on the longest side) are sent as they are. Anything else (HEIC,
+// WebP, a huge phone photo, a small file with enormous pixel dimensions...)
+// is redrawn in the browser and sent as a JPEG that fits both. The browser applies the
 // photo's rotation while redrawing, so portraits don't arrive sideways.
 var ImagePrep = (function () {
     var MAX_BYTES = 1.2 * 1024 * 1024;   // what the server accepts
-    var MAX_SIDE = 4000;                 // longest side of a converted picture
+    var MAX_SIDE = 4000;                 // longest side, in pixels (AMB_UPLOAD_MAX_SIDE on the server)
     var SERVER_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
 
     function loadImage(file) {
@@ -47,15 +48,18 @@ var ImagePrep = (function () {
         if (!file) {
             return Promise.reject(new Error('Please choose a picture.'));
         }
-        if (SERVER_TYPES.indexOf(file.type) !== -1 && file.size <= MAX_BYTES) {
-            return Promise.resolve(file);
-        }
-        if (file.type && file.type.indexOf('image/') !== 0 && !/\.(heic|heif)$/i.test(file.name)) {
+        var canSendAsIs = SERVER_TYPES.indexOf(file.type) !== -1 && file.size <= MAX_BYTES;
+        if (!canSendAsIs && file.type && file.type.indexOf('image/') !== 0 && !/\.(heic|heif)$/i.test(file.name)) {
             return Promise.reject(new Error("This file isn't a picture. Please choose a photo or image file."));
         }
 
         return loadImage(file).then(function (loaded) {
             var img = loaded.img;
+            // Small enough in every way: send the file untouched
+            if (canSendAsIs && Math.max(img.naturalWidth, img.naturalHeight) <= MAX_SIDE) {
+                URL.revokeObjectURL(loaded.url);
+                return file;
+            }
             var scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
             var quality = 0.92;
             var tries = 0;
