@@ -90,10 +90,14 @@ function stripeRequest($method, $path, $params = array(), $idempotencyKey = null
         )));
         $body = @file_get_contents($url, false, $context);
         $status = 0;
-        // (newer PHP has a function for the reply's headers; older PHP a variable)
-        $replyHeaders = function_exists('http_get_last_response_headers')
-            ? http_get_last_response_headers()
-            : (isset($http_response_header) ? $http_response_header : array());
+        // (newer PHP has a function for the reply's headers; older PHP a variable,
+        // read through get_defined_vars() because PHP 8.5 warns on naming it)
+        if (function_exists('http_get_last_response_headers')) {
+            $replyHeaders = http_get_last_response_headers();
+        } else {
+            $definedVars = get_defined_vars();
+            $replyHeaders = isset($definedVars['http_response_header']) ? $definedVars['http_response_header'] : array();
+        }
         if (!empty($replyHeaders[0]) && preg_match('#\s(\d{3})\s#', $replyHeaders[0] . ' ', $m)) {
             $status = (int) $m[1];
         }
