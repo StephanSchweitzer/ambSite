@@ -266,7 +266,9 @@ site.
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`: a `php -l` lint gate
 across all PHP files, then `rsync --delete` to the droplet. The rsync excludes
-`.env`, `CLAUDE.md`, `.github/`, `ambOldSite/`, keys, and every image directory
+`.env`, `CLAUDE.md`, `.github/`, `ambOldSite/`, `/scripts/` (admin tools that
+run on a laptop, e.g. `scripts/mac/mac-match-prod.sh`, which brings a Mac's
+Homebrew PHP/MySQL up to the server's versions), keys, and every image directory
 (`html/img/`, `imgMid/`, `thumbnails/`, `baseImages/`, `sslStuff/`) — so local
 images and local config can never overwrite production. `--delete` means an
 empty `DEPLOY_PATH` would be destructive; the workflow guards against that.

@@ -74,6 +74,7 @@ jobs:
             --exclude='.gitattributes' \
             --exclude='.idea/' \
             --exclude='ambOldSite/' \
+            --exclude='/scripts/' \
             --exclude='CLAUDE.md' \
             --exclude='.env' \
             --exclude='.env.example' \
