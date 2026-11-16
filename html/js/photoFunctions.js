@@ -9,7 +9,8 @@
 //   /                  home slideshow (phones and tablets go to the works)
 //   /select-works      the works, grouped by project
 //   /work/<id>/<name>  the works, scrolled to that painting, open in the viewer
-//   /about  /shop  /current-project
+//   /about  /current-project
+//   /shop  /shop/<id>/<name>  /shop/basket  /shop/thank-you   (drawn by shop.js)
 //   anything else      "page not found" (index.php also sends a real 404)
 
 var BREAKPOINT = 992;
@@ -20,6 +21,9 @@ var PAGE_TITLES = {
     'works': 'Select Works - Ambar Velasco',
     'about': 'About - Ambar Velasco',
     'shop': 'Shop - Ambar Velasco',
+    'shop-item': 'Shop - Ambar Velasco',
+    'shop-basket': 'Basket - Ambar Velasco',
+    'shop-thanks': 'Thank you - Ambar Velasco',
     'current-project': 'Current Project - Ambar Velasco',
     'notfound': 'Page not found - Ambar Velasco'
 };
@@ -27,6 +31,8 @@ var PAGE_TITLES = {
 var isMobile = false;
 var currentView = null;      // which page is drawn: 'home', 'works', 'about', ...
 var viewReady = false;       // true once that page's content has arrived
+var shownPath = null;        // the shop's pages share a few views: the address of the one drawn
+var pageTitle = document.title; // the page's own title (the viewer borrows the title bar while open)
 var galleryItems = [];       // the works on the current page, in order
 var cachedRequests = {};     // API responses, fetched once per visit
 var aboutLayout = null;
@@ -371,7 +377,26 @@ function parseRoute(pathname) {
     if (match) {
         return { view: 'works', path: path, workId: Number(match[1]) };
     }
+    if (path === '/shop/basket') {
+        return { view: 'shop-basket', path: path };
+    }
+    if (path === '/shop/thank-you') {
+        return { view: 'shop-thanks', path: path };
+    }
+    if (/^\/shop\/\d+(?:\/[^\/]*)?$/.test(path)) {
+        return { view: 'shop-item', path: path };
+    }
     return { view: 'notfound', path: path };
+}
+
+function isShopView(view) {
+    return String(view).indexOf('shop') === 0;
+}
+
+// True when that page is the one already on screen. Each shop item has its
+// own address but the same view, so for the shop the address has to match too.
+function isShowing(view, route) {
+    return view === currentView && (!isShopView(view) || route.path === shownPath);
 }
 
 // Phones and tablets skip the home slideshow and land on the works
@@ -381,14 +406,17 @@ function resolveView(route) {
 
 // Draws a page (without touching the address bar). Returns a promise that
 // resolves once the page's content is on screen.
-function renderView(view) {
-    if (view === currentView && viewReady) {
+function renderView(view, route) {
+    if (isShowing(view, route) && viewReady) {
         return $.Deferred().resolve().promise();
+    }
+    if (isShopView(view)) {
+        shownPath = route.path;
+        return renderShopPage(view, route.path); // shop.js
     }
     switch (view) {
         case 'works': return renderWorks();
         case 'about': return renderAbout();
-        case 'shop': return renderShop();
         case 'current-project': return renderCurrentProject();
         case 'notfound': return renderNotFound();
         default: return renderHome();
@@ -405,7 +433,7 @@ function goTo(path, options) {
 
     var route = parseRoute(path);
     var view = resolveView(route);
-    var changingPage = view !== currentView;
+    var changingPage = !isShowing(view, route);
 
     if (path !== location.pathname) {
         rememberScroll();
@@ -413,7 +441,7 @@ function goTo(path, options) {
         history.pushState({ path: newPath }, '', newPath);
     }
 
-    var ready = renderView(view);
+    var ready = renderView(view, route);
     if (changingPage && !options.section) {
         instantScrollTo(0);
     }
@@ -442,15 +470,15 @@ window.addEventListener('popstate', function (event) {
     // Back from a painting to the page it was opened from: it shrinks back
     // into place. Anywhere else: close at once, the page is about to change.
     if (viewer.open) {
-        closeViewer({ fromHistory: true, instantly: view !== currentView || !!route.workId });
+        closeViewer({ fromHistory: true, instantly: !isShowing(view, route) || !!route.workId });
     }
 
     // e.g. Back after closing the viewer: the right page is already showing
-    if (view === currentView && !route.workId) {
+    if (isShowing(view, route) && !route.workId) {
         return;
     }
 
-    renderView(view).then(function () {
+    renderView(view, route).then(function () {
         if (route.workId) {
             openSharedWork(route.workId, {});
         } else {
@@ -468,8 +496,18 @@ function setView(view) {
     main.removeAttribute('data-server-view');
     currentView = view;
     viewReady = false;
-    document.title = PAGE_TITLES[view] || PAGE_TITLES.home;
+    pageTitle = PAGE_TITLES[view] || PAGE_TITLES.home;
+    document.title = pageTitle;
     $('#imagesAndContent').attr('data-view', view);
+    drawBasketPill(); // shop.js: the basket button isn't shown on the basket page itself
+}
+
+// For a page whose title depends on what it shows (a shop item's name)
+function setPageTitle(title) {
+    pageTitle = title;
+    if (!viewer.open) {
+        document.title = title;
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -1029,6 +1067,9 @@ function showViewerImage(direction, opening) {
             img.style.removeProperty('--w');
             img.style.removeProperty('--h');
         }
+        // A work that can be bought links to its page in the shop
+        var shopPath = pageData.shopLinks && work.id ? pageData.shopLinks[work.id] : null;
+        $('#imageShop').prop('hidden', !shopPath).attr('href', shopPath || '#');
         setUpDescription();
         fitViewerToScreen();
         updateViewerTools(work);
@@ -1433,7 +1474,7 @@ function setupViewer() {
         if (Math.abs(window.pageYOffset - scrollPosition) > 1) {
             instantScrollTo(scrollPosition);
         }
-        document.title = PAGE_TITLES[currentView] || PAGE_TITLES.home;
+        document.title = pageTitle;
         pauseSlideshow(false);
 
         if (viewer.closingFromHistory) {
@@ -1452,7 +1493,7 @@ function setupViewer() {
 
     // Click on the dark background closes; click on the picture steps through
     modal.on('click', function (event) {
-        if (!$(event.target).closest('#popUpImage, .nav-arrow, .viewer-toolbar, .image-more, .scale-scene, .zoom-layer').length) {
+        if (!$(event.target).closest('#popUpImage, .nav-arrow, .viewer-toolbar, .image-more, .image-shop, .scale-scene, .zoom-layer').length) {
             closeViewer();
         }
     });
@@ -2548,36 +2589,6 @@ function createCurrentProjectCard(work, index) {
 }
 
 // --------------------------------------------------------------------------
-// Shop
-// --------------------------------------------------------------------------
-
-function renderShop() {
-    setView('shop');
-    var content = $('#imagesAndContent').css('padding-top', '50px');
-    content.html(loadingHtml('Loading shop...'));
-
-    return $.ajax({
-        url: '/actions/shopAPI.php',
-        data: { activity: 'active' },
-        dataType: 'json'
-    }).then(function (items) {
-        if (currentView !== 'shop') {
-            return;
-        }
-        content.empty().append($('<div>', { 'class': 'shop-top-space' }));
-        // Each item is a Shopify buy-button embed that draws its own product card
-        items.forEach(function (item) {
-            content.append($('<div>').addClass('shopItem').append($('<div>').addClass('buy-button-embed').html(item.buttonCode)));
-        });
-        viewReady = true;
-    }, function () {
-        if (currentView === 'shop') {
-            content.html(errorHtml("Sorry, we couldn't load the shop items. Please try again later."));
-        }
-    });
-}
-
-// --------------------------------------------------------------------------
 // Page not found
 // --------------------------------------------------------------------------
 
@@ -2893,7 +2904,7 @@ $(function () {
         history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
     }
 
-    renderView(view).then(function () {
+    renderView(view, route).then(function () {
         if (VT.menu) {
             drawTestMenu();
         } else if (view === 'works' && route.workId) {
@@ -2904,4 +2915,5 @@ $(function () {
     });
 
     spawnNewsletterFloat();
+    startShop(); // shop.js: the basket button
 });

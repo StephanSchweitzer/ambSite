@@ -91,6 +91,31 @@ shop content in the local database as a way of doing her content work. Content
 is production-only, managed through the live admin panel. Local content changes
 exist only as scratch data that the next refresh overwrites.
 
+## Your shop
+
+The shop is part of your own site now, and everything about it is on one
+admin page: **Shop**.
+
+- **Orders** shows what has been bought and still needs sending, with the
+  buyer's address. When you've posted something, press "Mark as sent".
+- **Items for sale** is where you add things, set prices, and hide or put
+  away what's no longer for sale. An original marks itself "Sold" the moment
+  someone buys it.
+- **Delivery** is where you say what postage costs, by destination.
+- **Settings** has a "Pause the shop" switch for holidays.
+
+The money itself is handled by a company called Stripe: buyers type their
+card details on Stripe's page, never on your site, and Stripe pays you. If you
+ever need to give someone their money back, that's done on Stripe's website
+(each order has a "See the payment in Stripe" button that takes you to the
+right place).
+
+**Rules for me, not for her:** Shop items, prices, delivery zones, settings
+and orders are content: production-only, managed in the live admin. Never
+refund, cancel or otherwise move money on her behalf, and never edit an order
+or stock level in the production database. Stripe keys live only in the
+server's `.env`; never print, commit or copy them.
+
 ## When you want to see how something looks
 
 Your practice site copies the paintings from the real site, but that copy was
@@ -282,7 +307,8 @@ Routing: `photoFunctions.js` keeps the address bar in step with what's drawn
 (`pushState` + a `popstate` handler, so Back/Forward work). Routes are `/`,
 `/select-works`, `/about`, `/shop`, `/current-project`, and
 `/work/<id>/<slug>` — the Works page scrolled to that painting with it open
-in the viewer (the id finds it; the slug is decoration). `index.php` parses
+in the viewer (the id finds it; the slug is decoration), plus the shop's
+`/shop/<id>/<slug>`, `/shop/basket` and `/shop/thank-you`. `index.php` parses
 the same routes server-side to send a real 404 for unknown paths and to print
 per-page `<title>`, canonical, Open Graph and JSON-LD tags (a shared painting
 link previews that painting). Because pages can be nested (`/work/1/x`),
@@ -296,8 +322,8 @@ running JS. It embeds the data it used as `window.AMB_PAGE_DATA`; the JS reads
 that instead of calling the APIs, and for the first page keeps the server's
 markup (`data-server-view` on `<main>`) rather than redrawing it. **The PHP
 render functions mirror the JS ones in `photoFunctions.js` /
-`navLinksFunctions.js` — change markup in both.** The shop is still drawn only
-by JS (its Shopify embeds run scripts). `index.php` 301s `/about/`,
+`navLinksFunctions.js` — change markup in both.** The shop is the exception:
+its markup exists only in PHP (see "The shop" below). `index.php` 301s `/about/`,
 `/index.php` and non-canonical `/work/<id>/<slug>` links to the canonical URL.
 
 Images on the public site: the gallery, slideshow and viewer show a web-sized
@@ -339,6 +365,7 @@ split out of `pdo.php`.
 |---|---|
 | Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
+| Shop | Pages: `actions/shopPageFunctions.php` (all the markup) + `js/shop.js` (basket, checkout, viewer hook-up). Catalogue: `actions/shopFunctions.php`. Orders and payment: `actions/shopOrderFunctions.php`, `actions/stripeFunctions.php`, `actions/stripeWebhook.php`. Public API `actions/shopAPI.php`; admin `admin/shopAdmin.php` + `admin/shopAdmin.css` + `js/shopAdminFunctions.js` + `actions/shopAdminAPI.php`. Tables: `database/shop.sql`. |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
 | SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
 | Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB and 4000px). |
@@ -354,8 +381,72 @@ this Mac.
 
 `allWorks` (artworks: fileLocation, name, desc2/desc3, medium, year, visible,
 isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
-(join table), `navLinks`, `newsletterEmailList`, `shopItems`, `aboutMe`,
+(join table), `navLinks`, `newsletterEmailList`, `aboutMe`,
 `users`, `login_attempts`, `admin_last_visit`.
+
+The shop: `shopProducts`, `shopVariants` (what's actually bought: a print's
+sizes, or an original's single price; `stock` NULL = no limit),
+`shopProductImages` (file names in `baseImages/`), `shopShippingZones`,
+`shopSettings`, `shopOrders`, `shopOrderItems` (a copy of what was bought, as
+it was then). `shopItems` is the old Shopify-embed table: unused, left alone.
+
+## The shop
+
+Payment is Stripe Checkout (Stripe's hosted page): no card data touches the
+server and there is no Stripe library — `stripeFunctions.php` makes three
+plain HTTPS calls. Settings in the server's `.env`: `STRIPE_SECRET_KEY`
+(`sk_test_...` or `sk_live_...`) and `STRIPE_WEBHOOK_SECRET` (`whsec_...`).
+Without the key the shop is browsable but the basket says it isn't taking
+orders yet. The webhook to register in Stripe's dashboard is
+`https://ambarvelasco.com/actions/stripeWebhook.php`, for
+`checkout.session.completed`, `.expired`, `.async_payment_succeeded`,
+`.async_payment_failed` and `charge.refunded`. Receipts to buyers and
+"you've been paid" emails to Ambar are Stripe's own (switched on in its
+dashboard); the site sends no email.
+
+- **The tables are created by hand**, once, from `database/shop.sql` (it only
+  adds tables). Schema changes are not something to do against production
+  from here (see Hard limits), so a change to the shop's tables means a new
+  `.sql` file for Stephan to run. Until the tables exist `shopReady()` is
+  false: `/shop` says nothing is for sale and the admin page explains.
+- **Flow:** `shopStartCheckout()` re-prices the basket from the database,
+  takes the stock (`UPDATE ... WHERE stock >= ?`, so two buyers can't both get
+  the last one), records a `pending` order and creates the Checkout Session
+  (expires in 31 minutes; delivery is one fixed shipping option, and the
+  address is limited to the country chosen in the basket). The webhook and
+  the thank-you page both just call `shopSyncOrder()`.
+- **Two rules in `shopOrderFunctions.php`:** an order is only marked paid
+  because Stripe, asked directly, says so (the webhook's payload is a nudge,
+  never the evidence); and an order is only cancelled — its stock put back —
+  once Stripe confirms the session is expired, so nothing can be paid for
+  after going back on sale. `stockHeld` flipping 1→0 guards against putting
+  stock back twice.
+- **Markup lives only in PHP.** `shopPageFunctions.php` draws `/shop` and
+  item pages for `index.php`; moving between shop pages fetches the same HTML
+  (`shopAPI.php?view=page`). `shop.js` adds behaviour through delegated
+  handlers and draws only the basket and thank-you pages (they belong to one
+  visitor). Shop CSS uses ordinary media queries, no `...Mobile` twins.
+- **`shop.js` loads before `photoFunctions.js`** and only defines things;
+  `photoFunctions.js` start-up calls `startShop()`. jQuery's ready callback
+  can fire between two deferred scripts, so the file whose start-up runs must
+  come last.
+- The shop's views (`shop`, `shop-item`, `shop-basket`, `shop-thanks`) share
+  routes by address, so "is this page already showing" is `isShowing(view,
+  route)` (view **and** `shownPath`), not `view === currentView`.
+- An item's pictures open in the works' viewer (`openViewer` with work-shaped
+  objects whose `path` is the item page, so no history entry is added). A
+  work with a live, in-stock item gets "Available in the shop" in the viewer
+  caption (`AMB_PAGE_DATA.shopLinks`, from `shopLinksForWorks()`).
+- The basket is `localStorage` (`ambBasket`: `[{variant, quantity}]`), never
+  prices. Money is integer cents everywhere; `shopMoney()` / `formatMoney()`
+  turn it into text.
+- Item pictures are file names shared with (or uploaded like) the works', so
+  they're never deleted from disk by the shop, and a work's permanent delete
+  keeps a file the shop still uses.
+- Saving an item moves stock by the difference from what the page loaded
+  (`stockWas`), so a sale made while the editor was open isn't undone.
+- Trying it locally: use Stripe test keys in the local `.env`, or the
+  stand-in at `dev/stripe-mock.php` (instructions in its header).
 
 ## Quirks to know before editing
 

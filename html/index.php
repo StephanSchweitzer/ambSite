@@ -13,6 +13,7 @@ $pdoSoftFail = true; // the page still loads if the database is unreachable
 include __DIR__ . '/database/pdo.php';
 include_once __DIR__ . '/actions/publicPageFunctions.php';
 include_once __DIR__ . '/actions/aboutMeCache.php';
+include_once __DIR__ . '/actions/shopPageFunctions.php';
 
 function e($text)
 {
@@ -41,7 +42,6 @@ $pages = array(
     '/' => array('view' => 'home', 'title' => 'Ambar Velasco Portfolio'),
     '/select-works' => array('view' => 'works', 'title' => 'Select Works - Ambar Velasco'),
     '/about' => array('view' => 'about', 'title' => 'About - Ambar Velasco'),
-    '/shop' => array('view' => 'shop', 'title' => 'Shop - Ambar Velasco'),
     '/current-project' => array('view' => 'current-project', 'title' => 'Current Project - Ambar Velasco'),
 );
 
@@ -55,10 +55,37 @@ $canonicalPath = $path;
 $shareWork = null;
 $work = null;
 $workText = '';
+$shopPage = null;   // for the shop's addresses: the page there (shopPageFunctions.php)
+$noindex = false;
 
 if (isset($pages[$path])) {
     $view = $pages[$path]['view'];
     $title = $pages[$path]['title'];
+} elseif ($path === '/shop' || strpos($path, '/shop/') === 0) {
+    $view = 'shop';
+    $title = 'Shop - Ambar Velasco';
+    try {
+        $shopPage = $conn ? shopPage($conn, $path) : null;
+    } catch (Throwable $ex) {
+        // Send the page without its content; the script asks for it again
+        error_log('index.php shop ' . $path . ': ' . $ex->getMessage());
+        $shopPage = null;
+    }
+    if ($shopPage && $shopPage['status'] === 404) {
+        $status = 404;
+        $view = 'notfound';
+    } elseif ($shopPage) {
+        if ($shopPage['view'] === 'shop-item' && $requestPath !== $shopPage['path']) {
+            redirectTo($shopPage['path']); // an old name in the link
+        }
+        $view = $shopPage['view'];
+        $title = $shopPage['title'];
+        $noindex = $shopPage['noindex'];
+        $canonicalPath = $shopPage['path'];
+        if ($shopPage['description']) {
+            $description = $shopPage['description'];
+        }
+    }
 } elseif (preg_match('#^/work/(\d+)(?:/[^/]*)?$#', $path, $match)) {
     $view = 'works';
     $lookupFailed = false;
@@ -111,6 +138,13 @@ if ($conn) {
             $pageData['aboutVersion'] = $aboutCache['version'];
         }
         $navHtml = ambRenderNav($navLinks, $projects);
+        // Works that can be bought get a link to the shop in the viewer
+        if (shopReady($conn)) {
+            $shopLinks = shopLinksForWorks($conn);
+            if ($shopLinks) {
+                $pageData['shopLinks'] = $shopLinks;
+            }
+        }
 
         foreach ($navLinks as $link) {
             if (stripos((string) $link['linkRedirection'], 'instagram.com') !== false) {
@@ -145,6 +179,12 @@ if ($conn) {
                 if ($aboutText !== '') {
                     $description = $aboutText;
                 }
+            }
+        } elseif ($shopPage) {
+            // (the basket and thank-you pages have no content here: shop.js draws them)
+            $content = $shopPage['html'];
+            if ($shopPage['product'] && $shopPage['product']['images']) {
+                $shareWork = $shopPage['product']['images'][0];
             }
         } elseif ($view === 'current-project') {
             $currentProjects = ambGetProjectsWithWorks($conn, 'currentProject');
@@ -195,6 +235,32 @@ if ($work) {
     if ($workText !== '') {
         $structuredData['description'] = $workText;
     }
+} elseif ($shopPage && $shopPage['product']) {
+    // Lets search engines show the price and whether it's still available
+    $product = $shopPage['product'];
+    $currency = strtoupper(shopSettings($conn)['currency']);
+    $structuredData = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => $product['name'],
+        'url' => $canonicalUrl,
+        'image' => array_map(function ($image) { return AMB_SITE_URL . ambWebImageUrl($image['location']); }, $product['images']),
+        'description' => $description,
+        'brand' => array('@type' => 'Brand', 'name' => 'Ambar Velasco'),
+    );
+    if ($product['typeLabel'] !== '') {
+        $structuredData['category'] = $product['typeLabel'];
+    }
+    if ($product['saleMode'] === 'buy' && $product['variants']) {
+        $prices = array_map(function ($variant) { return $variant['priceCents']; }, $product['variants']);
+        $availability = 'https://schema.org/' . ($product['soldOut'] ? ($product['isUnique'] ? 'SoldOut' : 'OutOfStock') : 'InStock');
+        $money = function ($cents) { return number_format($cents / 100, 2, '.', ''); };
+        $structuredData['offers'] = count($prices) > 1
+            ? array('@type' => 'AggregateOffer', 'priceCurrency' => $currency, 'lowPrice' => $money(min($prices)),
+                'highPrice' => $money(max($prices)), 'offerCount' => count($prices), 'availability' => $availability, 'url' => $canonicalUrl)
+            : array('@type' => 'Offer', 'priceCurrency' => $currency, 'price' => $money($prices[0]),
+                'availability' => $availability, 'url' => $canonicalUrl, 'seller' => array('@id' => $person['@id']));
+    }
 } elseif ($view === 'home') {
     // The site's name in search results comes from the WebSite entry
     $structuredData = array('@context' => 'https://schema.org', '@graph' => array(
@@ -226,7 +292,7 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <title><?= e($title) ?></title>
     <meta name="description" content="<?= e($description) ?>">
     <meta name="author" content="Ambar Velasco">
-<?php if ($status === 404): ?>
+<?php if ($status === 404 || $noindex): ?>
     <meta name="robots" content="noindex">
 <?php else: ?>
     <link rel="canonical" href="<?= e($canonicalUrl) ?>">
@@ -264,6 +330,8 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <!-- Scripts load in this order without holding up the page -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js" defer></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
+    <!-- (shop.js before photoFunctions.js, whose start-up calls into it) -->
+    <script src="/js/shop.js?v=<?php echo filemtime(__DIR__ . '/js/shop.js'); ?>" defer></script>
     <script src="/js/photoFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/photoFunctions.js'); ?>" defer></script>
     <script src="/js/navLinksFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/navLinksFunctions.js'); ?>" defer></script>
 </head>
@@ -361,6 +429,7 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
                     <h2 id="imageTitle"><?= $work ? e($work['name']) : '' ?></h2>
                     <p id="imageDescription"><?= $work ? ambMultiline($work['firstDescription']) : '' ?></p>
                     <button type="button" id="imageMore" class="image-more" hidden>more</button>
+                    <a id="imageShop" class="image-shop" href="#" hidden>Available in the shop</a>
                     <p id="imageCounter" class="image-counter"></p>
                 </div>
             </div>

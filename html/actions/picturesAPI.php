@@ -622,6 +622,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $sharedQuery->execute(array($work['fileLocation'], $id));
         $isShared = $sharedQuery->fetchColumn() > 0;
 
+        // The shop may be showing this picture too (an item for sale, or a
+        // past order): the work goes, its picture stays
+        if (!$isShared) {
+            try {
+                $inShop = $conn->prepare("SELECT (SELECT COUNT(*) FROM shopProductImages WHERE fileLocation = ?)
+                                               + (SELECT COUNT(*) FROM shopOrderItems WHERE imageLocation = ?)");
+                $inShop->execute(array($work['fileLocation'], $work['fileLocation']));
+                $isShared = $inShop->fetchColumn() > 0;
+            } catch (Throwable $e) {
+                // (no shop tables yet: nothing there can be using it)
+            }
+        }
+
         try {
             $conn->prepare("DELETE FROM worksInProjects WHERE workId = ?")->execute(array($id));
             $conn->prepare("DELETE FROM allWorks WHERE workID = ?")->execute(array($id));

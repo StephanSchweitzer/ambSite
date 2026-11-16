@@ -6,6 +6,7 @@
 global $conn;
 include 'database/pdo.php';
 include_once 'actions/publicPageFunctions.php';
+include_once 'actions/shopFunctions.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
@@ -21,7 +22,7 @@ $pages = array(
 );
 
 // The Current Project page, when the menu links to it and it has something
-// to show. (The shop is left out on purpose.)
+// to show.
 foreach (ambGetNavLinks($conn) as $link) {
     if (ambNavLinkPage($link) === '/current-project') {
         foreach (ambGetProjectsWithWorks($conn, 'currentProject') as $project) {
@@ -48,6 +49,19 @@ foreach ($groups as $group) {
     }
 }
 
+// The shop and each thing in it, once there is something for sale
+$shopItems = array();
+try {
+    if (shopReady($conn)) {
+        $shopItems = shopGetProducts($conn);
+    }
+} catch (Throwable $e) {
+    error_log('sitemap.php shop: ' . $e->getMessage());
+}
+if ($shopItems) {
+    $pages[] = array('loc' => '/shop', 'priority' => '0.8', 'changefreq' => 'weekly');
+}
+
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
@@ -66,6 +80,18 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     <image:image>
       <image:loc><?= xmlText(AMB_SITE_URL . ambWebImageUrl($work['location'])) ?></image:loc>
     </image:image>
+  </url>
+<?php endforeach; ?>
+<?php foreach ($shopItems as $item): ?>
+  <url>
+    <loc><?= xmlText(AMB_SITE_URL . $item['path']) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+<?php if ($item['images']): ?>
+    <image:image>
+      <image:loc><?= xmlText(AMB_SITE_URL . ambWebImageUrl($item['images'][0]['location'])) ?></image:loc>
+    </image:image>
+<?php endif; ?>
   </url>
 <?php endforeach; ?>
 </urlset>
