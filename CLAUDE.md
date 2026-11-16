@@ -102,6 +102,8 @@ admin page: **Shop**.
   away what's no longer for sale. An original marks itself "Sold" the moment
   someone buys it.
 - **Delivery** is where you say what postage costs, by destination.
+- **Promo codes** is where you make a word people can type in their basket
+  for money off (SPRING10, say), and switch it off again when you're done.
 - **Settings** has a "Pause the shop" switch for holidays.
 
 The money itself is handled by a company called Stripe: buyers type their
@@ -110,8 +112,8 @@ ever need to give someone their money back, that's done on Stripe's website
 (each order has a "See the payment in Stripe" button that takes you to the
 right place).
 
-**Rules for me, not for her:** Shop items, prices, delivery zones, settings
-and orders are content: production-only, managed in the live admin. Never
+**Rules for me, not for her:** Shop items, prices, delivery zones, promo
+codes, settings and orders are content: production-only, managed in the live admin. Never
 refund, cancel or otherwise move money on her behalf, and never edit an order
 or stock level in the production database. Stripe keys live only in the
 server's `.env`; never print, commit or copy them.
@@ -387,7 +389,7 @@ isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
 The shop: `shopProducts`, `shopVariants` (what's actually bought: a print's
 sizes, or an original's single price; `stock` NULL = no limit),
 `shopProductImages` (file names in `baseImages/`), `shopShippingZones`,
-`shopSettings`, `shopOrders`, `shopOrderItems` (a copy of what was bought, as
+`shopPromoCodes`, `shopSettings`, `shopOrders`, `shopOrderItems` (a copy of what was bought, as
 it was then). `shopItems` is the old Shopify-embed table: unused, left alone.
 
 ## The shop
@@ -421,6 +423,13 @@ dashboard); the site sends no email.
   once Stripe confirms the session is expired, so nothing can be paid for
   after going back on sale. `stockHeld` flipping 1→0 guards against putting
   stock back twice.
+- **Promo codes** take money off the items, never delivery, one per order.
+  `shopCheckPromo()` / `shopPromoDiscount()` decide (the basket's
+  `promoDiscount()` in `shop.js` is only a preview of the same sum). The
+  saving reaches Stripe as a one-off `amount_off` coupon made for that
+  session, so Stripe's total can't differ from ours. A use is counted when
+  checkout starts and given back if it's never paid, under the same
+  `stockHeld` guard as the stock.
 - **Markup lives only in PHP.** `shopPageFunctions.php` draws `/shop` and
   item pages for `index.php`; moving between shop pages fetches the same HTML
   (`shopAPI.php?view=page`). `shop.js` adds behaviour through delegated

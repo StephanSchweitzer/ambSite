@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS shopProducts (
   details       VARCHAR(500) NOT NULL DEFAULT '',          -- "acrylic, tape on paper | 50 x 65 cm | 2024"
   description   TEXT,
   workId        INT          DEFAULT NULL,                 -- the portfolio work it is (or is a print of)
-  saleMode      VARCHAR(10)  NOT NULL DEFAULT 'buy',       -- 'buy' | 'enquire'
   shippingClass VARCHAR(10)  NOT NULL DEFAULT 'standard',  -- 'standard' | 'large'
   status        VARCHAR(10)  NOT NULL DEFAULT 'draft',     -- 'draft' | 'live' | 'archived'
   sortOrder     INT          NOT NULL DEFAULT 0,
@@ -71,6 +70,23 @@ CREATE TABLE IF NOT EXISTS shopSettings (
   PRIMARY KEY (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Promo codes: a word a buyer types in the basket for money off the items
+-- (never off delivery). usedCount goes up when a checkout starts with the
+-- code and back down if that checkout is never paid.
+CREATE TABLE IF NOT EXISTS shopPromoCodes (
+  id        INT NOT NULL AUTO_INCREMENT,
+  code      VARCHAR(40) NOT NULL,                  -- capitals, digits, - and _
+  kind      VARCHAR(10) NOT NULL DEFAULT 'percent', -- 'percent' | 'amount'
+  value     INT NOT NULL,                          -- percent: 1-100; amount: cents
+  maxUses   INT DEFAULT NULL,                      -- NULL = any number of times
+  usedCount INT NOT NULL DEFAULT 0,
+  endsAt    DATE DEFAULT NULL,                     -- the last day it works; NULL = no end
+  active    TINYINT NOT NULL DEFAULT 1,
+  createdAt DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY shopPromoCodes_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- status: 'pending'    at Stripe's payment page; the stock is held
 --         'processing' paid by a slow method (bank debit); money on its way
 --         'paid'       to be sent
@@ -81,11 +97,14 @@ CREATE TABLE IF NOT EXISTS shopOrders (
   id                    INT NOT NULL AUTO_INCREMENT,
   token                 CHAR(32) NOT NULL,                 -- in the customer's confirmation link
   status                VARCHAR(12) NOT NULL DEFAULT 'pending',
-  stockHeld             TINYINT NOT NULL DEFAULT 0,        -- 1 while its stock is set aside
+  stockHeld             TINYINT NOT NULL DEFAULT 0,        -- 1 while its stock (and promo code use) is set aside
   currency              CHAR(3) NOT NULL,
-  subtotalCents         INT NOT NULL DEFAULT 0,
+  subtotalCents         INT NOT NULL DEFAULT 0,            -- the items, before any promo code
+  discountCents         INT NOT NULL DEFAULT 0,            -- taken off by the promo code
   shippingCents         INT NOT NULL DEFAULT 0,
-  totalCents            INT NOT NULL DEFAULT 0,
+  totalCents            INT NOT NULL DEFAULT 0,            -- subtotal - discount + shipping
+  promoId               INT DEFAULT NULL,
+  promoCode             VARCHAR(40) NOT NULL DEFAULT '',   -- as typed, kept even if the code is later removed
   zoneName              VARCHAR(120) NOT NULL DEFAULT '',
   country               CHAR(2) NOT NULL DEFAULT '',
   stripeSessionId       VARCHAR(255) DEFAULT NULL,

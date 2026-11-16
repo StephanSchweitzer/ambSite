@@ -251,7 +251,7 @@ if ($work) {
     if ($product['typeLabel'] !== '') {
         $structuredData['category'] = $product['typeLabel'];
     }
-    if ($product['saleMode'] === 'buy' && $product['variants']) {
+    if ($product['variants']) {
         $prices = array_map(function ($variant) { return $variant['priceCents']; }, $product['variants']);
         $availability = 'https://schema.org/' . ($product['soldOut'] ? ($product['isUnique'] ? 'SoldOut' : 'OutOfStock') : 'InStock');
         $money = function ($cents) { return number_format($cents / 100, 2, '.', ''); };

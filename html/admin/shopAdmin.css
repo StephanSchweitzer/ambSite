@@ -129,6 +129,7 @@ a { color: var(--blue); }
 input[type="text"],
 input[type="email"],
 input[type="search"],
+input[type="date"],
 textarea,
 select {
   width: 100%;
@@ -246,6 +247,13 @@ textarea { min-height: 110px; resize: vertical; }
 }
 
 .sa-chip.is-current { background: var(--ink); border-color: var(--ink); color: #fff; }
+.sa-chip:not(.is-current):not(:disabled):hover { border-color: var(--ink); }
+.sa-chip:disabled { color: #b5b3ac; cursor: default; }
+
+/* (how many are under each filter) */
+.sa-chip-count { margin-left: 2px; font-size: 0.82em; opacity: 0.6; }
+
+.sa-list-note { margin: -6px 0 6px; }
 
 .sa-empty {
   padding: 46px 20px;
@@ -316,18 +324,35 @@ textarea { min-height: 110px; resize: vertical; }
 .sa-move:disabled { opacity: 0.3; cursor: default; }
 .sa-move:not(:disabled):hover { border-color: var(--ink); }
 
-.sa-archived { margin-top: 30px; }
-.sa-archived summary { cursor: pointer; color: var(--muted); }
-
 /* ---------- The item editor ---------- */
 .sa-editor { max-width: 680px; }
 
+/* The way back to the list: a quiet link above the title, where a "back"
+   belongs, rather than a button beside it competing with Save */
+.sa-crumb {
+  display: inline-block;
+  margin: -6px 0 14px;
+  padding: 6px 0;
+}
+
 .sa-editor-head {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 22px;
+  margin-bottom: 26px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sa-editor-head h2 { line-height: 1.15; }
+
+.sa-kicker {
+  margin: 0 0 2px;
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .sa-section {
@@ -404,8 +429,9 @@ textarea { min-height: 110px; resize: vertical; }
   flex-wrap: wrap;
   align-items: center;
   padding: 14px 0;
-  margin-top: 20px;
-  background: linear-gradient(to top, #fff 75%, rgba(255, 255, 255, 0));
+  margin-top: 26px;
+  background: #fff;
+  border-top: 1px solid var(--line);
 }
 
 .sa-save-bar .sa-spacer { flex: 1 1 auto; }
@@ -512,6 +538,22 @@ textarea { min-height: 110px; resize: vertical; }
 }
 .sa-money input { padding-left: 34px; }
 .sa-money.is-wide input { padding-left: 50px; }
+
+/* ---------- Promo codes ---------- */
+.sa-code {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sa-code::placeholder { letter-spacing: 0; text-transform: none; }
+
+.sa-switch { flex: none; margin: 0; white-space: nowrap; }
+
+.sa-amount { display: flex; gap: 8px; }
+.sa-amount input { flex: 1 1 70px; min-width: 0; }
+.sa-amount select { flex: 0 0 auto; width: auto; }
+
+.sa-promo-state { margin: 12px 0 0; }
 
 /* ---------- Overlay (work picker, country picker) ---------- */
 .sa-overlay {

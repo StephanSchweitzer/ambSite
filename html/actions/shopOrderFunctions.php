@@ -2,9 +2,10 @@
 // Orders and payments.
 //
 // What happens when someone buys:
-//   1. shopStartCheckout() checks the basket against the database (prices
-//      and stock come from here, never from the browser), sets the stock
-//      aside, records a 'pending' order and asks Stripe for a payment page.
+//   1. shopStartCheckout() checks the basket against the database (prices,
+//      stock and any promo code come from here, never from the browser),
+//      sets the stock aside, records a 'pending' order and asks Stripe for a
+//      payment page.
 //   2. The customer pays on Stripe's page. Stripe then calls
 //      actions/stripeWebhook.php, and sends the customer back to
 //      /shop/thank-you. Either of those runs shopSyncOrder(), which asks
@@ -28,6 +29,7 @@ define('SHOP_CHECKOUTS_PER_HOUR', 12);    // per visitor: stops one person tying
 class ShopProblem extends Exception
 {
     public $lines = array(); // array(variantId => array('reason' => 'gone'|'stock', 'available' => n))
+    public $promo = false;   // true when the trouble is the promo code
 
     public function __construct($message, $lines = array())
     {
@@ -88,7 +90,7 @@ function shopPriceBasket($conn, $basket)
     }
     $in = implode(',', array_fill(0, count($basket), '?'));
     $stmt = $conn->prepare("SELECT v.id AS variantId, v.label, v.priceCents, v.stock, v.active,
-                                   p.id AS productId, p.name, p.status, p.saleMode, p.shippingClass,
+                                   p.id AS productId, p.name, p.status, p.shippingClass,
                                    (SELECT i.fileLocation FROM shopProductImages i WHERE i.productId = p.id
                                     ORDER BY i.sortOrder ASC, i.id ASC LIMIT 1) AS image
                             FROM shopVariants v JOIN shopProducts p ON p.id = v.productId
@@ -101,7 +103,7 @@ function shopPriceBasket($conn, $basket)
 
     foreach ($basket as $variantId => $quantity) {
         $row = isset($found[$variantId]) ? $found[$variantId] : null;
-        $buyable = $row && (int) $row['active'] === 1 && $row['status'] === 'live' && $row['saleMode'] === 'buy';
+        $buyable = $row && (int) $row['active'] === 1 && $row['status'] === 'live';
         if (!$buyable) {
             $lines[] = array('variant' => $variantId, 'quantity' => $quantity, 'problem' => 'gone',
                 'name' => $row ? trim((string) $row['name']) : '', 'label' => $row ? trim((string) $row['label']) : '', 'available' => 0);
@@ -128,6 +130,56 @@ function shopPriceBasket($conn, $basket)
     return $lines;
 }
 
+// ---------------------------------------------------------------------------
+// Promo codes
+// ---------------------------------------------------------------------------
+
+// A code as it is stored: capitals, digits, - and _ ("spring 10" -> "SPRING10")
+function shopCleanCode($code)
+{
+    return substr((string) preg_replace('/[^A-Z0-9_-]/', '', strtoupper((string) (is_scalar($code) ? $code : ''))), 0, 40);
+}
+
+// What a code takes off items costing $subtotal. Same sum as promoDiscount()
+// in js/shop.js. Never more than the items cost; delivery is never discounted.
+function shopPromoDiscount($kind, $value, $subtotal)
+{
+    $off = $kind === 'percent' ? (int) floor($subtotal * min(100, (int) $value) / 100) : (int) $value;
+    return max(0, min($off, (int) $subtotal));
+}
+
+// Looks a typed code up. Returns null if nothing was typed, otherwise either
+//   array('id', 'code', 'kind', 'value', 'label' => "10% off", 'discountCents')
+// or array('problem' => a sentence for the buyer).
+function shopCheckPromo($conn, $code, $subtotal)
+{
+    $code = shopCleanCode($code);
+    if ($code === '') {
+        return null;
+    }
+    $stmt = $conn->prepare('SELECT * FROM shopPromoCodes WHERE code = ?');
+    $stmt->execute(array($code));
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row || (int) $row['active'] !== 1) {
+        return array('problem' => "Sorry, that code isn't one we know.");
+    }
+    if ($row['endsAt'] !== null && gmdate('Y-m-d') > $row['endsAt']) {
+        return array('problem' => 'Sorry, that code has ended.');
+    }
+    if ($row['maxUses'] !== null && (int) $row['usedCount'] >= (int) $row['maxUses']) {
+        return array('problem' => 'Sorry, that code has been used up.');
+    }
+    $settings = shopSettings($conn);
+    return array(
+        'id' => (int) $row['id'],
+        'code' => $row['code'],
+        'kind' => $row['kind'] === 'amount' ? 'amount' : 'percent',
+        'value' => (int) $row['value'],
+        'label' => $row['kind'] === 'amount' ? shopMoney($row['value'], $settings['currency']) . ' off' : (int) $row['value'] . '% off',
+        'discountCents' => shopPromoDiscount($row['kind'], $row['value'], $subtotal),
+    );
+}
+
 function shopClientIpHash()
 {
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
@@ -140,7 +192,7 @@ function shopClientIpHash()
 
 // Returns array('url' => Stripe's payment page, 'token' => the order's).
 // Throws ShopProblem with a message for the customer if it can't go ahead.
-function shopStartCheckout($conn, $items, $countryCode)
+function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
 {
     $settings = shopSettings($conn);
     if ($settings['paused'] === '1') {
@@ -192,6 +244,21 @@ function shopStartCheckout($conn, $items, $countryCode)
     $shipping = $large ? $zone['priceLargeCents'] : $zone['priceStandardCents'];
     $currency = $settings['currency'];
     $token = bin2hex(random_bytes(16));
+
+    $promo = shopCheckPromo($conn, $promoCode, $subtotal);
+    if ($promo && isset($promo['problem'])) {
+        $problem = new ShopProblem($promo['problem']);
+        $problem->promo = true;
+        throw $problem;
+    }
+    $discount = $promo ? $promo['discountCents'] : 0;
+    // (Stripe can't charge less than 50 cents; an order that comes to nothing
+    // at all is fine)
+    $total = $subtotal - $discount + $shipping;
+    if ($total > 0 && $total < 50) {
+        $discount -= 50 - $total;
+        $total = 50;
+    }
     $expiresAt = time() + SHOP_HOLD_MINUTES * 60;
 
     // Set the stock aside and record the order together: either all of it
@@ -213,10 +280,24 @@ function shopStartCheckout($conn, $items, $countryCode)
             throw new ShopProblem('Someone else has just bought something in your basket. Please check it and try again.', $problems);
         }
 
-        $conn->prepare('INSERT INTO shopOrders (token, status, stockHeld, currency, subtotalCents, shippingCents, totalCents,
-                            zoneName, country, liveMode, ipHash, createdAt, expiresAt)
-                        VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-             ->execute(array($token, 'pending', $currency, $subtotal, $shipping, $subtotal + $shipping,
+        // One use of the promo code is set aside the same way, so a code
+        // with three uses left can't be spent by four people at once
+        if ($promo) {
+            $use = $conn->prepare('UPDATE shopPromoCodes SET usedCount = usedCount + 1
+                                   WHERE id = ? AND active = 1 AND (maxUses IS NULL OR usedCount < maxUses)');
+            $use->execute(array($promo['id']));
+            if ($use->rowCount() !== 1) {
+                $problem = new ShopProblem('Sorry, that code has just been used up.');
+                $problem->promo = true;
+                throw $problem;
+            }
+        }
+
+        $conn->prepare('INSERT INTO shopOrders (token, status, stockHeld, currency, subtotalCents, discountCents, shippingCents,
+                            totalCents, promoId, promoCode, zoneName, country, liveMode, ipHash, createdAt, expiresAt)
+                        VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+             ->execute(array($token, 'pending', $currency, $subtotal, $discount, $shipping, $total,
+                 $promo ? $promo['id'] : null, $promo ? $promo['code'] : '',
                  $zone['name'], $countryCode, stripeIsLive() ? 1 : 0, $ipHash, shopNow(), gmdate('Y-m-d H:i:s', $expiresAt)));
         $orderId = (int) $conn->lastInsertId();
 
@@ -272,6 +353,23 @@ function shopStartCheckout($conn, $items, $countryCode)
     }
 
     try {
+        // The promo code reaches Stripe as a one-off coupon for exactly the
+        // amount worked out here, so its page and receipt show the saving
+        // and its total can't differ from ours
+        if ($discount > 0) {
+            $coupon = stripeRequest('POST', '/v1/coupons', array(
+                'amount_off' => $discount,
+                'currency' => $currency,
+                'duration' => 'once',
+                'max_redemptions' => 1,
+                'name' => 'Code ' . $promo['code'],
+                'metadata' => array('order_token' => $token),
+            ), 'coupon-' . $token);
+            if (empty($coupon['id'])) {
+                throw new StripeError('Stripe did not return a coupon');
+            }
+            $params['discounts'] = array(array('coupon' => $coupon['id']));
+        }
         $session = stripeRequest('POST', '/v1/checkout/sessions', $params, 'order-' . $token);
         if (empty($session['id']) || empty($session['url'])) {
             throw new StripeError('Stripe did not return a payment page');
@@ -323,6 +421,10 @@ function shopCancelOrder($conn, $orderId)
             foreach ($items->fetchAll(PDO::FETCH_ASSOC) as $item) {
                 $restore->execute(array((int) $item['quantity'], (int) $item['variantId']));
             }
+            // ...and its use of a promo code is given back
+            $conn->prepare('UPDATE shopPromoCodes p JOIN shopOrders o ON o.promoId = p.id
+                            SET p.usedCount = GREATEST(0, p.usedCount - 1) WHERE o.id = ?')
+                 ->execute(array($orderId));
         }
         $conn->prepare("UPDATE shopOrders SET status = 'cancelled' WHERE id = ? AND status IN ('pending', 'processing')")
              ->execute(array($orderId));
@@ -506,6 +608,8 @@ function shopOrderForCustomer($conn, $order)
         'status' => $order['status'],
         'lines' => $lines,
         'subtotal' => shopMoney($order['subtotalCents'], $order['currency']),
+        'discount' => (int) $order['discountCents'] > 0 ? shopMoney($order['discountCents'], $order['currency']) : null,
+        'promoCode' => $order['promoCode'],
         'shipping' => shopMoney($order['shippingCents'], $order['currency']),
         'total' => shopMoney($order['totalCents'], $order['currency']),
         'email' => $order['customerEmail'],

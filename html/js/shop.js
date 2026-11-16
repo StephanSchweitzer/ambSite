@@ -26,6 +26,7 @@
 var SHOP_API = '/actions/shopAPI.php';
 var SHOP_ITEM_SIZES = '(max-width: 992px) 92vw, 36vw'; // same as SHOP_ITEM_SIZES in shopPageFunctions.php
 var BASKET_KEY = 'ambBasket';
+var BASKET_CODE_KEY = 'ambBasketCode'; // the promo code the visitor has applied
 var basketView = null; // what the basket page is showing: { lines, symbol, countries, ... }
 
 function shopEscape(text) {
@@ -291,6 +292,35 @@ $(document).on('click', '#imageShop', function (event) {
 // The basket page
 // --------------------------------------------------------------------------
 
+function readBasketCode() {
+    try {
+        return localStorage.getItem(BASKET_CODE_KEY) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function writeBasketCode(code) {
+    try {
+        if (code) {
+            localStorage.setItem(BASKET_CODE_KEY, code);
+        } else {
+            localStorage.removeItem(BASKET_CODE_KEY);
+        }
+    } catch (e) { /* storage blocked: the code lasts only for this page */ }
+}
+
+// What a promo code takes off items costing `items` cents: never more than
+// they cost, and never anything off delivery. Same sum as shopPromoDiscount()
+// in shopOrderFunctions.php, which is the one that counts.
+function promoDiscount(promo, items) {
+    if (!promo) {
+        return 0;
+    }
+    var off = promo.kind === 'percent' ? Math.floor(items * Math.min(100, promo.value) / 100) : promo.value;
+    return Math.max(0, Math.min(off, items));
+}
+
 function drawBasketPage(content) {
     // Back from Stripe's page without paying: let go of what was set aside
     // for that payment, straight away
@@ -314,7 +344,8 @@ function drawBasketPage(content) {
         content.html('<div class="shop shop-basket">' + shopHeader('Basket') + loadingHtml('') + '</div>');
     }
     var drawn = $.Deferred();
-    shopPost({ action: 'basket', items: items }).then(function (data) {
+    var code = readBasketCode();
+    shopPost({ action: 'basket', items: items, code: code }).then(function (data) {
         if (currentView !== 'shop-basket') {
             drawn.resolve();
             return;
@@ -336,6 +367,12 @@ function drawBasketPage(content) {
         });
         data.lines = data.lines.filter(function (line) { return line.problem !== 'gone'; });
         data.notes = notes;
+        // A code that doesn't work is forgotten, but stays in its box with
+        // the reason, ready to be corrected
+        if (data.promoProblem) {
+            data.typedCode = code;
+            writeBasketCode('');
+        }
         basketView = data;
         paintBasket(content);
         viewReady = true;
@@ -398,6 +435,19 @@ function paintBasket(content) {
         return '<option value="' + code + '"' + (code === chosen ? ' selected' : '') + '>' + shopEscape(data.countries[code].name) + '</option>';
     }).join('');
 
+    var promoBlock;
+    if (data.promo) {
+        promoBlock = '<p class="basket-code-on"><span>Code <b>' + shopEscape(data.promo.code) + '</b> &middot; ' + shopEscape(data.promo.label) + '</span>' +
+            '<button type="button" class="basket-code-remove">Remove</button></p>';
+    } else {
+        var open = !!data.promoProblem;
+        promoBlock = '<button type="button" class="basket-code-toggle" aria-expanded="' + open + '"' + (open ? ' hidden' : '') + '>Have a promo code?</button>' +
+            '<form class="basket-code-form"' + (open ? '' : ' hidden') + '>' +
+            '<input type="text" id="basketCode" aria-label="Promo code" placeholder="Promo code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" value="' + shopEscape(data.typedCode || '') + '">' +
+            '<button type="submit">Apply</button></form>' +
+            '<p class="basket-code-problem" role="alert"' + (open ? '' : ' hidden') + '>' + shopEscape(data.promoProblem || '') + '</p>';
+    }
+
     var pay;
     if (data.paused) {
         pay = '<p class="shop-status">The shop is taking a short break, so orders can\'t be placed just now. Your basket will keep.</p>';
@@ -413,7 +463,10 @@ function paintBasket(content) {
         '<div class="basket-layout"><ul class="basket-lines">' + lines + '</ul>' +
         '<div class="basket-summary">' +
         (codes.length ? '<label for="basketCountry">Where should it be sent?</label><select id="basketCountry">' + options + '</select>' : '') +
-        '<dl class="basket-totals"><dt>Items</dt><dd id="basketItems"></dd><dt>Delivery</dt><dd id="basketDelivery"></dd>' +
+        '<div class="basket-code">' + promoBlock + '</div>' +
+        '<dl class="basket-totals"><dt>Items</dt><dd id="basketItems"></dd>' +
+        (data.promo ? '<dt>Promo code</dt><dd id="basketDiscount"></dd>' : '') +
+        '<dt>Delivery</dt><dd id="basketDelivery"></dd>' +
         '<dt class="is-total">Total</dt><dd class="is-total" id="basketTotal"></dd></dl>' +
         '<p class="shop-status basket-problem" role="alert" hidden></p>' + pay +
         '<p class="basket-more"><a href="/shop" class="shop-text-link" data-shop-nav>Keep looking</a></p>' +
@@ -431,10 +484,40 @@ function updateBasketTotals() {
     });
     var country = data.countries[$('#basketCountry').val()];
     var delivery = country ? (large ? country.large : country.standard) : null;
+    var discount = promoDiscount(data.promo, items);
     $('#basketItems').text(formatMoney(items, data.symbol));
+    $('#basketDiscount').text('\u2212' + formatMoney(discount, data.symbol));
     $('#basketDelivery').text(delivery === null ? 'Choose a country' : (delivery === 0 ? 'Free' : formatMoney(delivery, data.symbol)));
-    $('#basketTotal').text(formatMoney(items + (delivery || 0), data.symbol));
+    $('#basketTotal').text(formatMoney(items - discount + (delivery || 0), data.symbol));
 }
+
+// Promo code: the small link opens a box to type it in; applying it asks
+// the server (the basket is simply fetched again with the code)
+$(document).on('click', '.basket-code-toggle', function () {
+    $(this).prop('hidden', true);
+    $('.basket-code-form').prop('hidden', false);
+    $('#basketCode').focus();
+});
+
+$(document).on('submit', '.basket-code-form', function (event) {
+    event.preventDefault();
+    var code = $.trim($('#basketCode').val());
+    if (!code) {
+        $('#basketCode').focus();
+        return;
+    }
+    $(this).find('button').prop('disabled', true).text('Checking…');
+    writeBasketCode(code);
+    drawBasketPage($('#imagesAndContent'));
+});
+
+$(document).on('click', '.basket-code-remove', function () {
+    writeBasketCode('');
+    basketView.promo = null;
+    basketView.promoProblem = null;
+    basketView.typedCode = '';
+    paintBasket($('#imagesAndContent'));
+});
 
 function basketLine(el) {
     var variant = Number($(el).closest('.basket-line').attr('data-variant'));
@@ -480,13 +563,23 @@ $(document).on('click', '.basket-pay', function () {
         return;
     }
     button.prop('disabled', true).text('Opening the payment page…');
-    shopPost({ action: 'checkout', items: readBasket(), country: country }).then(function (answer) {
+    var code = basketView.promo ? basketView.promo.code : '';
+    shopPost({ action: 'checkout', items: readBasket(), country: country, code: code }).then(function (answer) {
         location.href = answer.url; // Stripe's page
     }, function (xhr) {
         var answer = xhr.responseJSON || {};
         if (answer.lines && Object.keys(answer.lines).length) {
             // Something sold while it sat in the basket: show the basket as it now is
             drawBasketPage($('#imagesAndContent'));
+            return;
+        }
+        if (answer.promo) {
+            // The code stopped working since it was applied (it ended, or its
+            // last use went): show the basket without it, and say why
+            writeBasketCode('');
+            drawBasketPage($('#imagesAndContent')).then(function () {
+                $('.basket-problem').text(answer.message + ' The total above no longer includes it.').prop('hidden', false);
+            });
             return;
         }
         button.prop('disabled', false).text('Pay securely');
@@ -554,6 +647,7 @@ function paintThanks(order, token) {
         if (!sessionStorage.getItem('ambOrderDone:' + token)) {
             sessionStorage.setItem('ambOrderDone:' + token, '1');
             writeBasket([]);
+            writeBasketCode('');
         }
     } catch (e) {
         writeBasket([]);
@@ -574,7 +668,9 @@ function paintThanks(order, token) {
             : 'Your order is confirmed, and I\'ll get it ready to send.') + '</p>' +
         '<p class="thanks-number">Order ' + shopEscape(order.number) + '</p>' +
         '<ul class="basket-lines">' + lines + '</ul>' +
-        '<dl class="basket-totals"><dt>Items</dt><dd>' + shopEscape(order.subtotal) + '</dd><dt>Delivery</dt><dd>' + shopEscape(order.shipping) + '</dd>' +
+        '<dl class="basket-totals"><dt>Items</dt><dd>' + shopEscape(order.subtotal) + '</dd>' +
+        (order.discount ? '<dt>Promo code ' + shopEscape(order.promoCode) + '</dt><dd>\u2212' + shopEscape(order.discount) + '</dd>' : '') +
+        '<dt>Delivery</dt><dd>' + shopEscape(order.shipping) + '</dd>' +
         '<dt class="is-total">Total</dt><dd class="is-total">' + shopEscape(order.total) + '</dd></dl>' +
         (order.sendTo.length ? '<p class="thanks-address"><span>Going to</span>' + order.sendTo.map(shopEscape).join('<br>') + '</p>' : '') +
         (order.email ? '<p class="basket-note">A receipt is on its way to ' + shopEscape(order.email) + '.</p>' : '') +

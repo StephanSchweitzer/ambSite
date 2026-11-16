@@ -56,15 +56,13 @@ function shopPage($conn, $path)
             return array('view' => 'notfound', 'status' => 404) + $page;
         }
         $settings = shopSettings($conn);
-        // The work it is (or is a print of), if that's on show in the portfolio
-        $work = $product['workId'] ? ambGetPublicWork($conn, $product['workId']) : null;
         $page['view'] = 'shop-item';
         $page['product'] = $product;
         $page['path'] = $product['path']; // its proper address (the name part may be old)
         $page['title'] = $product['name'] . ' - Shop - Ambar Velasco';
         $about = trim($product['description']) !== '' ? $product['description'] : $product['details'];
         $page['description'] = trim(($product['typeLabel'] !== '' ? $product['typeLabel'] . ' by Ambar Velasco. ' : '') . ambExcerpt($about, 130));
-        $page['html'] = shopRenderProduct($product, $settings, shopGetZones($conn), $work ? $work['path'] : null);
+        $page['html'] = shopRenderProduct($product, $settings, shopGetZones($conn));
         return $page;
     }
 
@@ -116,8 +114,6 @@ function shopRenderCard($product, $index)
 
     if ($product['soldOut']) {
         $price = '<span class="shop-sold">' . ($product['isUnique'] ? 'Sold' : 'Sold out') . '</span>';
-    } elseif ($product['saleMode'] === 'enquire') {
-        $price = '<span class="shop-card-price">On enquiry</span>';
     } else {
         $price = '<span class="shop-card-price">' . ambHtml($product['priceText']) . '</span>';
     }
@@ -134,7 +130,7 @@ function shopRenderCard($product, $index)
 // /shop/<id>/<name>
 // ---------------------------------------------------------------------------
 
-function shopRenderProduct($product, $settings, $zones, $workPath)
+function shopRenderProduct($product, $settings, $zones)
 {
     $name = $product['name'];
     $images = $product['images'];
@@ -196,15 +192,12 @@ function shopRenderProduct($product, $settings, $zones, $workPath)
     if (trim($settings['deliveryNote']) !== '') {
         $notes[] = shopText($settings['deliveryNote']);
     }
-    if ($product['saleMode'] === 'buy' && $zones) {
+    if ($zones) {
         $key = $product['shippingClass'] === 'large' ? 'priceLargeCents' : 'priceStandardCents';
         $cheapest = min(array_map(function ($zone) use ($key) { return $zone[$key]; }, $zones));
         $notes[] = ($cheapest > 0 ? 'Delivery from ' . ambHtml(shopMoney($cheapest, $settings['currency'])) : 'Delivery')
             . ', worked out in the basket for where you are.';
         $notes[] = 'Paid securely by card, through Stripe.';
-    }
-    if ($workPath) {
-        $notes[] = '<a href="' . ambHtml($workPath) . '" class="shop-text-link">See it among the works</a>';
     }
     if ($notes) {
         $html .= '<ul class="shop-item-notes"><li>' . implode('</li><li>', $notes) . '</li></ul>';
@@ -218,14 +211,6 @@ function shopRenderBuying($product, $settings)
 {
     $variants = $product['variants'];
 
-    if ($product['saleMode'] === 'enquire') {
-        $email = trim($settings['contactEmail']);
-        $href = filter_var($email, FILTER_VALIDATE_EMAIL)
-            ? 'mailto:' . $email . '?subject=' . rawurlencode('About "' . $product['name'] . '"')
-            : '/about';
-        return '<p class="shop-item-price">Price on enquiry</p>'
-            . '<a class="shop-button" href="' . ambHtml($href) . '">Enquire about this piece</a>';
-    }
     if (!$variants) {
         return '';
     }

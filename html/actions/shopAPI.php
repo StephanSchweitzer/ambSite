@@ -5,8 +5,8 @@
 //
 //   GET  ?view=page&path=/shop/12/name   that shop page, already drawn
 //   GET  ?view=order&token=...           a customer's own order, for the thank-you page
-//   POST {action: 'basket',   items}     the basket priced as of right now
-//   POST {action: 'checkout', items, country}   start paying -> Stripe's page
+//   POST {action: 'basket',   items, code}     the basket priced as of right now
+//   POST {action: 'checkout', items, country, code}   start paying -> Stripe's page
 //   POST {action: 'abandon',  token}     came back without paying: free the stock
 //
 // (The shop admin has its own file, shopAdminAPI.php.)
@@ -68,23 +68,33 @@ try {
             $settings = shopSettings($conn);
             $lines = shopPriceBasket($conn, shopCleanBasket(isset($input['items']) ? $input['items'] : array()));
             $currencies = shopCurrencies();
+            // A promo code is checked against what can really be bought
+            $subtotal = 0;
+            foreach ($lines as $line) {
+                if ($line['problem'] !== 'gone') {
+                    $subtotal += $line['priceCents'] * min($line['quantity'], $line['available']);
+                }
+            }
+            $promo = shopCheckPromo($conn, isset($input['code']) ? $input['code'] : '', $subtotal);
             shopReply(array(
                 'lines' => $lines,
+                'promo' => $promo && !isset($promo['problem'])
+                    ? array('code' => $promo['code'], 'kind' => $promo['kind'], 'value' => $promo['value'], 'label' => $promo['label']) : null,
+                'promoProblem' => $promo && isset($promo['problem']) ? $promo['problem'] : null,
                 'symbol' => $currencies[$settings['currency']]['symbol'],
                 'countries' => shopDeliveryCountries(shopGetZones($conn)),
                 'paused' => $settings['paused'] === '1',
                 'canPay' => stripeIsConfigured(),
-                'contactEmail' => $settings['contactEmail'],
             ));
         }
 
         if ($action === 'checkout') {
             try {
                 $started = shopStartCheckout($conn, isset($input['items']) ? $input['items'] : array(),
-                    isset($input['country']) ? $input['country'] : '');
+                    isset($input['country']) ? $input['country'] : '', isset($input['code']) ? $input['code'] : '');
                 shopReply(array('url' => $started['url']));
             } catch (ShopProblem $problem) {
-                shopReply(array('message' => $problem->getMessage(), 'lines' => $problem->lines), 409);
+                shopReply(array('message' => $problem->getMessage(), 'lines' => $problem->lines, 'promo' => $problem->promo), 409);
             }
         }
 

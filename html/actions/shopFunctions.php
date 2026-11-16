@@ -10,6 +10,7 @@
 //   shopProductImages  its pictures: file names in baseImages/, exactly like
 //                      the works', so thumbnails, web copies and zoom all work
 //   shopShippingZones  delivery prices by destination
+//   shopPromoCodes     codes for money off (the sums are in shopOrderFunctions.php)
 //   shopSettings       currency, the shop's intro text, "shop paused"...
 // The tables are created by database/shop.sql. Until that has been run,
 // shopReady() is false and every page says so gently instead of failing.
@@ -40,6 +41,7 @@ function shopReady($conn)
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $conn->query('SELECT 1 FROM shopProducts LIMIT 1');
         $conn->query('SELECT 1 FROM shopOrders LIMIT 1');
+        $conn->query('SELECT 1 FROM shopPromoCodes LIMIT 1');
         $ready = true;
     } catch (Throwable $e) {
         $ready = false;
@@ -57,7 +59,6 @@ function shopSettingDefaults()
         'currency' => 'eur',
         'intro' => '',          // a line or two under the shop's title
         'deliveryNote' => '',   // shown on every item ("Sent rolled in a tube...")
-        'contactEmail' => '',   // for "enquire" items and questions about an order
         'paused' => '0',        // '1': everything stays on show, nothing can be bought
     );
 }
@@ -309,7 +310,6 @@ function shopGetProducts($conn, $options = array())
             'details' => trim((string) $row['details']),
             'description' => (string) $row['description'],
             'workId' => $row['workId'] === null ? null : (int) $row['workId'],
-            'saleMode' => $row['saleMode'] === 'enquire' ? 'enquire' : 'buy',
             'shippingClass' => $row['shippingClass'] === 'large' ? 'large' : 'standard',
             'status' => (string) $row['status'],
             'sortOrder' => (int) $row['sortOrder'],
@@ -351,8 +351,7 @@ function shopGetProducts($conn, $options = array())
             $prices[] = $variant['priceCents'];
             $anyLeft = $anyLeft || $variant['available'] > 0;
         }
-        // (something sold "on enquiry" has no stock to run out of)
-        $product['soldOut'] = $product['saleMode'] === 'buy' && !$anyLeft;
+        $product['soldOut'] = !$anyLeft;
         $product['fromCents'] = $prices ? min($prices) : null;
         // "€35", or "from €35" when the sizes cost different amounts
         $product['priceText'] = !$prices ? ''
@@ -376,7 +375,7 @@ function shopLinksForWorks($conn)
 {
     $links = array();
     $rows = $conn->query("SELECT p.id, p.name, p.workId FROM shopProducts p
-                          WHERE p.status = 'live' AND p.workId IS NOT NULL AND p.saleMode = 'buy'
+                          WHERE p.status = 'live' AND p.workId IS NOT NULL
                             AND EXISTS (SELECT 1 FROM shopVariants v WHERE v.productId = p.id AND v.active = 1 AND (v.stock IS NULL OR v.stock > 0))
                           ORDER BY p.sortOrder DESC, p.id ASC")->fetchAll(PDO::FETCH_ASSOC);
     foreach ($rows as $row) {

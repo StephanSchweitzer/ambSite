@@ -6,7 +6,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
   die;
 }
 // The shop, all in one place: orders to send, the items for sale, delivery
-// prices and settings. Everything on the page is drawn by
+// prices, promo codes and settings. Everything on the page is drawn by
 // js/shopAdminFunctions.js from actions/shopAdminAPI.php.
 ?>
 <!DOCTYPE html>
@@ -39,6 +39,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
     <button type="button" data-tab="orders" class="is-current">Orders <span class="sa-count" id="toSendCount" hidden></span></button>
     <button type="button" data-tab="items">Items for sale</button>
     <button type="button" data-tab="delivery">Delivery</button>
+    <button type="button" data-tab="promos">Promo codes</button>
     <button type="button" data-tab="settings">Settings</button>
   </nav>
 

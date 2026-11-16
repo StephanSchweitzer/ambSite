@@ -2247,6 +2247,108 @@ a.shop-button {
   color: var(--color-text);
 }
 
+/* Promo code: a quiet link that opens a small box */
+.basket-code {
+  margin: -6px 0 20px;
+}
+
+.basket-code-toggle,
+.basket-code-remove {
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1px solid var(--color-line);
+  background: none;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.basket-code-toggle:hover,
+.basket-code-remove:hover {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+
+.basket-code-toggle[hidden],
+.basket-code-form[hidden],
+.basket-code-problem[hidden] {
+  display: none;
+}
+
+.basket-code-form {
+  display: flex;
+  gap: 8px;
+}
+
+.basket-code-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d5d3cd;
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.basket-code-form input::placeholder {
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-faint);
+}
+
+.basket-code-form button {
+  flex: none;
+  padding: 0 18px;
+  border: 1px solid var(--color-ink);
+  border-radius: 999px;
+  background: none;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.basket-code-form button:hover {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.basket-code-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.basket-code-problem {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: #b5372b;
+}
+
+.basket-code-on {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.basket-code-on b {
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.08em;
+}
+
 .basket-totals {
   display: grid;
   grid-template-columns: 1fr auto;

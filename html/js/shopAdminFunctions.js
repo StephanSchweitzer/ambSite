@@ -1,5 +1,5 @@
 // The shop admin page (admin/shopAdmin.php): orders to send, the items for
-// sale, delivery prices and settings. Everything is read from and saved
+// sale, delivery prices, promo codes and settings. Everything is read from and saved
 // through actions/shopAdminAPI.php.
 (function () {
     var API = '../actions/shopAdminAPI.php';
@@ -11,9 +11,11 @@
     var state = null;          // everything from ?what=state
     var tab = 'orders';
     var orderFilter = 'tosend';
+    var itemFilter = 'all';    // which items the list shows: all, live, sold, hidden, away
     var editing = null;        // the item open in the editor
     var works = null;          // the portfolio's works, fetched once
     var zonesDraft = [];       // the delivery destinations as they are on screen
+    var promosDraft = [];      // the promo codes as they are on screen
     var nextKey = 1;
 
     // ----------------------------------------------------------------------
@@ -139,7 +141,7 @@
         $('#tabs button').each(function () {
             $(this).toggleClass('is-current', this.getAttribute('data-tab') === name);
         });
-        ({ orders: drawOrders, items: drawItems, delivery: drawDelivery, settings: drawSettings })[name]();
+        ({ orders: drawOrders, items: drawItems, delivery: drawDelivery, promos: drawPromos, settings: drawSettings })[name]();
     }
 
     // ----------------------------------------------------------------------
@@ -205,7 +207,9 @@
             '<span class="sa-muted sa-small">' + esc(when(order.paidAt || order.createdAt)) + '</span>' +
             '<span class="sa-order-total">' + esc(order.total) + '</span></div>' +
             '<div class="sa-order-body"><div><ul class="sa-lines">' + lines + '</ul>' +
-            '<p class="sa-muted sa-small">Items ' + esc(order.subtotal) + ' + delivery ' + esc(order.shipping) +
+            '<p class="sa-muted sa-small">Items ' + esc(order.subtotal) +
+            (order.discount ? ' &minus; ' + esc(order.discount) + ' with the code ' + esc(order.promoCode) : '') +
+            ' + delivery ' + esc(order.shipping) +
             (order.zone ? ' (' + esc(order.zone) + ')' : '') + '</p></div>' +
             '<div><h4>Send to</h4><address class="js-address">' + esc(order.address.join('\n')) + '</address>' +
             '<p><button type="button" class="sa-button sa-quiet sa-small js-copy">Copy the address</button></p>' +
@@ -270,19 +274,32 @@
         if (product.status !== 'live') {
             return '<span class="sa-pill">Hidden</span>';
         }
-        if (product.saleMode === 'buy' && product.soldOut) {
+        if (product.soldOut) {
             return '<span class="sa-pill is-sold">' + (product.isUnique ? 'Sold' : 'Sold out') + '</span>';
         }
         return '<span class="sa-pill is-live">In the shop</span>';
     }
 
-    function itemRow(product, index, count) {
+    // Which of the list's filters an item belongs under
+    function itemGroup(product) {
+        if (product.status === 'archived') {
+            return 'away';
+        }
+        if (product.status !== 'live') {
+            return 'hidden';
+        }
+        return product.soldOut ? 'sold' : 'live';
+    }
+
+    // canMove: the up / down arrows (only when the whole shop is listed, in
+    // the order it appears there)
+    function itemRow(product, index, count, canMove) {
         var facts = [];
         if (product.typeLabel) {
             facts.push(esc(product.typeLabel));
         }
-        facts.push(product.saleMode === 'enquire' ? 'On enquiry' : (esc(product.priceText) || 'No price yet'));
-        if (!product.isUnique && product.saleMode === 'buy' && product.variants.length) {
+        facts.push(esc(product.priceText) || 'No price yet');
+        if (!product.isUnique && product.variants.length) {
             var limited = product.variants.filter(function (v) { return v.stock !== null; });
             facts.push(limited.length === product.variants.length
                 ? limited.reduce(function (sum, v) { return sum + v.stock; }, 0) + ' left'
@@ -296,28 +313,60 @@
             itemStatus(product) +
             '<div class="sa-item-actions">' +
             (archived ? '<button type="button" class="sa-button sa-quiet sa-small js-restore">Bring back</button>'
-                : '<button type="button" class="sa-move js-move" data-step="-1" aria-label="Move up"' + (index === 0 ? ' disabled' : '') + '>&uarr;</button>' +
-                  '<button type="button" class="sa-move js-move" data-step="1" aria-label="Move down"' + (index === count - 1 ? ' disabled' : '') + '>&darr;</button>' +
+                : (canMove
+                    ? '<button type="button" class="sa-move js-move" data-step="-1" aria-label="Move up"' + (index === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+                      '<button type="button" class="sa-move js-move" data-step="1" aria-label="Move down"' + (index === count - 1 ? ' disabled' : '') + '>&darr;</button>'
+                    : '') +
                   '<button type="button" class="sa-button sa-quiet sa-small js-edit">Edit</button>') +
             '</div></div>';
     }
 
     function drawItems() {
-        var html = '<div class="sa-bar"><p class="sa-muted" style="margin:0">The order here is the order in the shop. Use the arrows to rearrange.</p>' +
-            '<button type="button" class="sa-button js-new">Add an item</button></div>';
-        if (!state.products.length) {
-            html += '<p class="sa-empty">Nothing in the shop yet. Choose &ldquo;Add an item&rdquo; to put up your first piece.</p>';
-        } else {
-            html += state.products.map(function (product, index) {
-                return itemRow(product, index, state.products.length);
-            }).join('');
+        var everything = state.products.concat(state.archived);
+        var counts = { all: state.products.length, live: 0, sold: 0, hidden: 0, away: 0 };
+        everything.forEach(function (product) {
+            counts[itemGroup(product)]++;
+        });
+        if (!counts[itemFilter]) {
+            itemFilter = 'all'; // (the last one under that filter has just moved elsewhere)
         }
-        if (state.archived.length) {
-            html += '<details class="sa-archived"><summary>Put away (' + state.archived.length + ')</summary>' +
-                state.archived.map(function (product) { return itemRow(product, 0, 1); }).join('') + '</details>';
+
+        // "Put away" only appears once something has been put away
+        var chips = [['all', 'All'], ['live', 'In the shop'], ['sold', 'Sold'], ['hidden', 'Hidden'], ['away', 'Put away']]
+            .filter(function (chip) { return chip[0] !== 'away' || counts.away; })
+            .map(function (chip) {
+                return '<button type="button" class="sa-chip js-item-filter' + (chip[0] === itemFilter ? ' is-current' : '') + '"' +
+                    ' data-filter="' + chip[0] + '" aria-pressed="' + (chip[0] === itemFilter) + '"' + (counts[chip[0]] ? '' : ' disabled') + '>' +
+                    chip[1] + ' <span class="sa-chip-count">' + counts[chip[0]] + '</span></button>';
+            }).join('');
+
+        var html = '<div class="sa-bar"><div class="sa-chips" role="group" aria-label="Show">' + chips + '</div>' +
+            '<button type="button" class="sa-button js-new">Add an item</button></div>';
+
+        if (!everything.length) {
+            html += '<p class="sa-empty">Nothing in the shop yet. Choose &ldquo;Add an item&rdquo; to put up your first piece.</p>';
+        } else if (itemFilter === 'all') {
+            html += '<p class="sa-muted sa-small sa-list-note">This is the order things appear in the shop. Use the arrows to rearrange.</p>' +
+                state.products.map(function (product, index) {
+                    return itemRow(product, index, state.products.length, true);
+                }).join('');
+        } else {
+            html += '<p class="sa-muted sa-small sa-list-note">' + ({
+                live: 'On show and can be bought.',
+                sold: 'Still on show, marked as sold. Put one away to take it out of the shop.',
+                hidden: 'Not in the shop: only you can see these.',
+                away: 'Taken out of the shop. Nothing here is deleted, and anything can be brought back.'
+            })[itemFilter] + '</p>' +
+                everything.filter(function (product) { return itemGroup(product) === itemFilter; })
+                    .map(function (product) { return itemRow(product, 0, 1, false); }).join('');
         }
         $('#panel').html(html);
     }
+
+    $(document).on('click', '.js-item-filter', function () {
+        itemFilter = this.getAttribute('data-filter');
+        drawItems();
+    });
 
     function findProduct(id) {
         return state.products.concat(state.archived).filter(function (product) { return product.id === id; })[0];
@@ -338,7 +387,7 @@
 
     $(document).on('click', '.js-restore', function () {
         post({ action: 'restoreProduct', id: Number($(this).closest('.sa-item').attr('data-id')) }).done(function () {
-            toast('Brought back. It is hidden until you show it in the shop again.');
+            toast('Brought back. You\'ll find it under Hidden until you show it in the shop again.');
             loadState(drawItems);
         });
     });
@@ -366,13 +415,17 @@
                 })
                 : [{ key: nextKey++, id: 0, label: '', price: '', stock: '', stockWas: null }]
         };
-        var p = product || { name: '', typeLabel: '', isUnique: true, details: '', description: '', saleMode: 'buy', shippingClass: 'standard', status: 'draft' };
+        var p = product || { name: '', typeLabel: '', isUnique: true, details: '', description: '', shippingClass: 'standard', status: 'draft' };
         var first = editing.options[0];
 
         $('#panel').html(
             '<form class="sa-editor" id="editor" novalidate>' +
-            '<div class="sa-editor-head"><h2>' + (product ? 'Edit item' : 'New item') + '</h2>' +
-            '<button type="button" class="sa-button sa-quiet js-cancel">Back to the list</button></div>' +
+            // Where you are, and the way back: a quiet link above the title, as
+            // at the top of the page. (Leaving is also "Cancel" in the bar below.)
+            '<a href="#" class="sa-back sa-crumb js-cancel"><span aria-hidden="true">&larr;</span> Items for sale</a>' +
+            '<div class="sa-editor-head"><div><p class="sa-kicker">' + (product ? 'Editing' : 'Adding') + '</p>' +
+            '<h2 id="editorTitle">' + esc(product ? product.name : 'New item') + '</h2></div>' +
+            (product ? itemStatus(product) : '') + '</div>' +
 
             '<div class="sa-field"><span class="sa-label">Pictures</span>' +
             '<span class="sa-hint">The first one is the main picture. Visitors can open and zoom into any of them.</span>' +
@@ -398,12 +451,7 @@
             '<span class="sa-hint">Anything a buyer would like to know. Leave empty if the picture says it all.</span>' +
             '<textarea id="fDescription">' + esc(p.description) + '</textarea></div>' +
 
-            '<div class="sa-section"><div class="sa-field"><span class="sa-label">How is it sold?</span>' +
-            '<label class="sa-check"><input type="radio" name="fSale" value="buy"' + (p.saleMode === 'buy' ? ' checked' : '') + '><span>Bought online, straight from the shop</span></label>' +
-            '<label class="sa-check"><input type="radio" name="fSale" value="enquire"' + (p.saleMode === 'enquire' ? ' checked' : '') + '>' +
-            '<span>On enquiry only <span class="sa-muted">(no price shown; people email you)</span></span></label></div>' +
-
-            '<div id="priceBlock">' +
+            '<div class="sa-section">' +
             '<div class="sa-field" id="uniqueBlock"><div class="sa-row">' +
             '<div><label class="sa-label" for="fPrice">Price</label>' + moneyField('price', first.price, 'id="fPrice"') + '</div>' +
             '<div><label class="sa-label" for="fAvailable">Is it still for sale?</label>' +
@@ -420,7 +468,7 @@
             '<span class="sa-hint">Which of your two delivery prices applies (you set them under Delivery).</span>' +
             '<label class="sa-check"><input type="radio" name="fShipping" value="standard"' + (p.shippingClass !== 'large' ? ' checked' : '') + '><span>Small: prints, zines, things that fit in a tube or envelope</span></label>' +
             '<label class="sa-check"><input type="radio" name="fShipping" value="large"' + (p.shippingClass === 'large' ? ' checked' : '') + '><span>Large or fragile: big originals, framed pieces</span></label></div>' +
-            '</div></div>' +
+            '</div>' +
 
             '<div class="sa-section"><label class="sa-check"><input type="checkbox" id="fLive"' + (p.status === 'live' ? ' checked' : '') + '>' +
             '<span><strong>Show it in the shop</strong><br><span class="sa-muted">Untick to keep it hidden while you work on it.</span></span></label></div>' +
@@ -457,17 +505,38 @@
     }
 
     // Shows the price boxes that fit: one price for an original, rows for
-    // things there are several of, none for "on enquiry"
+    // things there are several of
     function updateEditorBlocks() {
         var unique = $('#fUnique').prop('checked');
-        var enquire = $('input[name=fSale]:checked').val() === 'enquire';
-        $('#priceBlock').prop('hidden', enquire);
         $('#fPrice').val(editing.options[0].price);
         $('#uniqueBlock').prop('hidden', !unique);
         $('#optionsBlock').prop('hidden', unique);
     }
 
-    $(document).on('change', '#fUnique, input[name=fSale]', updateEditorBlocks);
+    $(document).on('change', '#fUnique', updateEditorBlocks);
+
+    // The title follows the name as it's typed
+    $(document).on('input', '#fName', function () {
+        $('#editorTitle').text($.trim(this.value) || (editing.id ? 'Untitled item' : 'New item'));
+    });
+
+    // Anything changed in the editor is remembered, so leaving without
+    // saving asks first
+    $(document).on('input change', '#editor', function () {
+        if (editing) {
+            editing.dirty = true;
+        }
+    });
+
+    function markChanged() {
+        if (editing) {
+            editing.dirty = true;
+        }
+    }
+
+    function okToLeaveEditor() {
+        return !editing || !editing.dirty || confirm('Leave without saving your changes to this item?');
+    }
 
     $(document).on('input', '#options input', function () {
         var key = Number($(this).closest('.sa-option').attr('data-key'));
@@ -487,6 +556,7 @@
 
     $(document).on('click', '.js-add-option', function () {
         editing.options.push({ key: nextKey++, id: 0, label: '', price: '', stock: '', stockWas: null });
+        markChanged();
         drawOptions();
         $('#options .sa-option').last().find('input').first().focus();
     });
@@ -494,23 +564,29 @@
     $(document).on('click', '.js-remove-option', function () {
         var key = Number($(this).closest('.sa-option').attr('data-key'));
         editing.options = editing.options.filter(function (option) { return option.key !== key; });
+        markChanged();
         drawOptions();
         $('#fPrice').val(editing.options[0].price);
     });
 
     $(document).on('click', '.js-picture-remove', function () {
         editing.images.splice(Number($(this).closest('.sa-picture').attr('data-index')), 1);
+        markChanged();
         drawPictures();
     });
 
     $(document).on('click', '.js-picture-first', function () {
         var index = Number($(this).closest('.sa-picture').attr('data-index'));
         editing.images.unshift(editing.images.splice(index, 1)[0]);
+        markChanged();
         drawPictures();
     });
 
-    $(document).on('click', '.js-cancel', function () {
-        showTab('items');
+    $(document).on('click', '.js-cancel', function (event) {
+        event.preventDefault();
+        if (okToLeaveEditor()) {
+            showTab('items');
+        }
     });
 
     $(document).on('click', '.js-archive', function () {
@@ -542,7 +618,6 @@
             details: $('#fDetails').val(),
             description: $('#fDescription').val(),
             workId: editing.workId,
-            saleMode: $('input[name=fSale]:checked').val(),
             shippingClass: $('input[name=fShipping]:checked').val(),
             status: $('#fLive').prop('checked') ? 'live' : 'draft',
             images: editing.images,
@@ -579,6 +654,7 @@
             }).then(function (answer) {
                 if (editing) {
                     editing.images.push(answer.location);
+                    markChanged();
                     drawPictures();
                 }
                 next();
@@ -638,6 +714,7 @@
         if (editing.images.indexOf(work.location) === -1) {
             editing.images.push(work.location);
         }
+        markChanged();
         // The first work chosen fills in what's still empty, and is remembered
         // as the work this item is (so the two can link to each other)
         if (!editing.workId) {
@@ -815,6 +892,110 @@
     });
 
     // ----------------------------------------------------------------------
+    // Promo codes
+    // ----------------------------------------------------------------------
+
+    function drawPromos() {
+        promosDraft = state.promos.map(function (promo) {
+            return {
+                key: nextKey++, id: promo.id, code: promo.code, kind: promo.kind,
+                value: promo.kind === 'percent' ? String(promo.value) : priceText(promo.value),
+                maxUses: promo.maxUses === null ? '' : String(promo.maxUses),
+                endsAt: promo.endsAt || '', active: promo.active, usedCount: promo.usedCount
+            };
+        });
+        $('#panel').html(
+            '<p>A promo code is a word a buyer types in their basket to get money off. Make one for your newsletter, ' +
+            'a fair, a friend: whoever you give it to can use it.</p>' +
+            '<p class="sa-muted">The money comes off the things they buy, never off delivery. One code per order.</p>' +
+            '<div id="promos"></div>' +
+            '<div class="sa-save-bar"><button type="button" class="sa-button sa-quiet js-add-promo">Add a code</button>' +
+            '<span class="sa-spacer"></span><button type="button" class="sa-button js-save-promos">Save promo codes</button></div>');
+        drawPromoRows();
+    }
+
+    // Why a code that's switched on isn't working any more, if it isn't
+    function promoState(promo) {
+        if (!promo.id) {
+            return 'Not saved yet';
+        }
+        var used = 'Used ' + promo.usedCount + (promo.usedCount === 1 ? ' time' : ' times') + ' so far';
+        var today = new Date().toISOString().slice(0, 10);
+        if (promo.endsAt && promo.endsAt < today) {
+            return used + ' &middot; <strong>it has ended</strong>';
+        }
+        if (promo.maxUses !== '' && promo.usedCount >= Number(promo.maxUses)) {
+            return used + ' &middot; <strong>all used up</strong>';
+        }
+        return used;
+    }
+
+    function drawPromoRows() {
+        if (!promosDraft.length) {
+            $('#promos').html('<p class="sa-empty">No promo codes yet. Choose &ldquo;Add a code&rdquo; to make one.</p>');
+            return;
+        }
+        $('#promos').html(promosDraft.map(function (promo) {
+            return '<div class="sa-zone sa-promo" data-key="' + promo.key + '">' +
+                '<div class="sa-zone-head"><input type="text" class="sa-code" data-field="code" aria-label="The code" placeholder="The code, e.g. SPRING10" ' +
+                'autocapitalize="characters" spellcheck="false" maxlength="40" value="' + esc(promo.code) + '">' +
+                '<label class="sa-check sa-switch"><input type="checkbox" data-field="active"' + (promo.active ? ' checked' : '') + '><span>Switched on</span></label>' +
+                '<button type="button" class="sa-remove js-remove-promo" aria-label="Remove this code">&times;</button></div>' +
+                '<div class="sa-row">' +
+                '<div><label class="sa-hint">It takes off</label><span class="sa-amount">' +
+                '<input type="text" inputmode="decimal" data-field="value" aria-label="How much it takes off" value="' + esc(promo.value) + '">' +
+                '<select data-field="kind" aria-label="Percent or money">' +
+                '<option value="percent"' + (promo.kind === 'percent' ? ' selected' : '') + '>% of the items</option>' +
+                '<option value="amount"' + (promo.kind === 'amount' ? ' selected' : '') + '>' + esc($.trim(symbol())) + ' off</option></select></span></div>' +
+                '<div><label class="sa-hint">How many times it can be used</label>' +
+                '<input type="text" inputmode="numeric" data-field="maxUses" placeholder="no limit" value="' + esc(promo.maxUses) + '"></div>' +
+                '<div><label class="sa-hint">Last day it works</label>' +
+                '<input type="date" data-field="endsAt" value="' + esc(promo.endsAt) + '"></div>' +
+                '</div><p class="sa-muted sa-small sa-promo-state">' + promoState(promo) + '</p></div>';
+        }).join(''));
+    }
+
+    function promoOf(el) {
+        var key = Number($(el).closest('.sa-promo').attr('data-key'));
+        return promosDraft.filter(function (promo) { return promo.key === key; })[0];
+    }
+
+    $(document).on('input change', '#promos input, #promos select', function () {
+        var field = this.getAttribute('data-field');
+        promoOf(this)[field] = this.type === 'checkbox' ? this.checked : $.trim(this.value);
+    });
+
+    $(document).on('click', '.js-add-promo', function () {
+        promosDraft.push({ key: nextKey++, id: 0, code: '', kind: 'percent', value: '', maxUses: '', endsAt: '', active: true, usedCount: 0 });
+        drawPromoRows();
+        $('#promos .sa-promo').last().find('input').first().focus();
+    });
+
+    $(document).on('click', '.js-remove-promo', function () {
+        var promo = promoOf(this);
+        if (promo.id && !confirm('Remove the code ' + promo.code + '? It stops working once you save. (To pause it instead, untick "Switched on".)')) {
+            return;
+        }
+        promosDraft = promosDraft.filter(function (each) { return each !== promo; });
+        drawPromoRows();
+    });
+
+    $(document).on('click', '.js-save-promos', function () {
+        var button = $(this).prop('disabled', true);
+        post({
+            action: 'savePromos',
+            promos: promosDraft.map(function (promo) {
+                return { id: promo.id, code: promo.code, kind: promo.kind, value: promo.value, maxUses: promo.maxUses, endsAt: promo.endsAt, active: promo.active };
+            })
+        }).done(function () {
+            toast('Promo codes saved');
+            loadState(drawPromos);
+        }).always(function () {
+            button.prop('disabled', false);
+        });
+    });
+
+    // ----------------------------------------------------------------------
     // Settings
     // ----------------------------------------------------------------------
 
@@ -836,10 +1017,6 @@
             '<span class="sa-hint">Optional. For example: &ldquo;Prints are sent rolled in a tube within a week.&rdquo;</span>' +
             '<textarea id="sDelivery" maxlength="1000">' + esc(s.deliveryNote) + '</textarea></div>' +
 
-            '<div class="sa-field"><label for="sEmail">Your email for buyers</label>' +
-            '<span class="sa-hint">Where &ldquo;enquire&rdquo; buttons and questions about an order are sent.</span>' +
-            '<input type="email" id="sEmail" value="' + esc(s.contactEmail) + '"></div>' +
-
             '<div class="sa-field"><label for="sCurrency">Currency</label>' +
             '<span class="sa-hint">The money your prices are in. Changing it does not convert the prices you\'ve already typed.</span>' +
             '<select id="sCurrency">' + currencies + '</select></div>' +
@@ -855,7 +1032,6 @@
             paused: $('#sPaused').prop('checked'),
             intro: $('#sIntro').val(),
             deliveryNote: $('#sDelivery').val(),
-            contactEmail: $('#sEmail').val(),
             currency: $('#sCurrency').val()
         }).done(function () {
             toast('Settings saved');
@@ -902,7 +1078,9 @@
 
     $(function () {
         $('#tabs').on('click', 'button', function () {
-            showTab(this.getAttribute('data-tab'));
+            if (okToLeaveEditor()) {
+                showTab(this.getAttribute('data-tab'));
+            }
         });
         loadState(function () {
             // Straight to the orders if any are waiting; otherwise the items

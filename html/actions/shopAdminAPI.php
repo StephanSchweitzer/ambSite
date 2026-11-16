@@ -6,7 +6,7 @@
 //   GET  ?what=orders&show=tosend|sent|all
 //   GET  ?what=works     the portfolio's works, to pick an item's picture from
 //   POST {action: ...}   saveProduct, orderProducts, archiveProduct, restoreProduct,
-//                        saveZones, saveSettings, updateOrder   (JSON)
+//                        saveZones, savePromos, saveSettings, updateOrder   (JSON)
 //   POST action=uploadPicture + photo   (a form upload)
 
 include_once __DIR__ . '/../database/session.php';
@@ -110,6 +110,8 @@ function adminOrderRow($order, $items)
         'paidAt' => $utc($order['paidAt']),
         'shippedAt' => $utc($order['shippedAt']),
         'subtotal' => shopMoney($order['subtotalCents'], $order['currency']),
+        'discount' => (int) $order['discountCents'] > 0 ? shopMoney($order['discountCents'], $order['currency']) : null,
+        'promoCode' => $order['promoCode'],
         'shipping' => shopMoney($order['shippingCents'], $order['currency']),
         'total' => shopMoney($order['totalCents'], $order['currency']),
         'zone' => $order['zoneName'],
@@ -128,6 +130,24 @@ function adminOrderRow($order, $items)
             : null,
         'lines' => $lines,
     );
+}
+
+function adminPromos($conn)
+{
+    $promos = array();
+    foreach ($conn->query('SELECT * FROM shopPromoCodes ORDER BY active DESC, id DESC')->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $promos[] = array(
+            'id' => (int) $row['id'],
+            'code' => $row['code'],
+            'kind' => $row['kind'] === 'amount' ? 'amount' : 'percent',
+            'value' => (int) $row['value'],
+            'maxUses' => $row['maxUses'] === null ? null : (int) $row['maxUses'],
+            'usedCount' => (int) $row['usedCount'],
+            'endsAt' => $row['endsAt'],
+            'active' => (int) $row['active'] === 1,
+        );
+    }
+    return $promos;
 }
 
 try {
@@ -162,6 +182,7 @@ try {
                 'currencies' => shopCurrencies(),
                 'countries' => shopCountries(),
                 'zones' => $zones,
+                'promos' => adminPromos($conn),
                 'products' => shopGetProducts($conn, array('status' => 'all')),
                 'archived' => shopGetProducts($conn, array('status' => 'all', 'archived' => true)),
                 'toSend' => $toSend,
@@ -273,7 +294,6 @@ try {
         $name = cleanText($input['name'] ?? '', 255);
         $status = ($input['status'] ?? '') === 'live' ? 'live' : 'draft';
         $isUnique = !empty($input['isUnique']);
-        $saleMode = ($input['saleMode'] ?? '') === 'enquire' ? 'enquire' : 'buy';
         if ($name === '') {
             adminFail('Please give the item a name.');
         }
@@ -288,8 +308,7 @@ try {
             }
         }
 
-        // What can be bought. An original has a single one; an item sold "on
-        // enquiry" may have none.
+        // What can be bought. An original has a single one.
         $variants = array();
         foreach (is_array($input['variants'] ?? null) ? $input['variants'] : array() as $variant) {
             if (!is_array($variant)) {
@@ -301,7 +320,7 @@ try {
                 continue; // an empty row
             }
             if ($price === null || $price < 50) {
-                adminFail($saleMode === 'enquire' ? 'Please check the price (or leave it empty).' : 'Please give every option a price.');
+                adminFail($isUnique ? 'Please give the item a price.' : 'Please give every option a price.');
             }
             if ($price > 99999900) {
                 adminFail('That price is too high for the shop to take.');
@@ -324,7 +343,7 @@ try {
             if (!$images) {
                 adminFail('Please add a picture before putting the item in the shop.');
             }
-            if (!$variants && $saleMode === 'buy') {
+            if (!$variants) {
                 adminFail('Please give the item a price before putting it in the shop.');
             }
         }
@@ -336,7 +355,6 @@ try {
             'details' => cleanText($input['details'] ?? '', 500),
             'description' => cleanText($input['description'] ?? '', 10000),
             'workId' => !empty($input['workId']) ? (int) $input['workId'] : null,
-            'saleMode' => $saleMode,
             'shippingClass' => ($input['shippingClass'] ?? '') === 'large' ? 'large' : 'standard',
             'status' => $status,
             'updatedAt' => shopNow(),
@@ -481,19 +499,97 @@ try {
         adminReply(array('success' => true, 'zones' => shopGetZones($conn)));
     }
 
+    // Promo codes: the whole list as it is on screen. A code keeps its count
+    // of uses when edited; one left off the list is removed (orders that
+    // used it keep its name).
+    if ($action === 'savePromos') {
+        $rows = array();
+        $seen = array();
+        foreach (is_array($input['promos'] ?? null) ? $input['promos'] : array() as $promo) {
+            if (!is_array($promo)) {
+                continue;
+            }
+            $typed = trim((string) ($promo['code'] ?? ''));
+            $code = shopCleanCode($typed);
+            if ($typed === '' && trim((string) ($promo['value'] ?? '')) === '') {
+                continue; // an empty row
+            }
+            if ($code === '' || strlen($code) < 3) {
+                adminFail('Please give every code at least three letters or numbers (for example SPRING10).');
+            }
+            if (isset($seen[$code])) {
+                adminFail('The code ' . $code . ' is in the list twice. Each code can only be there once.');
+            }
+            $seen[$code] = true;
+            $kind = ($promo['kind'] ?? '') === 'amount' ? 'amount' : 'percent';
+            if ($kind === 'percent') {
+                $value = (int) preg_replace('/[^0-9]/', '', (string) ($promo['value'] ?? ''));
+                if ($value < 1 || $value > 100) {
+                    adminFail('Please say how much ' . $code . ' takes off: a percentage between 1 and 100.');
+                }
+            } else {
+                $value = shopParsePrice($promo['value'] ?? '');
+                if ($value === null || $value < 1) {
+                    adminFail('Please say how much ' . $code . ' takes off.');
+                }
+            }
+            $usesText = trim((string) ($promo['maxUses'] ?? ''));
+            $ends = trim((string) ($promo['endsAt'] ?? ''));
+            if ($ends !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $ends)) {
+                adminFail('Please check the last day for ' . $code . '.');
+            }
+            $rows[] = array(
+                'id' => isset($promo['id']) ? (int) $promo['id'] : 0,
+                'code' => $code,
+                'kind' => $kind,
+                'value' => $value,
+                'maxUses' => $usesText === '' ? null : max(1, min(1000000, (int) $usesText)),
+                'endsAt' => $ends === '' ? null : $ends,
+                'active' => !empty($promo['active']) ? 1 : 0,
+            );
+        }
+        $conn->beginTransaction();
+        try {
+            $existing = array_map('intval', $conn->query('SELECT id FROM shopPromoCodes')->fetchAll(PDO::FETCH_COLUMN));
+            $kept = array();
+            foreach ($rows as $row) {
+                if ($row['id'] && in_array($row['id'], $existing, true)) {
+                    $kept[] = $row['id'];
+                }
+            }
+            // Removed ones first, so a new code may reuse a removed one's name
+            foreach (array_diff($existing, $kept) as $gone) {
+                $conn->prepare('DELETE FROM shopPromoCodes WHERE id = ?')->execute(array($gone));
+            }
+            foreach ($rows as $row) {
+                $values = array($row['code'], $row['kind'], $row['value'], $row['maxUses'], $row['endsAt'], $row['active']);
+                if (in_array($row['id'], $kept, true)) {
+                    $conn->prepare('UPDATE shopPromoCodes SET code = ?, kind = ?, value = ?, maxUses = ?, endsAt = ?, active = ? WHERE id = ?')
+                         ->execute(array_merge($values, array($row['id'])));
+                } else {
+                    $conn->prepare('INSERT INTO shopPromoCodes (code, kind, value, maxUses, endsAt, active, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                         ->execute(array_merge($values, array(shopNow())));
+                }
+            }
+            $conn->commit();
+        } catch (PDOException $e) {
+            $conn->rollBack();
+            if (strpos($e->getMessage(), 'Duplicate') !== false) {
+                adminFail('Two codes ended up with the same name. Please give each a different one.');
+            }
+            throw $e;
+        }
+        adminReply(array('success' => true, 'promos' => adminPromos($conn)));
+    }
+
     if ($action === 'saveSettings') {
         $currency = strtolower((string) ($input['currency'] ?? ''));
         if (!isset(shopCurrencies()[$currency])) {
             adminFail('Please choose a currency.');
         }
-        $email = cleanText($input['contactEmail'] ?? '', 255);
-        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            adminFail("That email address doesn't look right.");
-        }
         shopSaveSetting($conn, 'currency', $currency);
         shopSaveSetting($conn, 'intro', cleanText($input['intro'] ?? '', 1000));
         shopSaveSetting($conn, 'deliveryNote', cleanText($input['deliveryNote'] ?? '', 1000));
-        shopSaveSetting($conn, 'contactEmail', $email);
         shopSaveSetting($conn, 'paused', !empty($input['paused']) ? '1' : '0');
         adminReply(array('success' => true, 'settings' => shopSettings($conn, true)));
     }
