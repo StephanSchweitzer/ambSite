@@ -106,8 +106,10 @@ admin page: **Shop**.
   for money off (SPRING10, say), and switch it off again when you're done.
 - **Settings** has a "Pause the shop" switch for holidays.
 
-The money itself is handled by a company called Stripe: buyers type their
-card details on Stripe's page, never on your site, and Stripe pays you. If you
+The money itself is handled by a company called Stripe. Buyers pay right on
+your basket page, but the box where they type their card belongs to Stripe:
+the card number goes straight to Stripe and never touches your site. Stripe
+then pays you. If you
 ever need to give someone their money back, that's done on Stripe's website
 (each order has a "See the payment in Stripe" button that takes you to the
 right place).
@@ -396,12 +398,35 @@ it was then). `shopItems` is the old Shopify-embed table: unused, left alone.
 
 ## The shop
 
-Payment is Stripe Checkout (Stripe's hosted page): no card data touches the
-server and there is no Stripe library — `stripeFunctions.php` makes three
-plain HTTPS calls. Settings in the server's `.env`: `STRIPE_SECRET_KEY`
-(`sk_test_...` or `sk_live_...`) and `STRIPE_WEBHOOK_SECRET` (`whsec_...`).
-Without the key the shop is browsable but the basket says it isn't taking
-orders yet. The webhook to register in Stripe's dashboard is
+Payment is a Stripe Checkout Session, paid on the basket page itself
+(`ui_mode=elements`: Stripe.js mounts Stripe's address and card boxes into
+`shop.js`'s checkout form), so no card data touches the server and there is
+no Stripe library — `stripeFunctions.php` makes plain HTTPS calls. Settings
+in the server's `.env`: `STRIPE_SECRET_KEY` (`sk_test_...` or
+`sk_live_...`), `STRIPE_PUBLISHABLE_KEY` (`pk_test_...` / `pk_live_...`,
+same mode as the secret key) and `STRIPE_WEBHOOK_SECRET` (`whsec_...`).
+Without the secret key the shop is browsable but the basket says it isn't
+taking orders yet; without (or with a mismatched) publishable key it falls
+back to Stripe's hosted page (`success_url`/`cancel_url`).
+
+- **API version and Stripe.js go together.** `STRIPE_API_VERSION` is
+  `2026-10-28.endive` (elements mode needs 2026-03-25.dahlia or later), and
+  `shop.js` loads `https://js.stripe.com/endive/stripe.js`
+  (`initCheckoutElementsSdk`, `loadActions`, `actions.confirm`). Move both
+  together. The response readers accept both old and new shapes
+  (`shipping_details` vs `collected_information.shipping_details`).
+- **The checkout on the basket page:** "Continue to payment" creates the
+  order and session, then draws the order beside a form (email and phone
+  are the site's own inputs, passed in with `updateEmail` /
+  `updatePhoneNumber`; address and card are Stripe's). Paying redirects to
+  the session's `return_url`, `/shop/thank-you?order=<token>`. The order's
+  token is kept in `sessionStorage` (`ambCheckout`); opening the basket
+  again, "Change the basket", or starting a new checkout (`replaces`) gives
+  that payment up first (`shopAbandonOrder`), so its held stock is free —
+  otherwise an original would look sold to the person buying it. Never
+  given up while `confirm()` is running.
+- Apple Pay / Google Pay appear inside Stripe's card box; Apple Pay needs
+  the domain registered in Stripe's dashboard (payment method domains). The webhook to register in Stripe's dashboard is
 `https://ambarvelasco.com/actions/stripeWebhook.php`, for
 `checkout.session.completed`, `.expired`, `.async_payment_succeeded`,
 `.async_payment_failed` and `charge.refunded`. Receipts to buyers and
@@ -416,8 +441,9 @@ dashboard); the site sends no email.
 - **Flow:** `shopStartCheckout()` re-prices the basket from the database,
   takes the stock (`UPDATE ... WHERE stock >= ?`, so two buyers can't both get
   the last one), records a `pending` order and creates the Checkout Session
-  (expires in 31 minutes; delivery is one fixed shipping option, and the
-  address is limited to the country chosen in the basket). The webhook and
+  (expires in 31 minutes; delivery is one fixed shipping option, which
+  `shop.js` selects if Stripe hasn't, and the address is limited to the
+  country chosen in the basket). The webhook and
   the thank-you page both just call `shopSyncOrder()`.
 - **Two rules in `shopOrderFunctions.php`:** an order is only marked paid
   because Stripe, asked directly, says so (the webhook's payload is a nudge,
@@ -457,7 +483,9 @@ dashboard); the site sends no email.
 - Saving an item moves stock by the difference from what the page loaded
   (`stockWas`), so a sale made while the editor was open isn't undone.
 - Trying it locally: use Stripe test keys in the local `.env`, or the
-  stand-in at `dev/stripe-mock.php` (instructions in its header).
+  stand-in at `dev/stripe-mock.php` (instructions in its header). The
+  stand-in covers the server side only — Stripe.js can't talk to it, so
+  the address/card boxes need real test keys to appear.
 
 ## Quirks to know before editing
 

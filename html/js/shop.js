@@ -330,6 +330,27 @@ function drawBasketPage(content) {
         history.replaceState($.extend({}, history.state, { path: '/shop/basket' }), '', '/shop/basket');
     }
 
+    // A payment started on this page and left unfinished is given up first,
+    // so what it set aside shows as available again (a one-of-a-kind original
+    // would otherwise look sold to the very person buying it)
+    var unfinished = checkoutState && checkoutState.paying ? null : readCheckoutToken();
+    endCheckout();
+    if (unfinished) {
+        if (!content.find('.shop-basket').length || content.find('.checkout-form').length) {
+            content.html('<div class="shop shop-basket">' + shopHeader('Basket') + loadingHtml('') + '</div>');
+        }
+        var after = $.Deferred();
+        shopPost({ action: 'abandon', token: unfinished }).always(function () {
+            writeCheckoutToken('');
+            if (currentView !== 'shop-basket') {
+                after.resolve();
+                return;
+            }
+            drawBasketPage(content).then(after.resolve, after.reject);
+        });
+        return after.promise();
+    }
+
     var items = readBasket();
     if (!items.length) {
         basketView = null;
@@ -453,6 +474,10 @@ function paintBasket(content) {
         pay = '<p class="shop-status">The shop is taking a short break, so orders can\'t be placed just now. Your basket will keep.</p>';
     } else if (!data.canPay || !codes.length) {
         pay = '<p class="shop-status">The shop isn\'t taking orders just yet. Your basket will keep, so please come back soon.</p>';
+    } else if (data.payOnPage) {
+        pay = '<button type="button" class="shop-button basket-pay">Continue to payment</button>' +
+            '<p class="basket-note">Next you give your address and pay, here on this page.</p>';
+        loadStripeJs().then(null, function () { /* tried again when paying */ });
     } else {
         pay = '<button type="button" class="shop-button basket-pay">Pay securely</button>' +
             '<p class="basket-note">You\'ll finish on Stripe\'s secure payment page, where you give your address and pay by card.</p>';
@@ -562,10 +587,26 @@ $(document).on('click', '.basket-pay', function () {
         $('#basketCountry').focus();
         return;
     }
-    button.prop('disabled', true).text('Opening the payment page…');
+    var onPage = basketView.payOnPage;
+    var label = button.text();
+    button.prop('disabled', true).text(onPage ? 'Getting the payment ready…' : 'Opening the payment page…');
     var code = basketView.promo ? basketView.promo.code : '';
-    shopPost({ action: 'checkout', items: readBasket(), country: country, code: code }).then(function (answer) {
-        location.href = answer.url; // Stripe's page
+    var replaces = readCheckoutToken();
+    // (Stripe.js is fetched alongside, when paying here)
+    var stripeReady = onPage ? loadStripeJs() : $.Deferred().resolve().promise();
+    stripeReady.then(null, function () { /* told below, once the payment exists */ });
+    shopPost({ action: 'checkout', items: readBasket(), country: country, code: code, replaces: replaces }).then(function (answer) {
+        if (answer.url) {
+            writeCheckoutToken(''); // (any earlier one was given up)
+            location.href = answer.url; // Stripe's page
+            return;
+        }
+        writeCheckoutToken(answer.token);
+        stripeReady.then(function () {
+            startCheckout(answer, country);
+        }, function () {
+            startCheckout(answer, country, true);
+        });
     }, function (xhr) {
         var answer = xhr.responseJSON || {};
         if (answer.lines && Object.keys(answer.lines).length) {
@@ -582,9 +623,323 @@ $(document).on('click', '.basket-pay', function () {
             });
             return;
         }
-        button.prop('disabled', false).text('Pay securely');
+        if (replaces) {
+            writeCheckoutToken(''); // (the server gave that one up before saying no)
+        }
+        button.prop('disabled', false).text(label);
         problem.text(answer.message || 'Sorry, the payment page couldn\'t be opened. Nothing has been charged. Please try again.').prop('hidden', false);
     });
+});
+
+// --------------------------------------------------------------------------
+// Paying on the basket page
+// --------------------------------------------------------------------------
+//
+// When the site has Stripe's public key, the basket turns into the checkout:
+// the order on one side; email, phone, delivery address and the card box on
+// the other. The address and card boxes are Stripe's own (Stripe.js puts
+// them in the page, styled to match), so card numbers go straight to Stripe
+// and never reach this site. Paying sends the customer on to the thank-you
+// page, which asks the server (and so Stripe) whether it went through.
+//
+// The payment set up for this checkout holds the stock for half an hour. Its
+// token is kept for the tab (sessionStorage): going back to the basket, or
+// starting again, gives it up first so the stock is free again.
+
+var STRIPE_JS = 'https://js.stripe.com/endive/stripe.js'; // same name as STRIPE_API_VERSION in stripeFunctions.php
+var CHECKOUT_KEY = 'ambCheckout';
+var checkoutState = null; // { token, checkout, actions, session, paying }
+var stripeJsLoading = null;
+var stripeClients = {};
+
+// Stripe's look, brought close to the site's (ambar.css)
+var STRIPE_APPEARANCE = {
+    theme: 'stripe',
+    labels: 'above',
+    variables: {
+        colorPrimary: '#1d1d1b',
+        colorText: '#2a2a28',
+        colorBackground: '#ffffff',
+        colorDanger: '#b3261e',
+        fontFamily: 'Lato, "Helvetica Neue", Arial, sans-serif',
+        fontSizeBase: '15px',
+        fontWeightNormal: '400',
+        spacingUnit: '4px',
+        borderRadius: '4px'
+    },
+    rules: {
+        '.Input': { border: '1px solid #d5d3cd', boxShadow: 'none' },
+        '.Input:focus': { border: '1px solid #1d1d1b', boxShadow: 'none' },
+        '.Label': { color: '#75756f', fontSize: '13px' },
+        '.Tab': { border: '1px solid #d5d3cd', boxShadow: 'none' }
+    }
+};
+var STRIPE_FONTS = [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap' }];
+
+function readCheckoutToken() {
+    try {
+        var token = sessionStorage.getItem(CHECKOUT_KEY) || '';
+        return /^[a-f0-9]{32}$/.test(token) ? token : '';
+    } catch (e) {
+        return checkoutState ? checkoutState.token : '';
+    }
+}
+
+function writeCheckoutToken(token) {
+    try {
+        if (token) {
+            sessionStorage.setItem(CHECKOUT_KEY, token);
+        } else {
+            sessionStorage.removeItem(CHECKOUT_KEY);
+        }
+    } catch (e) { /* storage blocked: it lasts only for this page */ }
+}
+
+// Stripe.js, fetched the first time the basket can be paid from. Stripe asks
+// that it always comes from their own address, never a copy.
+function loadStripeJs() {
+    if (window.Stripe) {
+        return $.Deferred().resolve().promise();
+    }
+    if (stripeJsLoading) {
+        return stripeJsLoading;
+    }
+    var loading = $.Deferred();
+    var script = document.createElement('script');
+    script.src = STRIPE_JS;
+    script.async = true;
+    var timer = setTimeout(function () { failed(); }, 20000);
+    function failed() {
+        clearTimeout(timer);
+        script.remove();
+        stripeJsLoading = null; // so the next try fetches it afresh
+        loading.reject();
+    }
+    script.onload = function () {
+        clearTimeout(timer);
+        if (window.Stripe) {
+            loading.resolve();
+        } else {
+            failed();
+        }
+    };
+    script.onerror = failed;
+    document.head.appendChild(script);
+    stripeJsLoading = loading.promise();
+    return stripeJsLoading;
+}
+
+function stripeClient(publishableKey) {
+    if (!stripeClients[publishableKey]) {
+        stripeClients[publishableKey] = window.Stripe(publishableKey);
+    }
+    return stripeClients[publishableKey];
+}
+
+// Lets go of the checkout on screen (not of the payment itself: that's the
+// token's job, above)
+function endCheckout() {
+    if (checkoutState) {
+        checkoutState.ended = true;
+        checkoutState = null;
+    }
+}
+
+function checkoutLines(data) {
+    return data.lines.map(function (line) {
+        return '<li class="basket-line">' +
+            '<span class="basket-line-picture">' +
+            (line.image ? '<img src="' + shopEscape(thumbnailUrl(line.image)) + '" alt="" decoding="sync">' : '') + '</span>' +
+            '<div class="basket-line-text"><span class="basket-line-name">' + shopEscape(line.name) + '</span>' +
+            (line.label ? '<span class="basket-line-option">' + shopEscape(line.label) + '</span>' : '') +
+            (line.quantity > 1 ? '<span class="basket-line-option">' + line.quantity + ' of them</span>' : '') + '</div>' +
+            '<div class="basket-line-price">' + shopEscape(formatMoney(line.priceCents * line.quantity, data.symbol)) + '</div></li>';
+    }).join('');
+}
+
+// Draws the checkout for a payment the server has just set up
+function startCheckout(answer, country, noStripeJs) {
+    if (currentView !== 'shop-basket') {
+        return; // moved on meanwhile: the payment is given up next time the basket opens
+    }
+    endCheckout();
+    var state = checkoutState = { token: answer.token, paying: false };
+    var data = basketView;
+    var content = $('#imagesAndContent');
+    var items = 0;
+    var large = false;
+    data.lines.forEach(function (line) {
+        items += line.priceCents * line.quantity;
+        large = large || line.shippingClass === 'large';
+    });
+    var place = data.countries[country];
+    var delivery = place ? (large ? place.large : place.standard) : 0;
+    var discount = promoDiscount(data.promo, items);
+
+    content.html('<div class="shop shop-basket">' + shopHeader('Checkout') +
+        '<div class="basket-layout is-checkout">' +
+        '<div class="checkout-order"><ul class="basket-lines">' + checkoutLines(data) + '</ul>' +
+        '<dl class="basket-totals"><dt>Items</dt><dd>' + shopEscape(formatMoney(items, data.symbol)) + '</dd>' +
+        (discount ? '<dt>Promo code ' + shopEscape(data.promo.code) + '</dt><dd>−' + shopEscape(formatMoney(discount, data.symbol)) + '</dd>' : '') +
+        '<dt>Delivery to ' + shopEscape(place ? place.name : country) + '</dt><dd>' + (delivery === 0 ? 'Free' : shopEscape(formatMoney(delivery, data.symbol))) + '</dd>' +
+        '<dt class="is-total">Total</dt><dd class="is-total">' + shopEscape(formatMoney(items - discount + delivery, data.symbol)) + '</dd></dl>' +
+        '<p class="basket-more"><button type="button" class="checkout-back">Change the basket</button></p></div>' +
+        '<form class="basket-summary checkout-form" novalidate>' +
+        '<h3 class="checkout-heading">Your details</h3>' +
+        '<div class="checkout-field"><label for="checkoutEmail">Email</label>' +
+        '<input type="email" id="checkoutEmail" autocomplete="email" inputmode="email" spellcheck="false" maxlength="200" required></div>' +
+        '<div class="checkout-field"><label for="checkoutPhone">Phone <span>(for the courier)</span></label>' +
+        '<input type="tel" id="checkoutPhone" autocomplete="tel" maxlength="40" required></div>' +
+        '<h3 class="checkout-heading">Delivery address</h3><div id="checkoutAddress" class="checkout-stripe"></div>' +
+        '<h3 class="checkout-heading">Payment</h3><div id="checkoutPayment" class="checkout-stripe"><div class="loading-spinner"></div></div>' +
+        '<p class="shop-status basket-problem" role="alert" hidden></p>' +
+        '<button type="submit" class="shop-button checkout-pay" disabled>Pay</button>' +
+        '<p class="basket-note">Card details go straight to Stripe, who handle the payment for this shop. They never reach this site.</p>' +
+        '</form></div></div>');
+    window.scrollTo(0, 0);
+
+    var fail = function (message) {
+        if (!state.ended) {
+            stopCheckout(state, message || 'Sorry, the payment form couldn\'t be loaded. Nothing has been charged. Please go back to the basket and try again.');
+        }
+    };
+    if (noStripeJs || !window.Stripe) {
+        fail();
+        return;
+    }
+
+    var checkout;
+    try {
+        checkout = stripeClient(answer.publishableKey).initCheckoutElementsSdk({
+            clientSecret: answer.clientSecret,
+            elementsOptions: { appearance: STRIPE_APPEARANCE, fonts: STRIPE_FONTS }
+        });
+        state.checkout = checkout;
+        checkout.on('change', function (session) {
+            if (!state.ended) {
+                checkoutChanged(state, session);
+            }
+        });
+        $('#checkoutPayment').empty();
+        checkout.createShippingAddressElement().mount('#checkoutAddress');
+        checkout.createPaymentElement().mount('#checkoutPayment');
+    } catch (e) {
+        fail();
+        return;
+    }
+    Promise.resolve(checkout.loadActions()).then(function (result) {
+        if (state.ended) {
+            return;
+        }
+        if (!result || !result.actions) {
+            fail(result && result.error && result.error.message);
+            return;
+        }
+        state.actions = result.actions;
+        if (!state.session && typeof state.actions.getSession === 'function') {
+            checkoutChanged(state, state.actions.getSession());
+        }
+        $('.checkout-pay').prop('disabled', false);
+    }, function () {
+        fail();
+    });
+}
+
+// Stripe's view of the payment changed (address typed, delivery chosen...)
+function checkoutChanged(state, session) {
+    if (!session) {
+        return;
+    }
+    state.session = session;
+    var total = session.total && session.total.total ? session.total.total.amount : '';
+    if (!state.paying) {
+        $('.checkout-pay').text(total ? 'Pay ' + total : 'Pay');
+    }
+    // There's only ever one way of sending (the delivery price for the
+    // chosen country): make sure it's the one chosen
+    if (state.actions && session.shipping && !session.shipping.shippingOption &&
+        session.shippingOptions && session.shippingOptions.length && !state.choosingShipping) {
+        state.choosingShipping = true;
+        Promise.resolve(state.actions.updateShippingOption(session.shippingOptions[0].id)).then(null, function () {}).then(function () {
+            state.choosingShipping = false;
+        });
+    }
+    if (session.status && session.status.type === 'expired') {
+        stopCheckout(state, 'This payment was left open too long, so it has been closed and nothing has been charged. ' +
+            'Please go back to the basket to start again.');
+    }
+}
+
+// The checkout can't go on: the form gives way to why, and the way back
+function stopCheckout(state, message) {
+    state.ended = true;
+    $('.checkout-form').children().not('.basket-problem').remove();
+    $('.checkout-form .basket-problem').text(message).prop('hidden', false);
+    $('.checkout-form').append('<button type="button" class="shop-button checkout-back">Back to the basket</button>');
+}
+
+// Stripe answers {type: 'error', error} when something is wrong
+function stripeStep(promise) {
+    return Promise.resolve(promise).then(function (result) {
+        if (result && result.type === 'error') {
+            throw result.error || {};
+        }
+        return result;
+    });
+}
+
+$(document).on('submit', '.checkout-form', function (event) {
+    event.preventDefault();
+    var state = checkoutState;
+    if (!state || !state.actions || state.paying || state.ended) {
+        return;
+    }
+    var problem = $('.checkout-form .basket-problem').prop('hidden', true);
+    var say = function (text, field) {
+        problem.text(text).prop('hidden', false);
+        if (field) {
+            $(field).focus();
+        }
+    };
+    var email = $.trim($('#checkoutEmail').val());
+    var phone = $.trim($('#checkoutPhone').val());
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        say('Please give the email address your receipt should go to.', '#checkoutEmail');
+        return;
+    }
+    if (phone.replace(/\D/g, '').length < 6) {
+        say('Please give a phone number, in case the courier needs to reach you.', '#checkoutPhone');
+        return;
+    }
+
+    var button = $('.checkout-pay');
+    var label = button.text();
+    state.paying = true;
+    button.prop('disabled', true).text('Paying…');
+    $('.checkout-back').prop('disabled', true);
+    var actions = state.actions;
+    stripeStep(actions.updateEmail(email)).then(function () {
+        return stripeStep(actions.updatePhoneNumber(phone));
+    }).then(function () {
+        // (Stripe sends them on to the thank-you page once it's paid)
+        return stripeStep(actions.confirm());
+    }).then(null, function (error) {
+        if (state.ended) {
+            return;
+        }
+        state.paying = false;
+        button.prop('disabled', false).text(label);
+        $('.checkout-back').prop('disabled', false);
+        say((error && error.message) || 'Sorry, the payment didn\'t go through, and nothing has been charged. Please check the details and try again.');
+    });
+});
+
+// Back to the basket: the payment is given up there (drawBasketPage)
+$(document).on('click', '.checkout-back', function () {
+    if (checkoutState && checkoutState.paying) {
+        return;
+    }
+    drawBasketPage($('#imagesAndContent'));
 });
 
 // --------------------------------------------------------------------------
@@ -637,12 +992,17 @@ function paintThanks(order, token) {
     }
     if (order.status === 'pending') {
         body.html('<p>Your payment hasn\'t been confirmed yet. That can take a minute or two.</p>' +
-            '<p>If you paid, a receipt is on its way to you by email and there\'s nothing more to do.</p>');
+            '<p>If you paid, a receipt is on its way to you by email and there\'s nothing more to do.</p>' +
+            '<p>If the payment didn\'t go through, nothing has been charged, and your basket is waiting: ' +
+            '<a href="/shop/basket" class="shop-text-link" data-shop-nav>back to your basket</a>.</p>');
         return;
     }
 
     // Paid: the basket has done its job. Only once, in case this page is
     // opened again later when there's a new basket.
+    if (readCheckoutToken() === token) {
+        writeCheckoutToken('');
+    }
     try {
         if (!sessionStorage.getItem('ambOrderDone:' + token)) {
             sessionStorage.setItem('ambOrderDone:' + token, '1');

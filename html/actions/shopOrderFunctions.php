@@ -4,13 +4,14 @@
 // What happens when someone buys:
 //   1. shopStartCheckout() checks the basket against the database (prices,
 //      stock and any promo code come from here, never from the browser),
-//      sets the stock aside, records a 'pending' order and asks Stripe for a
-//      payment page.
-//   2. The customer pays on Stripe's page. Stripe then calls
-//      actions/stripeWebhook.php, and sends the customer back to
-//      /shop/thank-you. Either of those runs shopSyncOrder(), which asks
-//      Stripe what happened and marks the order paid.
-//   3. If they never pay, Stripe closes the payment page after half an hour;
+//      sets the stock aside, records a 'pending' order and asks Stripe to
+//      open a payment for it (a Checkout Session).
+//   2. The customer pays: on the basket page itself, in Stripe's card box
+//      (js/shop.js), or on Stripe's own page when the site has no public
+//      key. Stripe then calls actions/stripeWebhook.php, and sends the
+//      customer on to /shop/thank-you. Either of those runs shopSyncOrder(),
+//      which asks Stripe what happened and marks the order paid.
+//   3. If they never pay, Stripe closes the payment after half an hour;
 //      the order becomes 'cancelled' and the stock goes back.
 //
 // Two rules keep this safe:
@@ -190,7 +191,8 @@ function shopClientIpHash()
 // Starting a payment
 // ---------------------------------------------------------------------------
 
-// Returns array('url' => Stripe's payment page, 'token' => the order's).
+// Returns array('token' => the order's, and either 'clientSecret' (paying
+// on the basket page: Stripe.js needs it) or 'url' (Stripe's own page)).
 // Throws ShopProblem with a message for the customer if it can't go ahead.
 function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
 {
@@ -314,15 +316,14 @@ function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
     }
 
     $site = shopSiteUrl();
+    $onPage = stripePaysOnPage();
     $params = array(
         'mode' => 'payment',
         'client_reference_id' => shopOrderNumber($orderId),
         'metadata' => array('order_token' => $token),
-        'success_url' => $site . '/shop/thank-you?order=' . $token,
-        'cancel_url' => $site . '/shop/basket?cancelled=' . $token,
         'expires_at' => $expiresAt,
         'line_items' => array(),
-        // The address is asked for on Stripe's page, limited to the country
+        // The address is asked for with the payment, limited to the country
         // the delivery price was worked out for
         'shipping_address_collection' => array('allowed_countries' => array($countryCode)),
         'shipping_options' => array(array('shipping_rate_data' => array(
@@ -336,6 +337,16 @@ function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
             'metadata' => array('order_token' => $token, 'order_number' => shopOrderNumber($orderId)),
         ),
     );
+    if ($onPage) {
+        // Paid on the basket page: Stripe sends the customer on to the
+        // thank-you page once the bank has said yes. (There is no "cancel"
+        // address: going back is a button on the page itself.)
+        $params['ui_mode'] = 'elements';
+        $params['return_url'] = $site . '/shop/thank-you?order=' . $token;
+    } else {
+        $params['success_url'] = $site . '/shop/thank-you?order=' . $token;
+        $params['cancel_url'] = $site . '/shop/basket?cancelled=' . $token;
+    }
     foreach ($lines as $line) {
         $product = array('name' => $line['name']);
         if ($line['label'] !== '') {
@@ -371,8 +382,8 @@ function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
             $params['discounts'] = array(array('coupon' => $coupon['id']));
         }
         $session = stripeRequest('POST', '/v1/checkout/sessions', $params, 'order-' . $token);
-        if (empty($session['id']) || empty($session['url'])) {
-            throw new StripeError('Stripe did not return a payment page');
+        if (empty($session['id']) || empty($session[$onPage ? 'client_secret' : 'url'])) {
+            throw new StripeError('Stripe did not return a payment');
         }
     } catch (StripeError $e) {
         // No payment page was made, so nothing can be paid: undo the order
@@ -386,6 +397,9 @@ function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
     }
 
     $conn->prepare('UPDATE shopOrders SET stripeSessionId = ? WHERE id = ?')->execute(array($session['id'], $orderId));
+    if ($onPage) {
+        return array('clientSecret' => (string) $session['client_secret'], 'token' => $token);
+    }
     return array('url' => $session['url'], 'token' => $token);
 }
 

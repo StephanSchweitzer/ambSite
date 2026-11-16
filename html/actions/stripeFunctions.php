@@ -4,15 +4,21 @@
 // API is ordinary HTTPS requests, and the shop only needs three of them.
 //
 // Settings, in .env:
-//   STRIPE_SECRET_KEY      sk_test_... while trying things out, sk_live_... for real
-//   STRIPE_WEBHOOK_SECRET  whsec_..., from the webhook set up in Stripe's dashboard
+//   STRIPE_SECRET_KEY       sk_test_... while trying things out, sk_live_... for real
+//   STRIPE_PUBLISHABLE_KEY  pk_test_... / pk_live_..., the matching public key.
+//                           With it, the customer pays on the basket page itself;
+//                           without it, on Stripe's own page (as before)
+//   STRIPE_WEBHOOK_SECRET   whsec_..., from the webhook set up in Stripe's dashboard
 //
-// Card details never touch this server: the customer types them on Stripe's
-// own page (Stripe Checkout), and Stripe tells us afterwards whether they paid.
+// Card details never touch this server either way. On the basket page the
+// card box is Stripe's own (Stripe.js puts it there), so what's typed in it
+// goes straight to Stripe; Stripe tells us afterwards whether they paid.
 
 // The reply shapes this code was written against. Stripe keeps old versions
 // working, so asking for one by name means its answers don't change under us.
-define('STRIPE_API_VERSION', '2024-06-20');
+// (Paying on the site's own page, ui_mode=elements, needs 2026-03-25 or later;
+// js/shop.js loads the Stripe.js of the same name, js.stripe.com/endive/.)
+define('STRIPE_API_VERSION', '2026-10-28.endive');
 
 class StripeError extends Exception
 {
@@ -35,6 +41,28 @@ function stripeIsConfigured()
 function stripeIsLive()
 {
     return strpos(stripeSecretKey(), 'sk_live_') === 0 || strpos(stripeSecretKey(), 'rk_live_') === 0;
+}
+
+function stripePublishableKey()
+{
+    return trim((string) env('STRIPE_PUBLISHABLE_KEY', ''));
+}
+
+// True when the customer pays on the site's own basket page: needs the public
+// key, and one of the same kind as the secret key (test with test, live with
+// live), or Stripe.js couldn't find the payment
+function stripePaysOnPage()
+{
+    $public = stripePublishableKey();
+    if (!stripeIsConfigured() || $public === '') {
+        return false;
+    }
+    $wanted = stripeIsLive() ? 'pk_live_' : 'pk_test_';
+    if (strpos($public, $wanted) !== 0) {
+        error_log('Stripe: STRIPE_PUBLISHABLE_KEY should start ' . $wanted . ' to match the secret key; using Stripe\'s own payment page');
+        return false;
+    }
+    return true;
 }
 
 // One request to Stripe. Returns the decoded reply; throws StripeError if
