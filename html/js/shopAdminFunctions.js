@@ -141,7 +141,7 @@
         $('#tabs button').each(function () {
             $(this).toggleClass('is-current', this.getAttribute('data-tab') === name);
         });
-        ({ orders: drawOrders, items: drawItems, delivery: drawDelivery, promos: drawPromos, settings: drawSettings })[name]();
+        ({ orders: drawOrders, items: drawItems, delivery: drawDelivery, promos: drawPromos, emails: drawEmails, settings: drawSettings })[name]();
     }
 
     // ----------------------------------------------------------------------
@@ -185,13 +185,17 @@
             (order.status === 'shipped' ? '&body=' + encodeURIComponent('Hello ' + (order.name || '') + ',\n\nYour order is on its way!' +
                 (order.tracking ? '\n\nTracking: ' + order.tracking : '') + '\n\nAmbar') : '') : '';
 
+        // The site's own emails can be sent again (if one went astray)
+        var canResend = order.email && state.setup.email;
         var actions = '';
         if (order.status === 'paid') {
             actions = '<input type="text" class="js-tracking" placeholder="Tracking number or link (optional)" value="' + esc(order.tracking) + '">' +
-                '<button type="button" class="sa-button js-sent">Mark as sent</button>';
+                '<button type="button" class="sa-button js-sent">Mark as sent</button>' +
+                (canResend ? '<button type="button" class="sa-button sa-quiet sa-small js-resend" data-kind="confirm">Send the order confirmation again</button>' : '');
         } else if (order.status === 'shipped') {
             actions = '<span class="sa-muted">Sent ' + esc(when(order.shippedAt)) + (order.tracking ? ' &middot; ' + esc(order.tracking) : '') + '</span>' +
                 (mail ? '<a class="sa-button sa-quiet sa-small" href="' + esc(mail) + '">Email the customer</a>' : '') +
+                (canResend ? '<button type="button" class="sa-button sa-quiet sa-small js-resend" data-kind="shipped">Send &ldquo;on its way&rdquo; again</button>' : '') +
                 '<button type="button" class="sa-button sa-quiet sa-small js-unsent">Not sent after all</button>';
         } else if (order.status === 'processing') {
             actions = '<span class="sa-muted">Paid by bank transfer: wait until this says &ldquo;To send&rdquo; before posting it.</span>';
@@ -238,10 +242,20 @@
             data.tracking = $(this).closest('.sa-order').find('.js-tracking').val();
         }
         $(this).prop('disabled', true);
-        post(data).done(function () {
-            toast(sent ? 'Marked as sent' : 'Moved back to "To send"');
+        post(data).done(function (answer) {
+            toast(!sent ? 'Moved back to "To send"'
+                : answer.emailed ? 'Marked as sent, and the customer has been emailed' : 'Marked as sent');
             loadState(drawOrders);
         }).fail(drawOrders);
+    });
+
+    $(document).on('click', '.js-resend', function () {
+        var button = $(this).prop('disabled', true);
+        post({ action: 'resendEmail', id: orderId(this), kind: this.getAttribute('data-kind') }).done(function (answer) {
+            toast('Sent to ' + answer.to);
+        }).always(function () {
+            button.prop('disabled', false);
+        });
     });
 
     $(document).on('change', '.js-note', function () {
@@ -990,6 +1004,113 @@
         }).done(function () {
             toast('Promo codes saved');
             loadState(drawPromos);
+        }).always(function () {
+            button.prop('disabled', false);
+        });
+    });
+
+    // ----------------------------------------------------------------------
+    // Emails: the wording of the shop's own emails (sent through Resend)
+    // ----------------------------------------------------------------------
+
+    var EMAIL_KINDS = {
+        confirm: 'The order confirmation',
+        shipped: 'Your order is on its way',
+        alert: 'A new order (to you)'
+    };
+
+    function emailBlock(kind, on, subject, text, about) {
+        var name = kind.charAt(0).toUpperCase() + kind.slice(1);
+        return '<section class="sa-email">' +
+            '<h3>' + EMAIL_KINDS[kind] + '</h3>' +
+            '<p class="sa-hint">' + about + '</p>' +
+            '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="e' + name + 'On"' + (on === '1' ? ' checked' : '') + '>' +
+            '<span>Send this email</span></label></div>' +
+            (subject !== null ?
+                '<div class="sa-field"><label for="e' + name + 'Subject">Subject line</label>' +
+                '<input type="text" id="e' + name + 'Subject" maxlength="200" value="' + esc(subject) + '"></div>' +
+                '<div class="sa-field"><label for="e' + name + 'Text">Your message</label>' +
+                '<span class="sa-hint">Leave an empty line to start a new paragraph. <code>{name}</code> becomes the buyer&rsquo;s first name, ' +
+                '<code>{order}</code> the order number.</span>' +
+                '<textarea id="e' + name + 'Text" maxlength="5000">' + esc(text) + '</textarea></div>' : '') +
+            '<p class="sa-email-tools">' +
+            '<button type="button" class="sa-button sa-quiet sa-small js-email-preview" data-kind="' + kind + '">Preview</button>' +
+            '<button type="button" class="sa-button sa-quiet sa-small js-email-test" data-kind="' + kind + '">Send me a test</button></p>' +
+            '</section>';
+    }
+
+    function drawEmails() {
+        var s = state.settings;
+        var status = state.setup.email
+            ? '<p class="sa-hint">Emails are sent from <strong>' + esc(state.setup.emailFrom) + '</strong>.</p>'
+            : '<div class="sa-setup"><h3>Emails aren&rsquo;t connected yet</h3><p>You can write and preview them now. ' +
+              'Before they can be sent, the email service (Resend) needs connecting on the server: a job for whoever looks after it ' +
+              '(<code>RESEND_API_KEY</code> in the server&rsquo;s settings file). Until then, Stripe&rsquo;s own receipt is the only email buyers get.</p></div>';
+
+        $('#panel').html(
+            '<form class="sa-editor" id="emailsForm" novalidate>' + status +
+            '<div class="sa-field"><label for="eOwner">Your email address</label>' +
+            '<span class="sa-hint">New-order alerts and test emails come here, and when a buyer replies to one of their emails, the reply comes here too.</span>' +
+            '<input type="email" id="eOwner" maxlength="255" value="' + esc(s.emailOwner) + '" placeholder="you@example.com"></div>' +
+
+            emailBlock('confirm', s.emailConfirmOn, s.emailConfirmSubject, s.emailConfirmText,
+                'Sent to the buyer as soon as they&rsquo;ve paid. Under your message comes what they bought, the prices, ' +
+                'the delivery address and a link to their order.') +
+            emailBlock('shipped', s.emailShippedOn, s.emailShippedSubject, s.emailShippedText,
+                'Sent to the buyer when you press &ldquo;Mark as sent&rdquo;. If you typed a tracking number or link, it&rsquo;s included.') +
+            emailBlock('alert', s.emailAlertOn, null, null,
+                'Sent to your own address for every sale, with the buyer&rsquo;s details and address. Its wording is fixed.') +
+
+            '<section class="sa-email"><h3>Your sign-off</h3>' +
+            '<div class="sa-field"><label for="eSignature">Under the message in the buyer&rsquo;s emails</label>' +
+            '<textarea id="eSignature" maxlength="1000" class="sa-short">' + esc(s.emailSignature) + '</textarea></div></section>' +
+
+            '<div class="sa-save-bar"><button type="submit" class="sa-button">Save emails</button></div></form>');
+    }
+
+    // The wording as it is on screen, saved or not
+    function emailDraft() {
+        return {
+            emailOwner: $('#eOwner').val(),
+            emailConfirmOn: $('#eConfirmOn').prop('checked'),
+            emailConfirmSubject: $('#eConfirmSubject').val(),
+            emailConfirmText: $('#eConfirmText').val(),
+            emailShippedOn: $('#eShippedOn').prop('checked'),
+            emailShippedSubject: $('#eShippedSubject').val(),
+            emailShippedText: $('#eShippedText').val(),
+            emailAlertOn: $('#eAlertOn').prop('checked'),
+            emailSignature: $('#eSignature').val()
+        };
+    }
+
+    $(document).on('submit', '#emailsForm', function (event) {
+        event.preventDefault();
+        var button = $(this).find('button[type=submit]').prop('disabled', true);
+        post({ action: 'saveEmails', emails: emailDraft() }).done(function () {
+            toast('Emails saved');
+            loadState(drawEmails);
+        }).always(function () {
+            button.prop('disabled', false);
+        });
+    });
+
+    $(document).on('click', '.js-email-preview', function () {
+        var kind = this.getAttribute('data-kind');
+        post({ action: 'previewEmail', kind: kind, emails: emailDraft() }).done(function (answer) {
+            openOverlay(EMAIL_KINDS[kind],
+                '<p class="sa-hint">Subject: <strong class="js-preview-subject"></strong><br>' +
+                'Shown with a made-up order. Unsaved changes are included.</p>' +
+                '<iframe class="sa-email-preview" title="Email preview" sandbox="allow-same-origin"></iframe>');
+            // (no scripts can run in it; same-origin only so its pictures load)
+            $('.js-preview-subject').text(answer.subject);
+            $('#overlayBody iframe').attr('srcdoc', answer.html);
+        });
+    });
+
+    $(document).on('click', '.js-email-test', function () {
+        var button = $(this).prop('disabled', true);
+        post({ action: 'testEmail', kind: this.getAttribute('data-kind'), emails: emailDraft() }).done(function (answer) {
+            toast('A test is on its way to ' + answer.to);
         }).always(function () {
             button.prop('disabled', false);
         });

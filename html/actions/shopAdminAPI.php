@@ -6,7 +6,8 @@
 //   GET  ?what=orders&show=tosend|sent|all
 //   GET  ?what=works     the portfolio's works, to pick an item's picture from
 //   POST {action: ...}   saveProduct, orderProducts, archiveProduct, restoreProduct,
-//                        saveZones, savePromos, saveSettings, updateOrder   (JSON)
+//                        saveZones, savePromos, saveSettings, updateOrder, resendEmail,
+//                        saveEmails, previewEmail, testEmail   (JSON)
 //   POST action=uploadPicture + photo   (a form upload)
 
 include_once __DIR__ . '/../database/session.php';
@@ -177,6 +178,8 @@ try {
                     'live' => stripeIsLive(),
                     'webhook' => trim((string) env('STRIPE_WEBHOOK_SECRET', '')) !== '',
                     'zones' => count($zones) > 0,
+                    'email' => shopEmailConfigured(),
+                    'emailFrom' => shopEmailFrom(),
                 ),
                 'settings' => shopSettings($conn),
                 'currencies' => shopCurrencies(),
@@ -608,16 +611,111 @@ try {
         if (array_key_exists('tracking', $input)) {
             $conn->prepare('UPDATE shopOrders SET tracking = ? WHERE id = ?')->execute(array(cleanText($input['tracking'], 500), (int) $order['id']));
         }
+        $emailed = false;
         if (isset($input['sent'])) {
             if ($input['sent']) {
-                $conn->prepare("UPDATE shopOrders SET status = 'shipped', shippedAt = ? WHERE id = ? AND status = 'paid'")
-                     ->execute(array(shopNow(), (int) $order['id']));
+                $shipped = $conn->prepare("UPDATE shopOrders SET status = 'shipped', shippedAt = ? WHERE id = ? AND status = 'paid'");
+                $shipped->execute(array(shopNow(), (int) $order['id']));
+                if ($shipped->rowCount() === 1) {
+                    $emailed = shopEmailOrderShipped($conn, (int) $order['id']);
+                }
             } else {
                 $conn->prepare("UPDATE shopOrders SET status = 'paid', shippedAt = NULL WHERE id = ? AND status = 'shipped'")
                      ->execute(array((int) $order['id']));
             }
         }
-        adminReply(array('success' => true));
+        adminReply(array('success' => true, 'emailed' => $emailed));
+    }
+
+    // Sends a buyer's email again (it failed, or they lost it)
+    if ($action === 'resendEmail') {
+        $order = shopFindOrder($conn, 'id', (int) ($input['id'] ?? 0));
+        $kind = (string) ($input['kind'] ?? '');
+        if (!$order || !in_array($kind, array('confirm', 'shipped'), true)) {
+            adminFail("That order doesn't exist.", 404);
+        }
+        if (!shopEmailConfigured()) {
+            adminFail("Emails aren't connected yet, so nothing could be sent.");
+        }
+        if (!shopEmailIsAddress($order['customerEmail'])) {
+            adminFail("This order has no email address to send to.");
+        }
+        try {
+            $email = shopEmailBuild($conn, $kind, $order, shopSettings($conn));
+            shopEmailSend($order['customerEmail'], $email['subject'], $email['html'], $email['text'], shopSettings($conn)['emailOwner']);
+        } catch (ShopEmailError $e) {
+            error_log('shopAdminAPI resend: ' . $e->getMessage());
+            adminFail("The email couldn't be sent just now. Please try again in a little while.", 502);
+        }
+        adminReply(array('success' => true, 'to' => $order['customerEmail']));
+    }
+
+    // -----------------------------------------------------------------------
+    // Emails
+    // -----------------------------------------------------------------------
+
+    // The wording as typed on the Emails tab (saved or not yet), with
+    // anything unusable replaced by what's saved
+    $emailDraft = function ($input) use ($conn) {
+        $settings = shopSettings($conn);
+        $draft = isset($input['emails']) && is_array($input['emails']) ? $input['emails'] : array();
+        foreach (array('emailConfirmSubject' => 200, 'emailShippedSubject' => 200,
+                       'emailConfirmText' => 5000, 'emailShippedText' => 5000, 'emailSignature' => 1000) as $name => $max) {
+            if (array_key_exists($name, $draft)) {
+                $settings[$name] = str_replace("\r", '', cleanText($draft[$name], $max));
+            }
+        }
+        foreach (array('emailConfirmOn', 'emailShippedOn', 'emailAlertOn') as $name) {
+            if (array_key_exists($name, $draft)) {
+                $settings[$name] = !empty($draft[$name]) ? '1' : '0';
+            }
+        }
+        if (array_key_exists('emailOwner', $draft)) {
+            $settings['emailOwner'] = cleanText($draft['emailOwner'], 255);
+        }
+        return $settings;
+    };
+
+    if ($action === 'saveEmails') {
+        $settings = $emailDraft($input);
+        if ($settings['emailOwner'] !== '' && !shopEmailIsAddress($settings['emailOwner'])) {
+            adminFail('Your email address doesn\'t look quite right. Please check it.');
+        }
+        foreach (array('emailConfirmSubject', 'emailShippedSubject') as $name) {
+            if ($settings[$name] === '') {
+                adminFail('Each email needs a subject line.');
+            }
+        }
+        foreach (array_keys(shopEmailDefaults()) as $name) {
+            shopSaveSetting($conn, $name, $settings[$name]);
+        }
+        adminReply(array('success' => true, 'settings' => shopSettings($conn, true)));
+    }
+
+    if ($action === 'previewEmail' || $action === 'testEmail') {
+        $kind = (string) ($input['kind'] ?? '');
+        if (!in_array($kind, array('confirm', 'shipped', 'alert'), true)) {
+            adminFail('Unknown email');
+        }
+        $settings = $emailDraft($input);
+        list($sample, $items) = shopEmailSampleOrder($conn, $settings);
+        $email = shopEmailBuild($conn, $kind, $sample, $settings, $items);
+        if ($action === 'previewEmail') {
+            adminReply(array('success' => true, 'subject' => $email['subject'], 'html' => $email['html']));
+        }
+        if (!shopEmailConfigured()) {
+            adminFail("Emails aren't connected yet, so a test can't be sent. The preview shows how it will look.");
+        }
+        if (!shopEmailIsAddress($settings['emailOwner'])) {
+            adminFail('Please fill in your own email address first: that\'s where the test goes.');
+        }
+        try {
+            shopEmailSend($settings['emailOwner'], '[Test email] ' . $email['subject'], $email['html'], $email['text']);
+        } catch (ShopEmailError $e) {
+            error_log('shopAdminAPI test email: ' . $e->getMessage());
+            adminFail("The test email couldn't be sent. Please try again in a little while.", 502);
+        }
+        adminReply(array('success' => true, 'to' => $settings['emailOwner']));
     }
 
     adminFail('Unknown request');

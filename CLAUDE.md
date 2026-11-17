@@ -104,6 +104,9 @@ admin page: **Shop**.
 - **Delivery** is where you say what postage costs, by destination.
 - **Promo codes** is where you make a word people can type in their basket
   for money off (SPRING10, say), and switch it off again when you're done.
+- **Emails** is where you write the emails the site sends: the "thank you
+  for your order" email, the "your order is on its way" email, and a note to
+  you for every sale. You can preview each one and send yourself a test.
 - **Settings** has a "Pause the shop" switch for holidays.
 
 The money itself is handled by a company called Stripe. Buyers pay right on
@@ -371,7 +374,7 @@ split out of `pdo.php`.
 |---|---|
 | Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
-| Shop | Pages: `actions/shopPageFunctions.php` (all the markup) + `js/shop.js` (basket, checkout, viewer hook-up). Catalogue: `actions/shopFunctions.php`. Orders and payment: `actions/shopOrderFunctions.php`, `actions/stripeFunctions.php`, `actions/stripeWebhook.php`. Public API `actions/shopAPI.php`; admin `admin/shopAdmin.php` + `admin/shopAdmin.css` + `js/shopAdminFunctions.js` + `actions/shopAdminAPI.php`. Tables: `database/shop.sql`. |
+| Shop | Pages: `actions/shopPageFunctions.php` (all the markup) + `js/shop.js` (basket, checkout, viewer hook-up). Catalogue: `actions/shopFunctions.php`. Orders and payment: `actions/shopOrderFunctions.php`, `actions/stripeFunctions.php`, `actions/stripeWebhook.php`. Emails: `actions/shopEmailFunctions.php`. Public API `actions/shopAPI.php`; admin `admin/shopAdmin.php` + `admin/shopAdmin.css` + `js/shopAdminFunctions.js` + `actions/shopAdminAPI.php`. Tables: `database/shop.sql`. |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
 | SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
 | Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB and 4000px). |
@@ -429,9 +432,26 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   the domain registered in Stripe's dashboard (payment method domains). The webhook to register in Stripe's dashboard is
 `https://ambarvelasco.com/actions/stripeWebhook.php`, for
 `checkout.session.completed`, `.expired`, `.async_payment_succeeded`,
-`.async_payment_failed` and `charge.refunded`. Receipts to buyers and
-"you've been paid" emails to Ambar are Stripe's own (switched on in its
-dashboard); the site sends no email.
+`.async_payment_failed` and `charge.refunded`. Stripe's own receipts and
+"you've been paid" emails can stay on (its dashboard) alongside the site's.
+
+- **The site's own emails** (`actions/shopEmailFunctions.php`, sent through
+  Resend's HTTPS API, no library): the order confirmation and an alert to
+  Ambar when an order flips to paid in `shopSyncOrder()`, and "on its way"
+  when `updateOrder` flips it to shipped. Only the request whose `UPDATE`
+  changed the row sends, so each goes once; the automatic ones also carry a
+  Resend `Idempotency-Key`. A failed send is logged and never stops the
+  order; the order card has "send again" buttons. Ambar writes the wording
+  on the shop admin's Emails tab; it's stored in `shopSettings` (the
+  `email*` keys, defaults in `shopEmailDefaults()`), so no schema change.
+  Server `.env`: `RESEND_API_KEY` (without it nothing is sent and the tab
+  says so) and optionally `SHOP_EMAIL_FROM` (default
+  `Ambar Velasco <shop@ambarvelasco.com>`; the domain must be verified in
+  Resend). Outside `APP_ENV=production` every email is redirected to the
+  shop's own address (`emailOwner`), subject prefixed "[Practice, meant
+  for …]", because the practice DB holds copies of real buyers' orders.
+  The Resend key is send-only. Locally, `dev/resend-mock.php` can stand in
+  (header explains; `RESEND_API_BASE` points at it).
 
 - **The tables are created by hand**, once, from `database/shop.sql` (it only
   adds tables). Schema changes are not something to do against production

@@ -506,9 +506,14 @@ function shopSyncOrder($conn, $order)
         if ($paymentStatus === 'paid' || $paymentStatus === 'no_payment_required') {
             $total = isset($session['amount_total']) ? (int) $session['amount_total'] : (int) $order['totalCents'];
             // (the stock that was set aside is now simply sold)
-            $conn->prepare("UPDATE shopOrders SET status = 'paid', stockHeld = 0, totalCents = ?, paidAt = ?
-                            WHERE id = ? AND status IN ('pending', 'processing')")
-                 ->execute(array($total, shopNow(), $orderId));
+            $paid = $conn->prepare("UPDATE shopOrders SET status = 'paid', stockHeld = 0, totalCents = ?, paidAt = ?
+                                    WHERE id = ? AND status IN ('pending', 'processing')");
+            $paid->execute(array($total, shopNow(), $orderId));
+            if ($paid->rowCount() === 1) {
+                // Only the request that marked it paid sends the emails, so
+                // the webhook and the thank-you page can't both send them
+                shopEmailOrderPaid($conn, $orderId);
+            }
         } else {
             // A slow way of paying (a bank debit): the money is on its way,
             // or it has failed

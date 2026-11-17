@@ -16,6 +16,7 @@
 // shopReady() is false and every page says so gently instead of failing.
 
 include_once __DIR__ . '/publicWorksFunctions.php';
+include_once __DIR__ . '/shopEmailFunctions.php'; // the emails' wording lives in shopSettings too
 
 define('SHOP_MAX_QUANTITY', 10);   // the most of one thing in a basket
 define('SHOP_MAX_LINES', 30);      // the most different things in a basket
@@ -55,12 +56,12 @@ function shopReady($conn)
 
 function shopSettingDefaults()
 {
-    return array(
+    return array_merge(array(
         'currency' => 'eur',
         'intro' => '',          // a line or two under the shop's title
         'deliveryNote' => '',   // shown on every item ("Sent rolled in a tube...")
         'paused' => '0',        // '1': everything stays on show, nothing can be bought
-    );
+    ), shopEmailDefaults());    // the emails' wording (shopEmailFunctions.php)
 }
 
 function shopSettings($conn, $refresh = false)

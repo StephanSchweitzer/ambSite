@@ -40,6 +40,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
     <button type="button" data-tab="items">Items for sale</button>
     <button type="button" data-tab="delivery">Delivery</button>
     <button type="button" data-tab="promos">Promo codes</button>
+    <button type="button" data-tab="emails">Emails</button>
     <button type="button" data-tab="settings">Settings</button>
   </nav>
 
