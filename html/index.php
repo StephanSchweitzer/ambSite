@@ -451,6 +451,10 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <!-- Navigation Overlay for Mobile -->
     <div class="nav-overlay"></div>
 </div>
+<?php if (shopTestMode()): ?>
+<template id="shopTestBanner"><?= shopRenderTestBanner() ?></template>
+<template id="shopTestNote"><?= shopRenderTestNote() ?></template>
+<?php endif; ?>
 <?php if ($pageData): ?>
 <script>window.AMB_PAGE_DATA = <?= json_encode($pageData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?>;</script>
 <?php endif; ?>

@@ -24,8 +24,8 @@ function shopPage($conn, $path)
 {
     $page = array(
         'view' => 'shop', 'status' => 200, 'title' => 'Shop - Ambar Velasco', 'description' => null,
-        'html' => null, 'product' => null, 'noindex' => false, 'path' => $path,
-    );
+        'html' => null, 'product' => null, 'noindex' => shopTestMode(), 'path' => $path,
+    ); // a test shop's made-up prices stay out of search results
     $ready = shopReady($conn);
 
     if ($path === '/shop/basket') {
@@ -86,7 +86,32 @@ function shopRenderHeader($title, $intro = '')
 {
     return '<header class="project-header shop-header"><h2 class="project-title">' . ambHtml($title) . '</h2>'
         . (trim((string) $intro) !== '' ? '<p class="project-description">' . shopText($intro) . '</p>' : '')
-        . '</header>';
+        . '</header>' . shopRenderTestBanner();
+}
+
+// While the shop runs on Stripe's test keys (shopTestMode), a notice under
+// every shop page's title. shop.js copies it from index.php's
+// <template id="shopTestBanner"> for the pages it draws (basket, checkout,
+// thank you), so the wording lives only here.
+function shopRenderTestBanner()
+{
+    if (!shopTestMode()) {
+        return '';
+    }
+    return '<aside class="shop-test-banner" role="note" aria-label="This shop is a test">'
+        . '<p class="shop-test-banner-title">This shop is a test &mdash; nothing here is for sale yet</p>'
+        . '<p>We&rsquo;re still designing it. The prices are made up, no orders will be sent, and no money can be taken.</p>'
+        . '<p><strong>Please don&rsquo;t enter your real card details.</strong> To try buying something, use the test card '
+        . '<span class="shop-test-card">4242&nbsp;4242&nbsp;4242&nbsp;4242</span> with any future date and any three digits.</p>'
+        . '</aside>';
+}
+
+// The short version, beside each "Add to basket" and "Pay" button
+function shopRenderTestNote()
+{
+    return shopTestMode()
+        ? '<p class="shop-test-note">Test shop: nothing will be charged. Please don&rsquo;t use a real card.</p>'
+        : '';
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +324,7 @@ function shopRenderBuying($product, $settings)
     $left = !$product['isUnique'] && $chosen['stock'] !== null && $chosen['stock'] <= 3 ? $chosen['stock'] : null;
     $html .= '<p class="shop-left" data-shop-left' . ($left === null ? ' hidden' : '') . '>' . ($left === null ? '' : 'Only ' . $left . ' left') . '</p>'
         . '<button type="submit" class="shop-button">Add to basket</button>'
+        . shopRenderTestNote()
         . '<div class="shop-added" role="status" hidden><p>Added to your basket.</p>'
         . '<a href="/shop/basket" class="shop-button shop-button-quiet" data-shop-nav>View basket</a>'
         . '<button type="button" class="shop-keep-browsing" data-shop-panel-close>Keep browsing</button></div>'

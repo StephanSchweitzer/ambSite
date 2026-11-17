@@ -129,7 +129,9 @@
         } else if (!state.setup.live) {
             box.prop('hidden', false).addClass('is-info').html(
                 '<h3>Practice mode</h3><p>Stripe is in test mode: no real money moves. To try a purchase, pay with the card ' +
-                'number <code>4242 4242 4242 4242</code>, any future date and any three digits.</p>');
+                'number <code>4242 4242 4242 4242</code>, any future date and any three digits.</p>' +
+                '<p>Visitors see a notice on every shop page saying the shop is a test and not to use a real card. ' +
+                'It goes away by itself once the shop is switched to real payments.</p>');
         } else {
             box.prop('hidden', true);
         }
@@ -1129,6 +1131,8 @@
             '<form class="sa-editor" id="settingsForm" novalidate>' +
             '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="sPaused"' + (s.paused === '1' ? ' checked' : '') + '>' +
             '<span><strong>Pause the shop</strong><br><span class="sa-muted">For holidays or busy weeks. Everything stays on show, but nothing can be bought until you untick this.</span></span></label></div>' +
+            '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="sInMenu"' + (s.inMenu === '1' ? ' checked' : '') + '>' +
+            '<span><strong>Show &ldquo;Shop&rdquo; in the menu</strong><br><span class="sa-muted">Untick to take the shop out of your website\'s menu. Its pages still work for anyone who has the link.</span></span></label></div>' +
 
             '<div class="sa-field"><label for="sIntro">A few words at the top of the shop</label>' +
             '<span class="sa-hint">Optional. One or two lines under the &ldquo;Shop&rdquo; title.</span>' +
@@ -1151,6 +1155,7 @@
         post({
             action: 'saveSettings',
             paused: $('#sPaused').prop('checked'),
+            inMenu: $('#sInMenu').prop('checked'),
             intro: $('#sIntro').val(),
             deliveryNote: $('#sDelivery').val(),
             currency: $('#sCurrency').val()

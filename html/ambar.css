@@ -1608,6 +1608,77 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   display: none;
 }
 
+/* While the shop runs on Stripe's test keys: "this shop is a test", under
+   every shop page's title (shopRenderTestBanner), and a short line beside
+   each "Add to basket" and "Pay" button (shopRenderTestNote) */
+.shop-test-banner {
+  max-width: 640px;
+  margin: -1.2rem auto 2.6rem;
+  padding: 16px 20px 14px;
+  border: 1px solid #ecd27a;
+  border-left: 5px solid var(--amb-yellow);
+  border-radius: 4px;
+  background: #fff8df;
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-normal);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.shop-test-banner p {
+  margin: 0 0 6px;
+}
+
+.shop-test-banner p:last-child {
+  margin-bottom: 0;
+}
+
+.shop-test-banner .shop-test-banner-title {
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.shop-test-banner-title::before {
+  content: 'TEST';
+  display: inline-block;
+  margin-right: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--color-ink);
+  color: #fff8df;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  vertical-align: 2px;
+}
+
+.shop-test-card {
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  font-weight: 700;
+}
+
+.shop-test-note {
+  margin: 10px 0 0;
+  padding: 7px 10px;
+  border-left: 3px solid var(--amb-yellow);
+  background: #fff8df;
+  color: var(--color-ink);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .shop-test-banner {
+    margin: -0.8rem 0 2rem;
+    padding: 14px 16px 12px;
+    font-size: 0.9rem;
+  }
+}
+
 /* A gallery's red dot: sold */
 .shop-sold {
   color: #b5372b;

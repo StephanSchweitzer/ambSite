@@ -49,10 +49,11 @@ foreach ($groups as $group) {
     }
 }
 
-// The shop and each thing in it, once there is something for sale
+// The shop and each thing in it, once there is something for sale, and not
+// while it's still a test (shopTestMode: its pages ask not to be indexed)
 $shopItems = array();
 try {
-    if (shopReady($conn)) {
+    if (shopReady($conn) && !shopTestMode()) {
         $shopItems = shopGetProducts($conn);
     }
 } catch (Throwable $e) {

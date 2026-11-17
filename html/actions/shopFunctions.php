@@ -17,6 +17,7 @@
 
 include_once __DIR__ . '/publicWorksFunctions.php';
 include_once __DIR__ . '/shopEmailFunctions.php'; // the emails' wording lives in shopSettings too
+include_once __DIR__ . '/stripeFunctions.php';    // stripeIsLive(), for shopTestMode()
 
 define('SHOP_MAX_QUANTITY', 10);   // the most of one thing in a basket
 define('SHOP_MAX_LINES', 30);      // the most different things in a basket
@@ -61,7 +62,17 @@ function shopSettingDefaults()
         'intro' => '',          // a line or two under the shop's title
         'deliveryNote' => '',   // shown on every item ("Sent rolled in a tube...")
         'paused' => '0',        // '1': everything stays on show, nothing can be bought
+        'inMenu' => '1',        // '1': "Shop" is in the site's menu (ambGetNavLinks)
     ), shopEmailDefaults());    // the emails' wording (shopEmailFunctions.php)
+}
+
+// True until the shop has real-money Stripe keys. While it is, every shop page
+// says plainly that it's a test (shopRenderTestBanner) and search engines are
+// asked to leave it alone, so made-up prices never turn up in search results.
+// Putting sk_live_ keys in the server's .env is all it takes to end it.
+function shopTestMode()
+{
+    return !stripeIsLive();
 }
 
 function shopSettings($conn, $refresh = false)

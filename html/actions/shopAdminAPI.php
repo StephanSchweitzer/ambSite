@@ -594,6 +594,7 @@ try {
         shopSaveSetting($conn, 'intro', cleanText($input['intro'] ?? '', 1000));
         shopSaveSetting($conn, 'deliveryNote', cleanText($input['deliveryNote'] ?? '', 1000));
         shopSaveSetting($conn, 'paused', !empty($input['paused']) ? '1' : '0');
+        shopSaveSetting($conn, 'inMenu', !empty($input['inMenu']) ? '1' : '0');
         adminReply(array('success' => true, 'settings' => shopSettings($conn, true)));
     }
 

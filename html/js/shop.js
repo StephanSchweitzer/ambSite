@@ -45,7 +45,16 @@ function shopPost(data) {
 }
 
 function shopHeader(title) {
-    return '<header class="project-header shop-header"><h2 class="project-title">' + shopEscape(title) + '</h2></header>';
+    return '<header class="project-header shop-header"><h2 class="project-title">' + shopEscape(title) + '</h2></header>' +
+        shopTemplate('shopTestBanner');
+}
+
+// The "this shop is a test" wording, written once by the server
+// (shopRenderTestBanner / shopRenderTestNote in shopPageFunctions.php) and
+// left in the page only while the shop is in test mode; '' otherwise
+function shopTemplate(id) {
+    var template = document.getElementById(id);
+    return template ? template.innerHTML : '';
 }
 
 // --------------------------------------------------------------------------
@@ -1192,6 +1201,7 @@ function startCheckout(answer, country, noStripeJs) {
         '<h3 class="checkout-heading">Payment</h3><div id="checkoutPayment" class="checkout-stripe"><div class="loading-spinner"></div></div>' +
         '<p class="shop-status basket-problem" role="alert" hidden></p>' +
         '<button type="submit" class="shop-button checkout-pay" disabled>Pay</button>' +
+        shopTemplate('shopTestNote') +
         '<p class="basket-note">Payments are processed securely by Stripe.</p>' +
         '</form></div></div>');
     window.scrollTo(0, 0);

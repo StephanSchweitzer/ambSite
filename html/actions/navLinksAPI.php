@@ -124,11 +124,10 @@ function deleteLinks($ids)
 try {
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
-            // Fetch all visible navigation links
-            $query = "SELECT ID, displayedText, linkRedirection, displayedOrder, isChangeable, onclick, isNewTab, attachedFollowingDiv FROM navLinks WHERE visible = 1 ORDER BY displayedOrder ASC";
-            $stmt = $conn->prepare($query);
-            $stmt->execute();
-            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // The menu's links, exactly as the public page draws them
+            // (the Shop link follows the shop's own setting)
+            include_once __DIR__ . '/publicPageFunctions.php';
+            $data = ambGetNavLinks($conn);
 
             echo json_encode(['status' => 'success', 'data' => $data]);
             break;

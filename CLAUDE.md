@@ -458,6 +458,17 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   The Resend key is send-only. Locally, `dev/resend-mock.php` can stand in
   (header explains; `RESEND_API_BASE` points at it).
 
+- **Test mode** (`shopTestMode()`: true until `STRIPE_SECRET_KEY` is
+  `sk_live_`/`rk_live_`): every shop page shows "this shop is a test, don't
+  use a real card" under its title (`shopRenderTestBanner()`; `shop.js`
+  copies it from index.php's `<template id="shopTestBanner">` for the pages
+  it draws), a short note sits under "Add to basket" and "Pay"
+  (`shopTestNote`), shop pages are `noindex` and left out of the sitemap.
+  It all disappears with live keys; no code change needed.
+- **The menu's Shop link** (the `navLinks` row whose `onclick` has
+  `loadShop`) follows the shop setting `inMenu` ("Show Shop in the menu",
+  default on) once the shop tables exist, not the row's `visible` flag
+  (`ambGetNavLinks()`, also used by `navLinksAPI.php`).
 - **The tables are created by hand**, once, from `database/shop.sql` (it only
   adds tables). Schema changes are not something to do against production
   from here (see Hard limits), so a change to the shop's tables means a new
