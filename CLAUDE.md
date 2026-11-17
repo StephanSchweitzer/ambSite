@@ -424,8 +424,9 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   `updatePhoneNumber`; address and card are Stripe's). Paying redirects to
   the session's `return_url`, `/shop/thank-you?order=<token>`. The order's
   token is kept in `sessionStorage` (`ambCheckout`); opening the basket
-  again, "Change the basket", or starting a new checkout (`replaces`) gives
-  that payment up first (`shopAbandonOrder`), so its held stock is free —
+  again, "Change the basket", starting a new checkout (`replaces`), or
+  going to any other page (Back, the menu, a reload: `leaveCheckout()`,
+  called from `setView()`) gives that payment up first (`shopAbandonOrder`), so its held stock is free —
   otherwise an original would look sold to the person buying it. Never
   given up while `confirm()` is running.
 - Apple Pay / Google Pay appear inside Stripe's card box; Apple Pay needs

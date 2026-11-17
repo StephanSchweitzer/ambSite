@@ -120,8 +120,9 @@ function renderShopPage(view, path) {
         return drawThanksPage(content);
     }
 
-    // The page index.php sent is already there
-    if (pageIsServerDrawn) {
+    // The page index.php sent is already there (unless a payment left behind
+    // is being given up: it was drawn with that payment's items as sold)
+    if (pageIsServerDrawn && givingUp.state() !== 'pending') {
         var name = content.find('.shop-item').attr('data-name');
         if (name) {
             setPageTitle(name + ' - Shop - Ambar Velasco');
@@ -134,9 +135,9 @@ function renderShopPage(view, path) {
         return $.Deferred().resolve().promise();
     }
 
-    var spinner = setTimeout(function () {
+    var spinner = pageIsServerDrawn ? null : setTimeout(function () {
         content.html(loadingHtml(''));
-    }, 200);
+    }, 200); // (a page index.php drew stays up until it's redrawn)
     var drawn = $.Deferred();
     var show = function (page) {
         clearTimeout(spinner);
@@ -157,7 +158,9 @@ function renderShopPage(view, path) {
         viewReady = true;
         drawn.resolve();
     };
-    $.ajax({ url: SHOP_API, data: { view: 'page', path: path }, dataType: 'json' }).then(show, function (xhr) {
+    givingUp.then(function () {
+        return $.ajax({ url: SHOP_API, data: { view: 'page', path: path }, dataType: 'json' });
+    }).then(show, function (xhr) {
         if (xhr.status === 404 && xhr.responseJSON && xhr.responseJSON.html) {
             show(xhr.responseJSON); // sold and taken down since the link was made
             return;
@@ -643,8 +646,9 @@ $(document).on('click', '.basket-pay', function () {
 // page, which asks the server (and so Stripe) whether it went through.
 //
 // The payment set up for this checkout holds the stock for half an hour. Its
-// token is kept for the tab (sessionStorage): going back to the basket, or
-// starting again, gives it up first so the stock is free again.
+// token is kept for the tab (sessionStorage): going back to the basket,
+// starting again, or leaving for any other page (leaveCheckout) gives it up
+// first so the stock is free again.
 
 var STRIPE_JS = 'https://js.stripe.com/endive/stripe.js'; // same name as STRIPE_API_VERSION in stripeFunctions.php
 var CHECKOUT_KEY = 'ambCheckout';
@@ -744,6 +748,38 @@ function endCheckout() {
         checkoutState.ended = true;
         checkoutState = null;
     }
+}
+
+// Resolves once a payment left behind (below) has been given up, so the shop
+// page drawn next shows what it set aside as on sale again
+var givingUp = $.Deferred().resolve().promise();
+
+// Called by setView() in photoFunctions.js for every page drawn, including
+// the first. A payment left unfinished when the visitor goes anywhere but the
+// basket (Back, the menu, a link, or opening the site again in this tab) is
+// given up straight away, as the basket does, so a one-of-a-kind original
+// doesn't look sold to the person who was buying it. Never while paying:
+// Stripe is about to send them to the thank-you page.
+function leaveCheckout(nextView) {
+    if (nextView === 'shop-basket' || nextView === 'shop-thanks') {
+        return; // the basket gives it up itself; the thank-you page is where paying ends
+    }
+    if (checkoutState && checkoutState.paying) {
+        return;
+    }
+    endCheckout();
+    var token = readCheckoutToken();
+    if (!token || givingUp.state() === 'pending') {
+        return;
+    }
+    var done = $.Deferred();
+    givingUp = done.promise();
+    shopPost({ action: 'abandon', token: token }).always(function () {
+        if (readCheckoutToken() === token) {
+            writeCheckoutToken('');
+        }
+        done.resolve();
+    });
 }
 
 function checkoutLines(data) {

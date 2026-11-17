@@ -491,6 +491,7 @@ window.addEventListener('popstate', function (event) {
 });
 
 function setView(view) {
+    leaveCheckout(view); // shop.js: a payment left unfinished is given up
     var main = document.getElementById('imagesAndContent');
     pageIsServerDrawn = main.getAttribute('data-server-view') === view;
     main.removeAttribute('data-server-view');
