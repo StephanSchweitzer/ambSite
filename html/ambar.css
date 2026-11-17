@@ -1711,7 +1711,7 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .shop-card:nth-child(4n+3) .shop-card-picture { --tape-a: var(--tape-lilac); --tape-b: var(--tape-coral); }
 .shop-card:nth-child(4n+4) .shop-card-picture { --tape-a: var(--tape-blue); --tape-b: var(--tape-yellow); }
 
-.shop-item-picture { --tape-w: clamp(64px, 20%, 124px); --tape-a: var(--tape-pink); --tape-b: var(--tape-yellow); }
+.shop-item-picture { --tape-w: clamp(56px, 18%, 96px); --tape-a: var(--tape-pink); --tape-b: var(--tape-yellow); }
 
 .shop-card .img-container,
 .shop-item-picture .img-container {
@@ -1773,41 +1773,189 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   color: var(--color-ink);
 }
 
-/* ---------- One item ---------- */
+/* ---------- The item panel ----------
+   An item opens in a panel over the shop: from the right on computers, a
+   sheet up from the bottom on phones (shop.js: the item panel). Above the
+   menu and the basket button, under the viewer (Bootstrap's 1040/1050). */
+.shop-panel-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1030;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear 0.42s; /* stays visible while it slides away */
+}
+
+.shop-panel-layer.is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transition: none;
+}
+
+.shop-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(29, 29, 27, 0.3);
+  opacity: 0;
+  transition: opacity 0.42s ease;
+}
+
+.is-open > .shop-panel-backdrop {
+  opacity: 1;
+}
+
+.shop-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: clamp(420px, 40vw, 580px);
+  background: var(--color-background);
+  box-shadow: -16px 0 44px rgba(29, 29, 27, 0.14);
+  transform: translateX(calc(100% + 50px));
+  transition: transform 0.42s var(--ease-out-soft);
+  outline: none;
+}
+
+.is-open > .shop-panel {
+  transform: none;
+}
+
+/* (closed on the way to another page, or for people who'd rather not have
+   things slide about) */
+.shop-panel-layer.is-instant,
+.shop-panel-layer.is-instant > * {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-panel {
+    transition: none;
+  }
+}
+
+.shop-panel-bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 16px 4px 40px;
+}
+
+.shop-panel-handle {
+  display: none;
+}
+
+.shop-panel-basket,
+.shop-panel-basket:link,
+.shop-panel-basket:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  transition: transform 0.3s var(--ease-out-soft);
+}
+
+.shop-panel-basket[hidden] {
+  display: none;
+}
+
+.shop-panel-basket b {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.shop-panel-basket.is-bumped {
+  transform: scale(1.08);
+}
+
+.shop-panel-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.shop-panel-close:hover {
+  background: var(--color-paper);
+}
+
+.shop-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 40px 56px;
+}
+
+.shop-panel-body > .loading-spinner,
+.shop-panel-body > .shop-empty {
+  margin-top: 20vh;
+}
+
+/* While the item is on its way (shop.js: drawStandIn) */
+.is-standin .loading-spinner {
+  margin: 28px 0 0;
+}
+
+/* Computers: the shop behind holds still (shop.js: holdPage) */
+html.shop-panel-open {
+  overflow: hidden;
+}
+
+/* ---------- One item, in the panel ---------- */
 .shop-item {
   text-align: left;
 }
 
-.shop-crumb {
-  margin: 0 0 30px;
-  font-size: 0.74rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+.shop-item-pictures {
+  margin: 14px 0 30px;
 }
 
-.shop-crumb a {
-  color: var(--color-text-secondary);
-  padding: 6px 0;
-}
-
-.shop-crumb a:hover {
-  color: var(--color-ink);
-}
-
-.shop-item-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 4vw;
-  align-items: start;
-}
-
+/* A tall painting is kept short enough that its name, price and button
+   are in sight beneath it: --w and --h are its proportions */
 .shop-item-picture {
+  --room: min(52vh, 600px);
+  width: min(100%, calc(var(--room) * var(--w, 4) / var(--h, 5)));
+  margin: 0 auto;
   cursor: zoom-in;
+}
+
+.is-standin .shop-item-picture {
+  cursor: default;
+}
+
+/* (the card's picture shows through until the sharper copy arrives) */
+.shop-item-picture .img-container img {
+  background-size: 100% 100%;
 }
 
 .shop-thumbs {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin-top: 18px;
 }
@@ -1841,16 +1989,10 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   border-color: var(--color-ink);
 }
 
-/* The words stay beside a tall picture as the page scrolls */
-.shop-item-info {
-  position: sticky;
-  top: 44px;
-}
-
 .shop-item-title {
   margin: 8px 0 10px;
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: 2.3rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -2045,10 +2187,54 @@ a.shop-button {
   transform: none;
 }
 
+/* After "Add to basket": on to the basket, or back to the shop */
 .shop-added {
-  margin: 12px 0 0;
-  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--amb-green);
+  border-radius: 4px;
+  background: var(--color-paper);
+}
+
+.shop-added p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-ink);
+}
+
+.shop-button-quiet,
+a.shop-button-quiet {
+  width: auto;
+  padding: 11px 24px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+  color: var(--color-ink) !important;
+}
+
+.shop-button-quiet:hover {
+  background: var(--color-ink);
+  color: #fff !important;
+}
+
+.shop-keep-browsing {
+  padding: 6px 0 2px;
+  border: none;
+  border-bottom: 1px solid currentColor;
+  background: none;
+  font-family: inherit;
+  font-size: 0.86rem;
   color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.shop-keep-browsing:hover {
+  color: var(--color-ink);
 }
 
 .shop-item-description {
@@ -2592,18 +2778,9 @@ a.shop-button {
     letter-spacing: 0.14em;
   }
 
-  .shop-item-layout,
   .basket-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 34px;
-  }
-
-  .shop-item-info {
-    position: static;
-  }
-
-  .shop-item-title {
-    font-size: 2.1rem;
   }
 
   .shop-button {
@@ -2622,6 +2799,61 @@ a.shop-button {
 
   .basket-pill span {
     display: none;
+  }
+}
+
+/* Phones: the item panel is a sheet up from the bottom, with a handle to
+   pull it down by */
+@media (max-width: 767px) {
+  .shop-panel {
+    top: max(32px, 5vh);
+    left: 0;
+    width: auto;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(29, 29, 27, 0.16);
+    transform: translateY(calc(100% + 40px));
+  }
+
+  .shop-panel-bar {
+    padding: 12px 8px 0 22px;
+  }
+
+  .shop-panel-handle {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 2px;
+    background: #d5d3cd;
+  }
+
+  .shop-panel-body {
+    padding: 0 22px calc(40px + env(safe-area-inset-bottom));
+  }
+
+  .shop-item-pictures {
+    margin-top: 10px;
+  }
+
+  .shop-item-picture {
+    --room: 42vh;
+    --tape-w: 60px;
+  }
+
+  .shop-thumb {
+    width: 54px;
+    height: 54px;
+  }
+
+  .shop-item-title {
+    font-size: 1.9rem;
+  }
+
+  .shop-item-price {
+    font-size: 1.6rem;
   }
 }
 

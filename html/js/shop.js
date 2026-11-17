@@ -9,11 +9,11 @@
 // by which time both files are there whichever arrived first.
 //
 //   /shop               everything for sale
-//   /shop/<id>/<name>   one item
+//   /shop/<id>/<name>   the same, with one item open in the side panel
 //   /shop/basket        the basket
 //   /shop/thank-you     after paying
 //
-// The shop and item pages are drawn by the server
+// The shop and its items are drawn by the server
 // (actions/shopPageFunctions.php): index.php sends them with the page, and
 // moving between them fetches the same HTML from actions/shopAPI.php. This
 // file only adds what they do. The basket and thank-you pages belong to one
@@ -24,7 +24,7 @@
 // server, both to show the basket and again when paying.
 
 var SHOP_API = '/actions/shopAPI.php';
-var SHOP_ITEM_SIZES = '(max-width: 992px) 92vw, 36vw'; // same as SHOP_ITEM_SIZES in shopPageFunctions.php
+var SHOP_ITEM_SIZES = '(max-width: 767px) 92vw, 500px'; // same as SHOP_ITEM_SIZES in shopPageFunctions.php
 var BASKET_KEY = 'ambBasket';
 var BASKET_CODE_KEY = 'ambBasketCode'; // the promo code the visitor has applied
 var basketView = null; // what the basket page is showing: { lines, symbol, countries, ... }
@@ -88,6 +88,9 @@ function setBasketQuantity(variant, quantity) {
 // there is something in it
 function drawBasketPill() {
     var count = readBasket().reduce(function (sum, item) { return sum + item.quantity; }, 0);
+    // (the item panel covers it, so the panel has its own)
+    $('.shop-panel-basket').prop('hidden', !count)
+        .attr('aria-label', 'Basket: ' + count + (count === 1 ? ' item' : ' items')).find('b').text(count);
     var pill = $('#basketPill');
     var hide = !count || currentView === 'shop-basket' || currentView === 'shop-thanks';
     if (hide) {
@@ -109,6 +112,7 @@ function drawBasketPill() {
 // Called by renderView() in photoFunctions.js. Returns a promise that
 // resolves once the page is on screen.
 function renderShopPage(view, path) {
+    var onlyThePanel = shopPanelMove(view);
     setView(view);
     var content = $('#imagesAndContent').css('padding-top', '50px');
     drawBasketPill();
@@ -120,15 +124,26 @@ function renderShopPage(view, path) {
         return drawThanksPage(content);
     }
 
+    // The shop is on screen already: an item opens over it, or closes
+    if (onlyThePanel) {
+        if (view === 'shop-item') {
+            return openPanel(path);
+        }
+        closePanel();
+        viewReady = true;
+        return $.Deferred().resolve().promise();
+    }
+
     // The page index.php sent is already there (unless a payment left behind
     // is being given up: it was drawn with that payment's items as sold)
     if (pageIsServerDrawn && givingUp.state() !== 'pending') {
-        var name = content.find('.shop-item').attr('data-name');
-        if (name) {
+        adoptPanel(content);
+        var name = panelLayer().find('.shop-item').attr('data-name');
+        if (name && view === 'shop-item') {
             setPageTitle(name + ' - Shop - Ambar Velasco');
         }
         // (its button, brought in line with what's already in the basket)
-        content.find('[data-shop-buy]').each(function () {
+        panelLayer().find('[data-shop-buy]').each(function () {
             updateBuyForm($(this));
         });
         viewReady = true;
@@ -146,8 +161,9 @@ function renderShopPage(view, path) {
             return;
         }
         content.html(page.html);
+        adoptPanel(content);
         setPageTitle(page.title);
-        content.find('[data-shop-buy]').each(function () {
+        panelLayer().find('[data-shop-buy]').each(function () {
             updateBuyForm($(this));
         });
         // An old link's name part is brought up to date
@@ -180,16 +196,350 @@ $(document).on('click', 'a[data-shop-nav]', function (event) {
         return;
     }
     event.preventDefault();
-    goTo(this.getAttribute('href'));
+    var href = this.getAttribute('href');
+    // An item clicked in the shop opens over it (Back closes it again)
+    if (this.hasAttribute('data-shop-item') && shopIndexShowing()) {
+        panelOpener = this;
+        goTo(href, { state: { shopPanel: true } });
+        return;
+    }
+    goTo(href);
 });
 
 // --------------------------------------------------------------------------
-// An item's page
+// The item panel
+// --------------------------------------------------------------------------
+//
+// An item clicked in the shop opens in a panel over it (from the right on
+// computers, up from the bottom on phones) rather than on a page of its own,
+// so the shop stays where it was underneath. The item still has its own
+// address, so it can be shared and found by search engines, and Back closes
+// it. Arriving at that address from anywhere else (a shared link, the
+// basket, "Available in the shop" in the viewer), the shop is drawn with the
+// panel already open.
+//
+// The panel is drawn by the server with the shop (closed and empty, or open
+// with an item), then moved out to the end of the page, where nothing around
+// it can clip or blur it (the open menu blurs the page).
+
+var SHOP_PANEL_MS = 420; // the panel's slide in ambar.css
+var SHOP_ITEM_KEEP_MS = 60000; // how long a fetched item is good for
+var shopItemCache = {}; // item address -> { at, request }
+var panelToken = 0; // only the latest item asked for is put in the panel
+var panelOpener = null; // the card clicked: it gets the focus back on closing
+var panelTidyTimer = null;
+
+function panelLayer() {
+    return $('body > .shop-panel-layer');
+}
+
+function panelIsOpen() {
+    return panelLayer().hasClass('is-open');
+}
+
+// The list of everything for sale is on screen
+function shopIndexShowing() {
+    return (currentView === 'shop' || currentView === 'shop-item') && $('#imagesAndContent > .shop-index').length > 0;
+}
+
+// Called by goTo() and Back / Forward in photoFunctions.js: going to `view`
+// only opens or closes an item's panel, so the shop shouldn't scroll
+function shopPanelMove(view) {
+    return (view === 'shop' || view === 'shop-item') && shopIndexShowing();
+}
+
+// Called by setView() for every page drawn: leaving the shop shuts the panel
+function leaveShopPanel(view) {
+    if (view !== 'shop' && view !== 'shop-item') {
+        closePanel(true);
+    }
+}
+
+// The panel that came with a newly drawn shop takes the place of the old one
+function adoptPanel(content) {
+    var layer = content.find('.shop-panel-layer');
+    if (!layer.length) {
+        return;
+    }
+    closePanel(true);
+    panelLayer().remove();
+    layer.appendTo('body');
+    listenToPanelTouches(layer[0]);
+    drawBasketPill();
+    if (layer.hasClass('is-open')) {
+        holdPage(true);
+        layer.find('.shop-panel')[0].focus({ preventScroll: true });
+    }
+}
+
+// Computers: the shop behind can't scroll while the panel is open, and the
+// scrollbar's room is kept empty so nothing widens (as for the viewer).
+// Phones and tablets: the page is left alone (switching its scrolling off
+// makes Safari repaint it white, see the viewer); listenToPanelTouches stops
+// it scrolling instead.
+function holdPage(hold) {
+    var html = $('html');
+    if (hold && !isTouchScreen() && !html.hasClass('shop-panel-open')) {
+        var scrollbar = window.innerWidth - document.documentElement.clientWidth;
+        html.addClass('shop-panel-open');
+        $('body').css('padding-right', scrollbar > 0 ? scrollbar + 'px' : '');
+    } else if (!hold && html.hasClass('shop-panel-open')) {
+        html.removeClass('shop-panel-open');
+        $('body').css('padding-right', '');
+    }
+}
+
+// An item, fetched once and kept for a minute: the cards fetch theirs as the
+// pointer reaches them, so the panel usually fills the moment it opens
+function shopItemRequest(path) {
+    var kept = shopItemCache[path];
+    if (kept && Date.now() - kept.at < SHOP_ITEM_KEEP_MS && kept.request.state() !== 'rejected') {
+        return kept.request;
+    }
+    // (after any payment left behind is given up, or its items look sold)
+    var request = givingUp.then(function () {
+        return $.ajax({ url: SHOP_API, data: { view: 'page', path: path }, dataType: 'json' });
+    });
+    shopItemCache[path] = { at: Date.now(), request: request };
+    return request;
+}
+
+$(document).on('pointerover focusin', 'a[data-shop-item]', function () {
+    if (shopIndexShowing()) {
+        shopItemRequest(this.getAttribute('href'));
+    }
+});
+
+function openPanel(path) {
+    var layer = panelLayer();
+    var token = ++panelToken;
+    var drawn = $.Deferred();
+    var request = shopItemRequest(path);
+    var wasOpen = layer.hasClass('is-open');
+
+    if (!wasOpen) {
+        layer.find('.shop-panel-body').scrollTop(0);
+    }
+    // (.done, not .then: an item already fetched goes in straight away,
+    // before the panel shows, so the last item is never seen in it)
+    request.done(function (page) {
+        if (token === panelToken) {
+            fillPanel(layer, page);
+        }
+        viewReady = true;
+        drawn.resolve();
+    }).fail(function (xhr) {
+        delete shopItemCache[path];
+        if (token === panelToken) {
+            layer.find('.shop-panel-body').html(xhr && xhr.status === 404
+                ? '<div class="shop-empty"><p>This is no longer available.</p></div>'
+                : errorHtml("Sorry, this couldn't be loaded. Please try again."));
+        }
+        viewReady = true;
+        drawn.resolve();
+    });
+    if (request.state() === 'pending') {
+        drawStandIn(layer, path);
+    }
+    if (!wasOpen) {
+        showPanel(layer);
+    }
+    return drawn.promise();
+}
+
+// While the item is on its way: its picture and name from the card clicked
+function drawStandIn(layer, path) {
+    var body = layer.find('.shop-panel-body');
+    var card = $('a[data-shop-item]').filter(function () {
+        return this.getAttribute('href') === path;
+    }).first();
+    var img = card.find('img')[0];
+    if (!card.length) {
+        body.html(loadingHtml(''));
+        return;
+    }
+    var picture = '';
+    if (img && img.complete && img.naturalWidth) {
+        picture = '<div class="shop-item-pictures"><div class="shop-item-picture" style="--w: ' + img.naturalWidth + '; --h: ' + img.naturalHeight + ';">' +
+            '<div class="img-container"><img src="' + shopEscape(img.currentSrc || img.src) + '" alt="" decoding="sync"></div></div></div>';
+    }
+    body.html('<article class="shop shop-item is-standin">' + picture +
+        '<div class="shop-item-info"><h2 class="shop-item-title" id="shopItemTitle">' + shopEscape(card.find('.shop-card-name').text()) + '</h2>' +
+        '<div class="loading-spinner"></div></div></article>');
+}
+
+function fillPanel(layer, page) {
+    var body = layer.find('.shop-panel-body');
+    var standIn = body.find('.is-standin img')[0];
+    var shown = standIn ? standIn.currentSrc || standIn.src : null;
+    body.html(page.panel);
+    // The card's picture, already on screen, shows until the panel's sharper
+    // copy has arrived (same painting, same shape)
+    var img = body.find('.shop-item-picture img')[0];
+    if (shown && img && !img.complete) {
+        img.style.backgroundImage = 'url("' + shown + '")';
+        img.addEventListener('load', function () {
+            img.style.backgroundImage = '';
+        });
+    }
+    body.find('[data-shop-buy]').each(function () {
+        updateBuyForm($(this));
+    });
+    setPageTitle(page.title);
+    // An old link's name part is brought up to date
+    if (page.path && page.path !== location.pathname && currentView === 'shop-item') {
+        history.replaceState($.extend({}, history.state, { path: page.path }), '', page.path);
+        shownPath = page.path;
+    }
+}
+
+function showPanel(layer) {
+    clearTimeout(panelTidyTimer);
+    layer.removeClass('is-instant');
+    layer[0].inert = false;
+    layer.addClass('is-open');
+    holdPage(true);
+    layer.find('.shop-panel')[0].focus({ preventScroll: true });
+    drawBasketPill();
+}
+
+// instantly: no slide (another page is about to be drawn)
+function closePanel(instantly) {
+    var layer = panelLayer();
+    panelToken++;
+    if (!layer.hasClass('is-open')) {
+        return;
+    }
+    var panel = layer.find('.shop-panel')[0];
+    panel.style.transform = '';
+    panel.style.transition = '';
+    layer.toggleClass('is-instant', !!instantly || prefersReducedMotion());
+    layer.removeClass('is-open');
+    layer[0].inert = true;
+    holdPage(false);
+    if (layer[0].contains(document.activeElement)) {
+        document.activeElement.blur();
+    }
+    if (!instantly && panelOpener && document.body.contains(panelOpener)) {
+        panelOpener.focus({ preventScroll: true });
+    }
+    panelOpener = null;
+    clearTimeout(panelTidyTimer);
+    panelTidyTimer = setTimeout(function () {
+        layer.removeClass('is-instant');
+    }, SHOP_PANEL_MS + 40);
+}
+
+// The visitor closes it (the cross, the shop around it, Escape, "Keep
+// browsing", a swipe down): back to the shop's address, by the history
+function askToClosePanel() {
+    if (!panelIsOpen() || viewer.open) {
+        return;
+    }
+    if (history.state && history.state.shopPanel && currentView === 'shop-item') {
+        history.back(); // so Back afterwards doesn't open it again
+        return;
+    }
+    // (arrived straight at the item: the shop takes its place in the history)
+    history.replaceState({ path: '/shop' }, '', '/shop');
+    renderView('shop', parseRoute('/shop'));
+}
+
+$(document).on('click', '[data-shop-panel-close]', askToClosePanel);
+
+document.addEventListener('keydown', function (event) {
+    // (with the viewer open on top, Escape is the viewer's)
+    if (event.key === 'Escape' && !viewer.open && panelIsOpen()) {
+        askToClosePanel();
+    }
+});
+
+// Keyboard focus stays in the open panel
+document.addEventListener('focusin', function (event) {
+    var layer = panelLayer();
+    if (layer.hasClass('is-open') && !viewer.open && !layer[0].contains(event.target)) {
+        layer.find('.shop-panel')[0].focus({ preventScroll: true });
+    }
+});
+
+// Touch: a finger on the panel scrolls the panel, never the shop behind it.
+// On phones the panel is a sheet from the bottom, and pulling it down from
+// the top lets it go.
+function listenToPanelTouches(layerEl) {
+    var panel = layerEl.querySelector('.shop-panel');
+    var body = layerEl.querySelector('.shop-panel-body');
+    var startY = 0;
+    var lastY = 0;
+    var lastTime = 0;
+    var speed = 0;
+    var canPull = false;
+    var pulling = false;
+    var isSheet = function () {
+        return window.matchMedia('(max-width: 767px)').matches;
+    };
+
+    layerEl.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) {
+            return;
+        }
+        startY = lastY = e.touches[0].clientY;
+        lastTime = e.timeStamp;
+        speed = 0;
+        pulling = false;
+        canPull = isSheet() && panel.contains(e.target) && body.scrollTop <= 0;
+    }, { passive: true });
+
+    layerEl.addEventListener('touchmove', function (e) {
+        if (e.touches.length !== 1 || !e.cancelable) {
+            return;
+        }
+        var y = e.touches[0].clientY;
+        var down = y > lastY;
+        speed = (y - lastY) / Math.max(1, e.timeStamp - lastTime);
+        lastY = y;
+        lastTime = e.timeStamp;
+        if (!panel.contains(e.target)) {
+            e.preventDefault(); // the shaded shop behind
+            return;
+        }
+        if (pulling || (canPull && y > startY && body.scrollTop <= 0)) {
+            pulling = true;
+            e.preventDefault();
+            panel.style.transition = 'none';
+            panel.style.transform = 'translateY(' + Math.max(0, y - startY) + 'px)';
+            return;
+        }
+        var atTop = body.scrollTop <= 0;
+        var atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
+        if (!body.contains(e.target) || (down && atTop) || (!down && atBottom)) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    var letGo = function () {
+        if (!pulling) {
+            return;
+        }
+        pulling = false;
+        var pulled = lastY - startY;
+        // (back to the panel's own slide, from where the finger left it)
+        panel.style.transition = '';
+        panel.style.transform = '';
+        if (pulled > 110 || (pulled > 30 && speed > 0.5)) {
+            askToClosePanel();
+        }
+    };
+    layerEl.addEventListener('touchend', letGo);
+    layerEl.addEventListener('touchcancel', letGo);
+}
+
+// --------------------------------------------------------------------------
+// An item, in the panel
 // --------------------------------------------------------------------------
 
-function shopItemImages() {
+function shopItemImages(el) {
     try {
-        return JSON.parse($('.shop-item').attr('data-images') || '[]');
+        return JSON.parse($(el).closest('.shop-item').attr('data-images') || '[]');
     } catch (e) {
         return [];
     }
@@ -202,7 +552,7 @@ $(document).on('click', '.shop-item-picture', function (event) {
         return;
     }
     event.preventDefault();
-    var images = shopItemImages().map(function (image) {
+    var images = shopItemImages(this).map(function (image) {
         // (the viewer keeps the address as it is: these all live at this page)
         return $.extend({}, image, { path: location.pathname });
     });
@@ -214,13 +564,18 @@ $(document).on('click', '.shop-item-picture', function (event) {
 // The small pictures swap the main one
 $(document).on('click', '.shop-thumb', function () {
     var index = Number(this.getAttribute('data-index'));
-    var image = shopItemImages()[index];
+    var image = shopItemImages(this)[index];
     if (!image) {
         return;
     }
-    $('.shop-thumb').removeClass('is-current');
+    var item = $(this).closest('.shop-item');
+    item.find('.shop-thumb').removeClass('is-current');
     $(this).addClass('is-current');
-    var picture = $('.shop-item-picture').attr({ 'data-index': index, href: webImageUrl(image.location) });
+    var picture = item.find('.shop-item-picture').attr({ 'data-index': index, href: webImageUrl(image.location) });
+    if (image.width && image.height) {
+        picture[0].style.setProperty('--w', image.width);
+        picture[0].style.setProperty('--h', image.height);
+    }
     picture.find('.img-container').empty().append(workImage(image, { sizes: SHOP_ITEM_SIZES, lazy: false }));
 });
 
@@ -248,7 +603,7 @@ function updateBuyForm(form) {
     var value = form.find('.shop-quantity-value');
     value.text(Math.max(1, Math.min(Number(value.text()) || 1, Math.max(room, 1))));
     form.find('[data-shop-left]').prop('hidden', !left).text(left ? 'Only ' + left + ' left' : '');
-    form.find('.shop-button').prop('disabled', room < 1).text(room < 1 ? 'In your basket' : 'Add to basket');
+    form.find('button[type=submit]').prop('disabled', room < 1).text(room < 1 ? 'In your basket' : 'Add to basket');
 }
 
 $(document).on('change', '[data-shop-buy] input[name=variant]', function () {
@@ -276,10 +631,18 @@ $(document).on('submit', '[data-shop-buy]', function (event) {
     }
     setBasketQuantity(variant, basketQuantity(variant) + adding);
     form.find('.shop-quantity-value').text('1');
-    form.find('.shop-added').prop('hidden', false);
+    var added = form.find('.shop-added').prop('hidden', false)[0];
     updateBuyForm(form);
-    $('#basketPill').addClass('is-bumped');
-    setTimeout(function () { $('#basketPill').removeClass('is-bumped'); }, 500);
+    // (brought into sight in the panel, where it can open below the fold)
+    var scroller = $(added).closest('.shop-panel-body')[0];
+    if (scroller) {
+        var below = added.getBoundingClientRect().bottom + 24 - scroller.getBoundingClientRect().bottom;
+        if (below > 0) {
+            scroller.scrollTo({ top: scroller.scrollTop + below, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+        }
+    }
+    $('#basketPill, .shop-panel-basket').addClass('is-bumped');
+    setTimeout(function () { $('#basketPill, .shop-panel-basket').removeClass('is-bumped'); }, 500);
 });
 
 // A work that's for sale: the link under it in the viewer goes to the shop

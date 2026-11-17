@@ -495,6 +495,17 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
 - The shop's views (`shop`, `shop-item`, `shop-basket`, `shop-thanks`) share
   routes by address, so "is this page already showing" is `isShowing(view,
   route)` (view **and** `shownPath`), not `view === currentView`.
+- **Items open in a side panel over the shop**, not a page of their own
+  (`shopRenderPanel()`; shop.js "The item panel"): from the right on
+  computers, a sheet from the bottom under 768px (pull down to close). The
+  address still becomes `/shop/<id>/<slug>` (history state `shopPanel`, so
+  closing is `history.back()`); arriving there directly draws the shop with
+  the panel open, which is what search engines see. `shopAPI.php?view=page`
+  returns `panel` (the item alone) besides `html`. The panel is moved to
+  `body` on arrival (`adoptPanel`), sits at z-index 1030 (under the viewer),
+  and holds the page like the viewer does (`html.shop-panel-open`, not on
+  touch screens). `shopPanelMove()` tells `goTo()`/`popstate` not to scroll
+  when only the panel opens or closes. Cards fetch their item on hover.
 - An item's pictures open in the works' viewer (`openViewer` with work-shaped
   objects whose `path` is the item page, so no history entry is added). A
   work with a live, in-stock item gets "Available in the shop" in the viewer

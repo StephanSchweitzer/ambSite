@@ -425,6 +425,7 @@ function renderView(view, route) {
 
 // Go to another page of the site, adding it to the browser history.
 // options.section: scroll to that project section once the works are shown.
+// options.state: more to keep in the history entry
 function goTo(path, options) {
     options = options || {};
     if (viewer.open) {
@@ -433,12 +434,13 @@ function goTo(path, options) {
 
     var route = parseRoute(path);
     var view = resolveView(route);
-    var changingPage = !isShowing(view, route);
+    // (opening or closing a shop item's panel keeps the shop where it is)
+    var changingPage = !isShowing(view, route) && !shopPanelMove(view);
 
     if (path !== location.pathname) {
         rememberScroll();
         var newPath = view === 'works' && route.view === 'home' ? '/select-works' : path;
-        history.pushState({ path: newPath }, '', newPath);
+        history.pushState($.extend({}, options.state, { path: newPath }), '', newPath);
     }
 
     var ready = renderView(view, route);
@@ -478,6 +480,12 @@ window.addEventListener('popstate', function (event) {
         return;
     }
 
+    // A shop item's panel opening or closing: the shop stays where it is
+    if (shopPanelMove(view)) {
+        renderView(view, route);
+        return;
+    }
+
     renderView(view, route).then(function () {
         if (route.workId) {
             openSharedWork(route.workId, {});
@@ -492,6 +500,7 @@ window.addEventListener('popstate', function (event) {
 
 function setView(view) {
     leaveCheckout(view); // shop.js: a payment left unfinished is given up
+    leaveShopPanel(view); // shop.js: an item's panel closes when the shop does
     var main = document.getElementById('imagesAndContent');
     pageIsServerDrawn = main.getAttribute('data-server-view') === view;
     main.removeAttribute('data-server-view');
@@ -1423,7 +1432,8 @@ function setupViewer() {
     // handlers below stop it scrolling instead.
     modal.on('show.bs.modal', function () {
         scrollPosition = window.pageYOffset;
-        if (isTouchScreen()) {
+        // (a shop item's panel, open under the viewer, already holds it)
+        if (isTouchScreen() || $('html').hasClass('shop-panel-open')) {
             return;
         }
         var scrollbar = window.innerWidth - document.documentElement.clientWidth;
@@ -1471,7 +1481,9 @@ function setupViewer() {
         viewer.loadToken++;
         $('#spinner').hide();
         $('html').removeClass('no-scroll');
-        $('body').css('padding-right', '');
+        if (!$('html').hasClass('shop-panel-open')) {
+            $('body').css('padding-right', ''); // (a shop item's panel still needs it)
+        }
         if (Math.abs(window.pageYOffset - scrollPosition) > 1) {
             instantScrollTo(scrollPosition);
         }

@@ -6,7 +6,8 @@
 // the script only adds behaviour (the basket, choosing a size, the viewer).
 //
 //   /shop                 everything for sale            view 'shop'
-//   /shop/<id>/<name>     one item                       view 'shop-item'
+//   /shop/<id>/<name>     the same, with that item open  view 'shop-item'
+//                         in the side panel
 //   /shop/basket          the basket (drawn by shop.js)  view 'shop-basket'
 //   /shop/thank-you       after paying (drawn by shop.js) view 'shop-thanks'
 
@@ -14,7 +15,7 @@ include_once __DIR__ . '/publicPageFunctions.php';
 include_once __DIR__ . '/shopFunctions.php';
 
 define('SHOP_GRID_SIZES', '(max-width: 992px) 45vw, 30vw');
-define('SHOP_ITEM_SIZES', '(max-width: 992px) 92vw, 36vw');
+define('SHOP_ITEM_SIZES', '(max-width: 767px) 92vw, 500px'); // the side panel's picture
 
 // Everything about the shop page at $path: which view it is, its title and
 // description, its HTML (null when the script draws it), and for an item the
@@ -56,13 +57,18 @@ function shopPage($conn, $path)
             return array('view' => 'notfound', 'status' => 404) + $page;
         }
         $settings = shopSettings($conn);
+        $zones = shopGetZones($conn);
         $page['view'] = 'shop-item';
         $page['product'] = $product;
         $page['path'] = $product['path']; // its proper address (the name part may be old)
         $page['title'] = $product['name'] . ' - Shop - Ambar Velasco';
         $about = trim($product['description']) !== '' ? $product['description'] : $product['details'];
         $page['description'] = trim(($product['typeLabel'] !== '' ? $product['typeLabel'] . ' by Ambar Velasco. ' : '') . ambExcerpt($about, 130));
-        $page['html'] = shopRenderProduct($product, $settings, shopGetZones($conn));
+        // An item opens over the shop, in the side panel: 'panel' is the item
+        // alone (to open it over the shop already on screen), 'html' the shop
+        // with it open
+        $page['panel'] = shopRenderProduct($product, $settings, $zones);
+        $page['html'] = shopRenderIndex(shopGetProducts($conn), $settings, $zones, $page['panel']);
         return $page;
     }
 
@@ -87,9 +93,10 @@ function shopRenderHeader($title, $intro = '')
 // /shop
 // ---------------------------------------------------------------------------
 
-function shopRenderIndex($products, $settings, $zones)
+// $itemHtml: an item to show open in the side panel (its address was asked for)
+function shopRenderIndex($products, $settings, $zones, $itemHtml = '')
 {
-    $html = '<div class="shop">' . shopRenderHeader('Shop', $settings['intro']);
+    $html = '<div class="shop shop-index">' . shopRenderHeader('Shop', $settings['intro']);
 
     if ($settings['paused'] === '1' && $products) {
         $html .= '<p class="shop-status">The shop is temporarily closed.</p>';
@@ -103,7 +110,25 @@ function shopRenderIndex($products, $settings, $zones)
     foreach ($products as $index => $product) {
         $html .= shopRenderCard($product, $index);
     }
-    return $html . '</div></div>';
+    return $html . '</div></div>' . shopRenderPanel($itemHtml);
+}
+
+// The panel an item opens in: from the right on computers, up from the
+// bottom on phones, with the shop still there behind it. Drawn closed and
+// empty with the shop, or open with an item in it. shop.js moves it to the
+// end of the page and fills it as items are clicked.
+function shopRenderPanel($itemHtml = '')
+{
+    $open = $itemHtml !== '';
+    return '<div class="shop-panel-layer' . ($open ? ' is-open' : '') . '" data-shop-panel' . ($open ? '' : ' inert') . '>'
+        . '<div class="shop-panel-backdrop" data-shop-panel-close></div>'
+        . '<aside class="shop-panel" role="dialog" aria-modal="true" aria-labelledby="shopItemTitle" tabindex="-1">'
+        . '<div class="shop-panel-bar"><span class="shop-panel-handle" aria-hidden="true"></span>'
+        . '<a class="shop-panel-basket" href="/shop/basket" data-shop-nav hidden>Basket <b>0</b></a>'
+        . '<button type="button" class="shop-panel-close" data-shop-panel-close aria-label="Close">'
+        . '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+        . '</button></div>'
+        . '<div class="shop-panel-body">' . $itemHtml . '</div></aside></div>';
 }
 
 function shopRenderCard($product, $index)
@@ -118,7 +143,7 @@ function shopRenderCard($product, $index)
         $price = '<span class="shop-card-price">' . ambHtml($product['priceText']) . '</span>';
     }
 
-    return '<a class="shop-card' . ($product['soldOut'] ? ' is-sold' : '') . '" href="' . ambHtml($product['path']) . '" data-shop-nav>'
+    return '<a class="shop-card' . ($product['soldOut'] ? ' is-sold' : '') . '" href="' . ambHtml($product['path']) . '" data-shop-nav data-shop-item>'
         . '<div class="shop-card-picture"><div class="img-container">' . $picture . '</div></div>'
         . '<div class="shop-card-text"><h3 class="shop-card-name">' . ambHtml($product['name']) . '</h3>'
         . '<p class="shop-card-meta">'
@@ -127,8 +152,16 @@ function shopRenderCard($product, $index)
 }
 
 // ---------------------------------------------------------------------------
-// /shop/<id>/<name>
+// /shop/<id>/<name>: one item, as it shows in the side panel
 // ---------------------------------------------------------------------------
+
+// The picture's proportions, so CSS can keep a tall painting short enough
+// that the price and button are in sight beneath it
+function shopPictureShape($image)
+{
+    return $image['width'] && $image['height']
+        ? ' style="--w: ' . (int) $image['width'] . '; --h: ' . (int) $image['height'] . ';"' : '';
+}
 
 function shopRenderProduct($product, $settings, $zones)
 {
@@ -146,15 +179,13 @@ function shopRenderProduct($product, $settings, $zones)
     }
 
     $html = '<article class="shop shop-item" data-product="' . $product['id'] . '" data-name="' . ambHtml($name) . '"'
-        . ' data-images="' . ambHtml(json_encode($forViewer, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '">'
-        . '<p class="shop-crumb"><a href="/shop" data-shop-nav><span aria-hidden="true">&larr;</span> Shop</a></p>'
-        . '<div class="shop-item-layout">';
+        . ' data-images="' . ambHtml(json_encode($forViewer, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '">';
 
     // --- pictures ---
     $html .= '<div class="shop-item-pictures">';
     if ($images) {
         $html .= '<a class="shop-item-picture" href="' . ambHtml(ambWebImageUrl($images[0]['location'])) . '" data-index="0"'
-            . ' aria-label="Look closer at ' . ambHtml($name) . '">'
+            . shopPictureShape($images[0]) . ' aria-label="Look closer at ' . ambHtml($name) . '">'
             . '<div class="img-container">' . ambWorkImage($images[0], false, SHOP_ITEM_SIZES, null, true) . '</div></a>';
         if (count($images) > 1) {
             $html .= '<div class="shop-thumbs">';
@@ -175,7 +206,7 @@ function shopRenderProduct($product, $settings, $zones)
     // --- words ---
     $html .= '<div class="shop-item-info">'
         . ($product['typeLabel'] !== '' ? '<p class="shop-kicker">' . ambHtml($product['typeLabel']) . '</p>' : '')
-        . '<h2 class="shop-item-title">' . ambHtml($name) . '</h2>'
+        . '<h2 class="shop-item-title" id="shopItemTitle">' . ambHtml($name) . '</h2>'
         . ($product['details'] !== '' ? '<p class="shop-item-details">' . shopText($product['details']) . '</p>' : '');
 
     $html .= shopRenderBuying($product, $settings);
@@ -202,7 +233,7 @@ function shopRenderProduct($product, $settings, $zones)
         $html .= '<ul class="shop-item-notes"><li>' . implode('</li><li>', $notes) . '</li></ul>';
     }
 
-    return $html . '</div></div></article>';
+    return $html . '</div></article>';
 }
 
 // The price and the way to buy: sizes to choose from, how many, the button
@@ -268,7 +299,9 @@ function shopRenderBuying($product, $settings)
     $left = !$product['isUnique'] && $chosen['stock'] !== null && $chosen['stock'] <= 3 ? $chosen['stock'] : null;
     $html .= '<p class="shop-left" data-shop-left' . ($left === null ? ' hidden' : '') . '>' . ($left === null ? '' : 'Only ' . $left . ' left') . '</p>'
         . '<button type="submit" class="shop-button">Add to basket</button>'
-        . '<p class="shop-added" role="status" hidden>Added to basket. <a href="/shop/basket" class="shop-text-link" data-shop-nav>View basket</a></p>'
+        . '<div class="shop-added" role="status" hidden><p>Added to your basket.</p>'
+        . '<a href="/shop/basket" class="shop-button shop-button-quiet" data-shop-nav>View basket</a>'
+        . '<button type="button" class="shop-keep-browsing" data-shop-panel-close>Keep browsing</button></div>'
         . '</form>';
     return $html;
 }
