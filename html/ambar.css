@@ -2750,6 +2750,12 @@ a.shop-button {
 /* ==========================================================================
    Floating newsletter nudge (every page, until dismissed with its x)
    ========================================================================== */
+/* ...except while paying: it would drift over the checkout form */
+body:has(#imagesAndContent[data-view="shop-basket"]) .newsletter-float,
+body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
+  display: none;
+}
+
 .newsletter-float {
   position: fixed;
   left: 22vw; /* keep the drift over the content sheet, off the nav column */

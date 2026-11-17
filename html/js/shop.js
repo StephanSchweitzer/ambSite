@@ -731,7 +731,8 @@ function loadStripeJs() {
 
 function stripeClient(publishableKey) {
     if (!stripeClients[publishableKey]) {
-        stripeClients[publishableKey] = window.Stripe(publishableKey);
+        // (in English like the rest of the site, not the browser's language)
+        stripeClients[publishableKey] = window.Stripe(publishableKey, { locale: 'en' });
     }
     return stripeClients[publishableKey];
 }
@@ -851,7 +852,13 @@ function checkoutChanged(state, session) {
         return;
     }
     state.session = session;
+    // (Stripe's own total, the one that will be charged; written the site's
+    // way, "€47", rather than Stripe's "€47.00")
     var total = session.total && session.total.total ? session.total.total.amount : '';
+    var cents = total ? session.total.total.minorUnitsAmount : null;
+    if (typeof cents === 'number' && basketView && session.minorUnitsAmountDivisor === 100) {
+        total = formatMoney(cents, basketView.symbol);
+    }
     if (!state.paying) {
         $('.checkout-pay').text(total ? 'Pay ' + total : 'Pay');
     }
