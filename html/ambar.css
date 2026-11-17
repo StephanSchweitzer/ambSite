@@ -570,7 +570,13 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 /* ==========================================================================
    Galleries / projects
    ========================================================================== */
+/* Full width of the sheet from the start. Left to size itself (it's an
+   item in #imagesAndContent's flex row) it took its width from whichever
+   pictures had loaded: half-width until they arrived, then full. The page
+   grew by a screen or more after a jump to a project, so the first jump
+   from the menu landed in the wrong place. */
 .project {
+  width: 100%;
   min-width: 51vw;
   max-width: 100%;
   margin-bottom: 4rem;
