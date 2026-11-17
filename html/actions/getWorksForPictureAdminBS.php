@@ -1,17 +1,13 @@
 <?php
 
-session_start();
-
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+include_once __DIR__ . '/../database/session.php';
 
 include '../database/pdo.php';
+include_once __DIR__ . '/adminAuth.php';
 
-  $project = "";
-  $project = $_GET['project'];
+requireAdminApi();
+
+  $project = $_GET['project'] ?? '';
   
   //$activityCondition = "WHERE title =  ";
 

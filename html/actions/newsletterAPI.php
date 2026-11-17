@@ -1,7 +1,7 @@
 <?php
 
 global $conn;
-session_start();
+include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
 
 header('Content-Type: application/json');
@@ -17,6 +17,11 @@ function sendError($message, $code = 500)
 try {
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
+            // The subscriber list is private — only the admin may read it
+            if (($_SESSION["ambar"] ?? null) != "connected") {
+                sendError('Unauthorized', 401);
+            }
+
             // Fetch all active subscriptions, ordered alphabetically by email
             $query = "SELECT id, email, subscriptionDate, active FROM newsletterEmailList ORDER BY email ASC";
             $stmt = $conn->prepare($query);
@@ -69,7 +74,7 @@ try {
 
         case 'PUT':
             // Require authentication for modification
-            if ($_SESSION["ambar"] != "connected") {
+            if (($_SESSION["ambar"] ?? null) != "connected") {
                 sendError('Unauthorized', 401);
             }
 
@@ -138,7 +143,7 @@ try {
 
         case 'DELETE':
             // Require authentication for deletion
-            if ($_SESSION["ambar"] != "connected") {
+            if (($_SESSION["ambar"] ?? null) != "connected") {
                 sendError('Unauthorized', 401);
             }
 

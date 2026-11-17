@@ -1,167 +1,128 @@
 <?php
+// What the public shop pages ask the server for (js/shop.js). No sign-in and
+// no session: everything here is either public or reached with an order's
+// own private link.
+//
+//   GET  ?view=page&path=/shop/12/name   that shop page, already drawn
+//   GET  ?view=order&token=...           a customer's own order, for the thank-you page
+//   POST {action: 'basket',   items, code}     the basket priced as of right now
+//   POST {action: 'checkout', items, country, code, replaces}   start paying ->
+//        {clientSecret, publishableKey, token} to pay on the basket page, or
+//        {url} of Stripe's own page. `replaces` is an earlier payment this
+//        visitor left unfinished: it's given up first, so its stock is free.
+//   POST {action: 'abandon',  token}     went back without paying: free the stock
+//
+// (The shop admin has its own file, shopAdminAPI.php.)
 
-session_start();
+include __DIR__ . '/../database/pdo.php';
+include_once __DIR__ . '/shopPageFunctions.php';
+include_once __DIR__ . '/shopOrderFunctions.php';
 
-include '../database/pdo.php';
-
-if ($_SERVER['REQUEST_METHOD'] === 'GET')
+function shopReply($data, $status = 200)
 {
-
-  $activity = $_GET['activity'];
-
-  $statusCondition = "WHERE available = 1 AND visible = 1 ";
-
-  if ($activity == "inactive")
-  {
-    $statusCondition = "WHERE available = 0 AND visible = 1 ";
-  }
-
-  if ($activity == "invisible")
-  {
-    $statusCondition = "WHERE visible = 0 ";
-  }
-
-  $query = "SELECT id, name, productOrder, available, buttonCode, visible
-            FROM    shopItems $statusCondition
-            ORDER BY productOrder DESC";
-
-  $projectQuery = $conn->prepare($query);
-  $projectQuery->execute();
-  $result = $projectQuery->fetchAll();
-
-  $data = array();
-
-  for ($i=0; $i < count($result); $i++) {
-
-    $singleEntry = array(
-      'id' => $result[$i][0],
-      'name' => $result[$i][1],
-      'productOrder' => $result[$i][2],
-      'available' => $result[$i][3],
-      'buttonCode' => $result[$i][4],
-      'visible' => $result[$i][5]
-    );
-
-    array_push($data, $singleEntry);
-  }
-
-  header('Content-Type: application/json');
-  echo json_encode($data);
-
-  die;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST')
-{
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
+    http_response_code($status);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store');
+    echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     die;
-  }
-
-  $name = $_POST["name"];
-  $productOrder = $_POST["productOrder"];
-  $available = $_POST["available"];
-  $buttonCode = $_POST["buttonCode"];
-  $visible = $_POST["visible"];
-
-  $query = "INSERT INTO shopItems (name, productOrder, available, buttonCode, visible)
-          VALUES (?, ?, ?, ?, ?)";
-
-
-
-  $theArray = array($name, $productOrder, $available, $buttonCode, $visible);
-
-  // echo json_encode(array('query' => $query, 'data' => $theArray));
-  //   die;
-
-  try {
-    $uploadQuery = $conn->prepare($query);
-    $uploadQuery->execute($theArray);
-    echo json_encode(array('status' => 'success', 'data' => $theArray));
-  } catch (PDOException $e) {
-
-    http_response_code(500);
-    echo json_encode(array('status' => 'error', 'message' => $e->getMessage()));
-  }
-
-  die;
 }
 
+try {
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $view = isset($_GET['view']) ? (string) $_GET['view'] : '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
-{
+        if ($view === 'page') {
+            $path = '/' . trim((string) ($_GET['path'] ?? ''), '/');
+            $page = shopPage($conn, $path);
+            shopReply(array(
+                'view' => $page['view'],
+                'path' => $page['path'],
+                'title' => $page['status'] === 404 ? 'Page not found - Ambar Velasco' : $page['title'],
+                'html' => $page['status'] === 404 ? ambRenderNotFound() : $page['html'],
+            ), $page['status'] === 404 ? 404 : 200);
+        }
 
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+        if ($view === 'order') {
+            $token = (string) ($_GET['token'] ?? '');
+            $order = shopReady($conn) && preg_match('/^[a-f0-9]{32}$/', $token) ? shopFindOrder($conn, 'token', $token) : null;
+            if (!$order) {
+                shopReply(array('message' => 'Order not found'), 404);
+            }
+            try {
+                // The thank-you page can arrive before Stripe's own message does
+                $order = shopSyncOrder($conn, $order);
+            } catch (Throwable $e) {
+                error_log('shopAPI order sync: ' . $e->getMessage());
+            }
+            shopReply(array('order' => shopOrderForCustomer($conn, $order)));
+        }
 
-  $rawData = file_get_contents('php://input');
-  parse_str($rawData, $_PATCH);
+        shopReply(array('message' => 'Unknown request'), 400);
+    }
 
-  $id = $_PATCH['id'];
-  $name = $_PATCH['name'];
-  $productOrder = $_PATCH['productOrder'];
-  $available = $_PATCH['available'];
-  $buttonCode = $_PATCH['buttonCode'];
-  $visible = $_PATCH["visible"];
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $input = json_decode((string) file_get_contents('php://input'), true);
+        $action = is_array($input) && isset($input['action']) ? (string) $input['action'] : '';
+        if (!shopReady($conn)) {
+            shopReply(array('message' => "The shop isn't open yet."), 503);
+        }
 
-  $theQuery = "UPDATE shopItems SET name = ?, productOrder = ?, available = ?, buttonCode = ?, visible = ? WHERE id = ?";
+        if ($action === 'basket') {
+            $settings = shopSettings($conn);
+            $lines = shopPriceBasket($conn, shopCleanBasket(isset($input['items']) ? $input['items'] : array()));
+            $currencies = shopCurrencies();
+            // A promo code is checked against what can really be bought
+            $subtotal = 0;
+            foreach ($lines as $line) {
+                if ($line['problem'] !== 'gone') {
+                    $subtotal += $line['priceCents'] * min($line['quantity'], $line['available']);
+                }
+            }
+            $promo = shopCheckPromo($conn, isset($input['code']) ? $input['code'] : '', $subtotal);
+            shopReply(array(
+                'lines' => $lines,
+                'promo' => $promo && !isset($promo['problem'])
+                    ? array('code' => $promo['code'], 'kind' => $promo['kind'], 'value' => $promo['value'], 'label' => $promo['label']) : null,
+                'promoProblem' => $promo && isset($promo['problem']) ? $promo['problem'] : null,
+                'symbol' => $currencies[$settings['currency']]['symbol'],
+                'countries' => shopDeliveryCountries(shopGetZones($conn)),
+                'paused' => $settings['paused'] === '1',
+                'canPay' => stripeIsConfigured(),
+                'payOnPage' => stripePaysOnPage(),
+            ));
+        }
 
-  $theArray = array($name, $productOrder, $available, $buttonCode, $visible, $id);
-  
-  // echo json_encode($theArray);
-  // die;
+        if ($action === 'checkout') {
+            $replaces = isset($input['replaces']) ? (string) $input['replaces'] : '';
+            if (preg_match('/^[a-f0-9]{32}$/', $replaces)) {
+                shopAbandonOrder($conn, $replaces);
+            }
+            try {
+                $started = shopStartCheckout($conn, isset($input['items']) ? $input['items'] : array(),
+                    isset($input['country']) ? $input['country'] : '', isset($input['code']) ? $input['code'] : '');
+                if (isset($started['clientSecret'])) {
+                    shopReply(array('clientSecret' => $started['clientSecret'], 'publishableKey' => stripePublishableKey(),
+                        'token' => $started['token']));
+                }
+                shopReply(array('url' => $started['url']));
+            } catch (ShopProblem $problem) {
+                shopReply(array('message' => $problem->getMessage(), 'lines' => $problem->lines, 'promo' => $problem->promo), 409);
+            }
+        }
 
-  $updateQuery = $conn->prepare($theQuery);
+        if ($action === 'abandon') {
+            $token = isset($input['token']) ? (string) $input['token'] : '';
+            if (preg_match('/^[a-f0-9]{32}$/', $token)) {
+                shopAbandonOrder($conn, $token);
+            }
+            shopReply(array('ok' => true));
+        }
 
-  if ($updateQuery->execute($theArray)) {
-      echo "Data updated successfully!";
-  } else {
-      echo "Error: ";
-  }
+        shopReply(array('message' => 'Unknown request'), 400);
+    }
 
-  die;
+    shopReply(array('message' => 'Unknown request'), 405);
+} catch (Throwable $e) {
+    error_log('shopAPI: ' . $e->getMessage());
+    shopReply(array('message' => 'Sorry, something went wrong. Please try again.'), 500);
 }
-
-if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
-{
-
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
-
-  $rawData = file_get_contents('php://input');
-  parse_str($rawData, $_DELETE);
-
-  //echo($rawData);
-  // var_dump($_PATCH);
-  // die;
-
-  $id = $_DELETE['id'];
-
-  $theQuery = "UPDATE shopItems SET visible = 0 WHERE id = ?";
-  //echo $theQuery;
-
-  $theArray = array($id);
-  //var_dump($theArray);
-  //die;
-
-  // Prepare the SQL statement
-  $updateQuery = $conn->prepare($theQuery);
-
-  // Execute the prepared statement
-  if ($updateQuery->execute($theArray)) {
-      echo "Post deleted successfully!";
-  } else {
-      echo "Error: ";
-  }
-
-  die;
-}
-
-?>

@@ -1,14 +1,60 @@
 RewriteEngine On
-
-RewriteCond %{HTTP_HOST} ^www.ambarvelasco.com$
-RewriteRule ^(.*)$ http://ambarvelasco.com/$1 [R=301]
-
-RewriteCond %{HTTP_HOST} ^www.ambarvelasco.com$
-RewriteCond %{SERVER_PORT} ^443
-RewriteRule ^(.*)$ https://ambarvelasco.com/$1 [R=301]
-
 RewriteBase /
+
+# www.ambarvelasco.com -> ambarvelasco.com, straight to https in one hop
+RewriteCond %{HTTP_HOST} ^www\.ambarvelasco\.com$ [NC]
+RewriteRule ^(.*)$ https://ambarvelasco.com/$1 [R=301,L]
+
+# Certificate files from the old SSL setup are never for visitors
+RewriteRule ^sslStuff(/|$) - [R=404,L]
+
+# Web-sized artwork copies (web/<file>, narrower ones at web/<width>/<file>,
+# and the bigger zoom copy at web/zoom/<file>). The first request for one runs
+# webImage.php, which makes and saves it; after that Apache serves the saved
+# file directly.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^baseImages/web/zoom/([^/]+)$ actions/webImage.php?zoom=1&f=$1 [B,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^baseImages/web/([0-9]+)/([^/]+)$ actions/webImage.php?w=$1&f=$2 [B,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^baseImages/web/([^/]+)$ actions/webImage.php?f=$1 [B,L]
+
+# The sitemap lists every work, so it is generated from the database
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+# Every other address that isn't a real file or folder is a page of the
+# site, handled by index.php (unknown ones get a proper "not found")
 RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.php [L]
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+</IfModule>
+
+# Smaller downloads: text files are sent compressed
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/xml application/javascript text/javascript application/json image/svg+xml
+</IfModule>
+
+# How long browsers keep files instead of downloading them again on the next
+# visit. The site's own CSS and JS links carry ?v=<last changed>, so those can
+# be kept for a year: a change gets a new address. Admin pages link them
+# without ?v=, so those always check for a newer copy first. Every artwork
+# upload gets a file name no other work is using, so artwork is kept 30 days
+# (not forever: a name can come back after a permanent delete). Design images
+# (logo, icons) can change under the same name, so they're kept a week.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable" "expr=%{QUERY_STRING} =~ /(^|&)v=/"
+        Header set Cache-Control "no-cache" "expr=%{QUERY_STRING} !~ /(^|&)v=/"
+    </FilesMatch>
+    <FilesMatch "\.(jpe?g|png|gif|webp|ico|svg)$">
+        Header set Cache-Control "public, max-age=2592000" "expr=%{REQUEST_URI} =~ m#^/(baseImages|thumbnails|img|imgMid)/#"
+        Header set Cache-Control "public, max-age=604800" "expr=%{REQUEST_URI} !~ m#^/(baseImages|thumbnails|img|imgMid)/#"
+    </FilesMatch>
+</IfModule>

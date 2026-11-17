@@ -1,13 +1,23 @@
 <?php
 global $conn;
-session_start();
+include_once __DIR__ . '/../database/session.php';
 
 include '../database/pdo.php';
+include_once __DIR__ . '/adminAuth.php';
 include 'imageManipulationFunctions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $theYear = "";
-    $theYear = $_GET['theYear'];
+    $theYear = $_GET['theYear'] ?? '';
+
+    // These views include hidden/trashed works and are only for the admin
+    // pages. Everything else filters on visible = 1 and stays public.
+    $adminOnlyViews = array('everything', 'invisible', 'stats', 'projectsAPI');
+    if (in_array($theYear, $adminOnlyViews, true) && ($_SESSION["ambar"] ?? null) != "connected") {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(array('status' => 'error', 'message' => 'Unauthorized'));
+        die;
+    }
 
     // One canonical column list for every allWorks query below. Keeping it in a
     // single place means no branch can silently omit a column — the mismatch
@@ -184,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if ($theYear == 'projectsAPI') {
         $query = "SELECT $allWorksCols FROM allWorks
-              WHERE isSelectWork = 1
+              WHERE isSelectWork = 1 AND visible = 1
               ORDER BY name ASC";
     }
 
@@ -222,53 +232,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     die;
 }
 
+// Upload answers. Failures carry a real HTTP error code, so the admin page
+// can never mistake one for a success.
+function uploadFail($message, $code = 400, $extra = array())
+{
+    http_response_code($code);
+    header('Content-Type: application/json');
+    echo json_encode(array_merge(array("success" => false, "message" => $message), $extra));
+    die;
+}
+
+// A file name for a new upload that no other work is using. Re-using a name
+// would silently replace that other work's image, thumbnail and web copy.
+function uniqueArtworkFileName($conn, $originalName, $dirs)
+{
+    $base = pathinfo($originalName, PATHINFO_FILENAME);
+    $base = trim(preg_replace('/[^A-Za-z0-9_-]+/', '-', $base), '-');
+    if ($base === '') {
+        $base = 'artwork';
+    }
+    $base = substr($base, 0, 80);
+
+    $inUse = $conn->prepare("SELECT COUNT(*) FROM allWorks WHERE fileLocation = ?");
+    for ($n = 1; ; $n++) {
+        $candidate = $base . ($n > 1 ? '-' . $n : '') . '.jpeg';
+        $taken = false;
+        foreach ($dirs as $dir) {
+            if (file_exists($dir . $candidate)) {
+                $taken = true;
+                break;
+            }
+        }
+        if (!$taken) {
+            $inUse->execute(array($candidate));
+            $taken = $inUse->fetchColumn() > 0;
+        }
+        if (!$taken) {
+            return $candidate;
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check session
-    if ($_SESSION["ambar"] != "connected") {
-        header('Content-Type: application/json');
-        echo json_encode(array("success" => false, "message" => "Authentication required"));
-        die;
+    if (($_SESSION["ambar"] ?? null) != "connected") {
+        uploadFail("You have been signed out. Please sign in again.", 401, array("signedOut" => true));
     }
 
-    // Check if photo was uploaded
     if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => false,
-            "message" => "File upload error",
-            "error_code" => isset($_FILES['photo']) ? $_FILES['photo']['error'] : 'No file uploaded'
-        ));
-        die;
+        $errorCode = isset($_FILES['photo']) ? $_FILES['photo']['error'] : UPLOAD_ERR_NO_FILE;
+        $tooBig = in_array($errorCode, array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true);
+        uploadFail($tooBig ? "The picture is too large for the server." : "The picture did not arrive. Please try again.",
+            $tooBig ? 413 : 400, array("error_code" => $errorCode));
     }
 
-    // Check required fields
     $requiredFields = ['name', 'medium', 'isColor', 'availability', 'creationYear', 'orderOfDisplay', 'carousel', 'selectWork'];
     $missingFields = [];
-
     foreach ($requiredFields as $field) {
         if (!isset($_POST[$field]) || $_POST[$field] === '') {
             $missingFields[] = $field;
         }
     }
-
     if (count($missingFields) > 0) {
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => false,
-            "message" => "Missing required fields",
-            "missing" => $missingFields
-        ));
-        die;
+        uploadFail("Missing required fields: " . implode(', ', $missingFields), 400, array("missing" => $missingFields));
     }
 
-    // Get photo and form data
     $photo = $_FILES['photo'];
-    $locationName = $photo['name'];
-    $fileLocation = $locationName;
+
+    $tooLarge = uploadTooLargeMessage($photo['tmp_name']);
+    if ($tooLarge !== null) {
+        uploadFail($tooLarge, 413);
+    }
 
     $name = $_POST["name"];
-    $desc2 = isset($_POST["firstDescription"]) ? $_POST["firstDescription"] : '';
-    $desc3 = isset($_POST["secondDescription"]) ? $_POST["secondDescription"] : '';
+    $desc2 = $_POST["firstDescription"] ?? '';
+    $desc3 = $_POST["secondDescription"] ?? '';
     $medium = $_POST["medium"];
     $color = $_POST["isColor"];
     $isAvailable = $_POST["availability"];
@@ -276,111 +313,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $orderOfDisplay = $_POST["orderOfDisplay"];
     $carousel = $_POST["carousel"];
     $selectWork = $_POST["selectWork"];
-    $long_description = isset($_POST["long_description"]) ? $_POST["long_description"] : '';
+    $long_description = $_POST["long_description"] ?? '';
 
-    // Check if destination directories exist
     $baseImageDir = '../baseImages/';
     $thumbnailDir = '../thumbnails/';
+    $webDir = $baseImageDir . 'web/';
 
-    if (!file_exists($baseImageDir)) {
-        if (!mkdir($baseImageDir, 0755, true)) {
-            header('Content-Type: application/json');
-            echo json_encode(array("success" => false, "message" => "Base image directory doesn't exist and couldn't be created"));
-            die;
+    foreach (array($baseImageDir, $thumbnailDir) as $dir) {
+        if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+            uploadFail("Image folder is missing and couldn't be created", 500);
         }
-    } else if (!is_writable($baseImageDir)) {
-        header('Content-Type: application/json');
-        echo json_encode(array("success" => false, "message" => "Base image directory not writable"));
-        die;
-    }
-
-    if (!file_exists($thumbnailDir)) {
-        if (!mkdir($thumbnailDir, 0755, true)) {
-            header('Content-Type: application/json');
-            echo json_encode(array("success" => false, "message" => "Thumbnail directory doesn't exist and couldn't be created"));
-            die;
-        }
-    } else if (!is_writable($thumbnailDir)) {
-        header('Content-Type: application/json');
-        echo json_encode(array("success" => false, "message" => "Thumbnail directory not writable"));
-        die;
-    }
-
-    // Process the image
-    if ($photo['error'] === UPLOAD_ERR_OK) {
-        $tempFilePath = $photo['tmp_name'];
-
-        // Generate a new destination path with the JPEG extension
-        $fileExtension = pathinfo($photo['name'], PATHINFO_EXTENSION);
-        $baseName = basename($photo['name'], "." . $fileExtension);
-        $newFileName = $baseName . ".jpeg";
-        $destination = $baseImageDir . $newFileName;
-
-        try {
-            // Convert and upload the image
-            convertToProgressiveJPEGAndUpload($tempFilePath, $destination);
-            $fileLocation = $newFileName;
-
-            // Create thumbnail
-            createAndSaveThumbnail($destination, $thumbnailDir, $newFileName);
-        } catch (Exception $e) {
-            header('Content-Type: application/json');
-            echo json_encode(array(
-                "success" => false,
-                "message" => "Image processing error",
-                "error" => $e->getMessage()
-            ));
-            die;
+        if (!is_writable($dir)) {
+            uploadFail("Image folder is not writable", 500);
         }
     }
 
-    // Insert into database
+    $newFileName = uniqueArtworkFileName($conn, $photo['name'], artworkImageDirs());
+    $destination = $baseImageDir . $newFileName;
+
+    try {
+        convertToProgressiveJPEGAndUpload($photo['tmp_name'], $destination);
+        createAndSaveThumbnail($destination, $thumbnailDir, $newFileName);
+    } catch (Throwable $e) {
+        @unlink($destination);
+        @unlink($thumbnailDir . $newFileName);
+        error_log('Upload image processing failed: ' . $e->getMessage());
+        uploadFail("This picture could not be read. Please use a JPEG, PNG or GIF.", 415);
+    }
+
+    // The web-sized copies the public site shows. If this fails, webImage.php
+    // makes them on the first visit instead.
+    try {
+        if (is_dir($webDir) || @mkdir($webDir, 0755, true)) {
+            createWebImage($destination, $webDir . $newFileName);
+            createWebImageVariants($webDir . $newFileName, $webDir, $newFileName);
+        }
+    } catch (Throwable $webError) {
+        error_log('Web copy not made at upload for ' . $newFileName . ': ' . $webError->getMessage());
+    }
+
     try {
         $query = "INSERT INTO allWorks (fileLocation, name, desc2,
                     desc3, medium, color,
-                    isAvailable, year, OrderOfDisplay,
+                    isAvailable, year, orderOfDisplay,
                     carousel, isSelectWork, long_description)
-            VALUES (?, ?, ?, 
-                    ?, ?, ?, 
-                    ?, ?, ?, 
-                    ?, ?, ?
-            )";
-
-        $theArray = array($fileLocation, $name, $desc2,
-            $desc3, $medium, $color,
-            $isAvailable, $year, $orderOfDisplay,
-            $carousel, $selectWork, $long_description);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $uploadQuery = $conn->prepare($query);
-        $uploadQuery->execute($theArray);
-
-        $newId = $conn->lastInsertId();
-
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => true,
-            "message" => "Image uploaded successfully",
-            "id" => $newId,
-            "filename" => $fileLocation
-        ));
+        $uploadQuery->execute(array($newFileName, $name, $desc2,
+            $desc3, $medium, $color,
+            $isAvailable, $year, $orderOfDisplay,
+            $carousel, $selectWork, $long_description));
     } catch (PDOException $e) {
-        header('Content-Type: application/json');
-        echo json_encode(array(
-            "success" => false,
-            "message" => "Database error",
-            "error" => $e->getMessage()
-        ));
+        // Don't leave image files behind for a work that doesn't exist
+        foreach (artworkImageDirs() as $dir) {
+            @unlink($dir . $newFileName);
+        }
+        error_log('Upload database error: ' . $e->getMessage());
+        uploadFail("The work could not be saved. Please try again.", 500);
     }
 
+    header('Content-Type: application/json');
+    echo json_encode(array(
+        "success" => true,
+        "message" => "Image uploaded successfully",
+        "id" => $conn->lastInsertId(),
+        "filename" => $newFileName
+    ));
     die;
 }
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
-    if ($_SESSION["ambar"] != "connected") {
-        header("Location: signIn/signIn.php?status=needCredentials");
-        die;
-    }
+    requireAdminApi();
 
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_PATCH);
@@ -545,10 +550,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-    if ($_SESSION["ambar"] != "connected") {
-        header("Location: signIn/signIn.php?status=needCredentials");
-        die;
-    }
+    requireAdminApi();
 
     $rawData = file_get_contents('php://input');
     parse_str($rawData, $_DELETE);
@@ -569,12 +571,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // Create placeholders for IN clause
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
-        $theQuery = "UPDATE allWorks 
-                    SET visible = 0, 
-                        carousel = 0, 
-                        isSelectWork = 0, 
-                        isAvailable = 0 
-                    WHERE workID IN ($placeholders)";
+        // Deleting only hides the works. Their Select Works, Carousel and
+        // For Sale settings are kept (every public query also checks
+        // visible), so restoring brings them back exactly as they were.
+        $theQuery = "UPDATE allWorks SET visible = 0 WHERE workID IN ($placeholders)";
 
         $updateQuery = $conn->prepare($theQuery);
 
@@ -622,6 +622,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $sharedQuery->execute(array($work['fileLocation'], $id));
         $isShared = $sharedQuery->fetchColumn() > 0;
 
+        // The shop may be showing this picture too (an item for sale, or a
+        // past order): the work goes, its picture stays
+        if (!$isShared) {
+            try {
+                $inShop = $conn->prepare("SELECT (SELECT COUNT(*) FROM shopProductImages WHERE fileLocation = ?)
+                                               + (SELECT COUNT(*) FROM shopOrderItems WHERE imageLocation = ?)");
+                $inShop->execute(array($work['fileLocation'], $work['fileLocation']));
+                $isShared = $inShop->fetchColumn() > 0;
+            } catch (Throwable $e) {
+                // (no shop tables yet: nothing there can be using it)
+            }
+        }
+
         try {
             $conn->prepare("DELETE FROM worksInProjects WHERE workId = ?")->execute(array($id));
             $conn->prepare("DELETE FROM allWorks WHERE workID = ?")->execute(array($id));
@@ -633,7 +646,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
         $deletedFiles = array();
         if (!$isShared && $fileName !== '') {
-            foreach (array('../baseImages/', '../thumbnails/') as $dir) {
+            foreach (artworkImageDirs() as $dir) {
                 $path = $dir . $fileName;
                 if (is_file($path) && unlink($path)) {
                     $deletedFiles[] = $path;
@@ -654,12 +667,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     // Regular single-item delete starts here...
     $id = $_DELETE['id'];
 
-    $theQuery = "UPDATE allWorks
-                SET visible = 0,
-                    carousel = 0,
-                    isSelectWork = 0,
-                    isAvailable = 0
-                WHERE workID = ?";
+    // Only hides the work; see the batch delete above
+    $theQuery = "UPDATE allWorks SET visible = 0 WHERE workID = ?";
 
     $theArray = array($id);
 

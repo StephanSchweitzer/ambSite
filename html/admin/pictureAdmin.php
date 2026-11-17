@@ -1,6 +1,6 @@
 <?php
-session_start();
-if ($_SESSION["ambar"] != "connected") {
+include_once __DIR__ . '/../database/session.php';
+if (($_SESSION["ambar"] ?? null) != "connected") {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;
 }
@@ -13,7 +13,7 @@ if ($_SESSION["ambar"] != "connected") {
     <title>Works Administration</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
 
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
@@ -511,15 +511,153 @@ if ($_SESSION["ambar"] != "connected") {
             font-weight: 600;
         }
 
-        @media (max-width: 768px) {
+        /* Phones and small tablets: the sidebar sits above the works as a
+           compact panel instead of a fixed column beside them. */
+        @media (max-width: 767.98px) {
+            .admin-layout {
+                flex-direction: column;
+            }
+
             .sidebar {
                 width: 100%;
-                position: relative;
+                position: static;
                 min-height: auto;
+                padding: 15px;
+            }
+
+            .admin-title {
+                font-size: 1.4rem;
+                margin-bottom: 12px;
+            }
+
+            .sidebar-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .sidebar-actions .btn {
+                margin-bottom: 0 !important;
+                font-size: 0.95rem;
+                font-weight: 600;
+            }
+
+            .section-title {
+                margin: 15px 0 8px;
+            }
+
+            .sidebar .view-options {
+                flex-direction: row !important;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 0 !important;
+            }
+
+            .sidebar .view-options .nav-link {
+                background-color: rgba(255,255,255,0.06);
+                margin-bottom: 0;
+                padding: 6px 12px;
+                font-size: 0.9rem;
+            }
+
+            .sidebar .view-options .nav-link.active {
+                background-color: #3b7a57;
+            }
+
+            .stats-list {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .stats-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 10px 6px;
+                margin-bottom: 0;
+            }
+
+            .stats-card i {
+                font-size: 18px;
+                margin: 0 0 4px;
+            }
+
+            .stats-card .count {
+                font-size: 1.2rem;
             }
 
             .content-area {
                 margin-left: 0;
+                padding: 10px;
+            }
+
+            .main-content {
+                padding: 15px;
+            }
+
+            .main-content h1 {
+                font-size: 1.3rem;
+                margin-bottom: 0;
+            }
+
+            .multi-select-toolbar > div {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .work-card {
+                margin-bottom: 12px;
+            }
+
+            .work-image {
+                height: 150px;
+            }
+
+            .work-info {
+                padding: 10px;
+            }
+
+            .work-title {
+                font-size: 0.95rem;
+            }
+
+            .work-medium, .work-year {
+                font-size: 0.8rem;
+            }
+
+            .work-badges {
+                top: 6px;
+                right: 6px;
+                gap: 3px;
+            }
+
+            .work-badges .badge {
+                font-size: 0.65rem;
+            }
+
+            .toast-container {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+            }
+
+            .custom-toast {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .modal-content #previewImage,
+            .modal-content #uploadPreview {
+                max-height: 220px;
+                object-fit: contain;
+            }
+
+            .modal-footer {
+                flex-wrap: wrap;
+            }
+
+            .modal-footer #deleteOrRestore {
+                margin-right: auto;
             }
         }
 
@@ -599,21 +737,23 @@ if ($_SESSION["ambar"] != "connected") {
     </div>
 </div>
 
-<div class="d-flex">
+<div class="d-flex admin-layout">
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="admin-title">Works Admin</div>
 
-        <a href="mainAdmin.php" class="btn btn-outline-light btn-sm w-100 mb-3">
-            <i class="fas fa-arrow-left"></i> Main Admin
-        </a>
+        <div class="sidebar-actions">
+            <a href="mainAdmin.php" class="btn btn-outline-light btn-sm w-100 mb-3">
+                <i class="fas fa-arrow-left"></i> Main Admin
+            </a>
 
-        <button class="btn btn-light w-100 mb-4" id="addNewWorkBtn">
-            <i class="fas fa-plus"></i> Add New Work
-        </button>
+            <button class="btn btn-light w-100 mb-4" id="addNewWorkBtn">
+                <i class="fas fa-plus"></i> Add New Work
+            </button>
+        </div>
 
         <div class="section-title">View Options</div>
-        <nav class="nav flex-column mb-4">
+        <nav class="nav flex-column mb-4 view-options">
             <a class="nav-link active" href="#" id="viewSelectWorks">
                 <i class="fas fa-star"></i> Select Works
             </a>
@@ -629,6 +769,7 @@ if ($_SESSION["ambar"] != "connected") {
         </nav>
 
         <div class="section-title">Statistics</div>
+        <div class="stats-list">
         <div class="stats-card d-flex align-items-center" id="totalWorksCard">
             <i class="fas fa-photo-film"></i>
             <div>
@@ -651,6 +792,7 @@ if ($_SESSION["ambar"] != "connected") {
                 <small>In Carousel</small>
                 <p class="count" id="carouselWorksCount">0</p>
             </div>
+        </div>
         </div>
     </div>
 
@@ -999,8 +1141,9 @@ if ($_SESSION["ambar"] != "connected") {
                             <img id="uploadPreview" class="img-fluid rounded mb-3" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiM5OTk5OTkiPlNlbGVjdCBJbWFnZTwvdGV4dD48L3N2Zz4=" alt="Upload Preview">
                             <div class="mb-3">
                                 <label for="photoPostUpload" class="form-label">Select Image</label>
-                                <input class="form-control" type="file" accept="image/*" name="photoPostUpload" id="photoPostUpload">
-                                <div class="form-text">Maximum file size: 1.2 MB</div>
+                                <input class="form-control" type="file" accept="image/*,.heic,.heif" name="photoPostUpload" id="photoPostUpload">
+                                <div class="form-text">Any photo works. Large ones are resized automatically.</div>
+                                <div class="form-text" id="uploadPrepNote"></div>
                             </div>
                         </div>
                     </div>
@@ -1197,6 +1340,7 @@ if ($_SESSION["ambar"] != "connected") {
 <div class="toast-container"></div>
 
 <!-- Custom JS -->
+<script src="../js/imagePrep.js?v=<?php echo filemtime(__DIR__ . '/../js/imagePrep.js'); ?>"></script>
 <script src="../js/photoAdminFunctions.js"></script>
 
 <script>
@@ -1205,5 +1349,6 @@ if ($_SESSION["ambar"] != "connected") {
         getAllWorks('Select Works');
     });
 </script>
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

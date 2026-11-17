@@ -1,9 +1,10 @@
 <?php
 
 global $conn;
-session_start();
+include_once __DIR__ . '/../database/session.php';
 
 include '../database/pdo.php';
+include_once __DIR__ . '/adminAuth.php';
 
 function makeNewCurrentProject($id)
 {
@@ -22,7 +23,17 @@ function makeNewCurrentProject($id)
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
   $activity = isset($_GET['activity']) ? $_GET['activity'] : "";
-  
+
+  // Inactive, deleted and "all" project lists are only for the admin pages
+  $adminOnlyActivities = array('inactive', 'deleted', 'all');
+  if (in_array($activity, $adminOnlyActivities, true) && ($_SESSION["ambar"] ?? null) != "connected")
+  {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(array('status' => 'error', 'message' => 'Unauthorized'));
+    die;
+  }
+
   $activityCondition = "WHERE active = 1 ";
 
   if($activity == 'inactive')
@@ -37,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
   if($activity == 'currentProject')
   {
-    $activityCondition = "WHERE isCurrentProject = 1 ";
+    $activityCondition = "WHERE isCurrentProject = 1 AND deleted = 0 ";
   }
 
   if($activity == 'all')
@@ -79,11 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+  requireAdminApi();
 
   $title = $_POST["title"];
   $description = $_POST["description"];
@@ -128,11 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 {
 
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+  requireAdminApi();
 
   $rawData = file_get_contents('php://input');
   parse_str($rawData, $_PATCH);
@@ -143,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $orderOfDisplay = $_PATCH['orderOfDisplay'];
   $active = $_PATCH['active'];
   $isCurrentProject = $_PATCH['isCurrentProject'];
-  $restore = $_PATCH['restore'];
+  $restore = $_PATCH['restore'] ?? '';
 
   if ($restore == "restore")
   {
@@ -183,11 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 {
 
-  if ($_SESSION["ambar"] != "connected")
-  {
-    header("Location: signIn/signIn.php?status=needCredentials");
-    die;
-  }
+  requireAdminApi();
 
   $rawData = file_get_contents('php://input');
   parse_str($rawData, $_DELETE);
@@ -198,7 +197,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE')
 
   $id = $_DELETE['id'];
 
-  $theQuery = "UPDATE projects SET deleted = 1, active = 0 WHERE id = ?";
+  // A deleted project also stops being the current project, so it leaves
+  // the public Current Project page
+  $theQuery = "UPDATE projects SET deleted = 1, active = 0, isCurrentProject = 0 WHERE id = ?";
   //echo $theQuery;
 
   $theArray = array($id);

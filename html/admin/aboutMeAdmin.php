@@ -1,6 +1,6 @@
 <?php
-session_start();
-if ($_SESSION["ambar"] != "connected") {
+include_once __DIR__ . '/../database/session.php';
+if (($_SESSION["ambar"] ?? null) != "connected") {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;
 }
@@ -13,7 +13,7 @@ if ($_SESSION["ambar"] != "connected") {
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>About Me Admin Page</title>
     <style>
         body {
@@ -252,7 +252,7 @@ if ($_SESSION["ambar"] != "connected") {
                                         <i class="fas fa-upload mr-2"></i> Select New Photo (Optional)
                                     </label>
                                     <div class="custom-file">
-                                        <input type="file" class="custom-file-input" id="aboutMePhoto" accept="image/*" onchange="previewNewPhoto(this)">
+                                        <input type="file" class="custom-file-input" id="aboutMePhoto" accept="image/*,.heic,.heif" onchange="previewNewPhoto(this)">
                                         <label class="custom-file-label" for="aboutMePhoto">Choose file...</label>
                                     </div>
                                 </div>
@@ -308,7 +308,9 @@ if ($_SESSION["ambar"] != "connected") {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+<script src="../js/imagePrep.js?v=<?php echo filemtime(__DIR__ . '/../js/imagePrep.js'); ?>"></script>
 <script src="../js/aboutMe.js"></script>
 
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

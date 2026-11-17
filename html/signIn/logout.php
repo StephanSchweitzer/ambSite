@@ -1,5 +1,5 @@
 <?php
-session_start();
+include_once __DIR__ . '/../database/session.php';
 
 // Unset all session variables
 $_SESSION = array();

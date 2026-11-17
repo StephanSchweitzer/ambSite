@@ -1,6 +1,6 @@
 <?php
-session_start();
-if ($_SESSION["ambar"] != "connected") {
+include_once __DIR__ . '/../database/session.php';
+if (($_SESSION["ambar"] ?? null) != "connected") {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;
 }
@@ -15,7 +15,7 @@ if ($_SESSION["ambar"] != "connected") {
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="admin.css">
     <script src="../js/projectAdminFunctions.js"></script>
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Project Admin Dashboard</title>
 
     <style>
@@ -470,6 +470,53 @@ if ($_SESSION["ambar"] != "connected") {
             color: #ffc107; /* Same as active color on hover */
             border-color: #636b74 #636b74 #495057; /* Slightly lighter borders on hover */
         }
+
+        /* Phones and small tablets */
+        @media (max-width: 767.98px) {
+            .admin-container {
+                margin: 10px;
+                padding: 12px;
+            }
+
+            .page-header {
+                padding: 18px;
+                margin-bottom: 15px;
+            }
+
+            .page-header .lead {
+                font-size: 1rem;
+                margin-bottom: 0;
+            }
+
+            .control-panel {
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+
+            .control-panel .text-right {
+                text-align: left !important;
+            }
+
+            .control-panel .btn-action {
+                display: block;
+                width: 100%;
+                margin: 5px 0;
+            }
+
+            .project-counts {
+                gap: 8px;
+            }
+
+            .filter-controls .btn-action {
+                margin: 0;
+                padding: 8px 6px;
+                font-size: 0.85rem;
+            }
+
+            .project-card {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -766,5 +813,6 @@ if ($_SESSION["ambar"] != "connected") {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

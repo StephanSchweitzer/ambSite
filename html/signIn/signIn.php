@@ -1,7 +1,4 @@
 <!DOCTYPE html>
-
-
-<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
@@ -9,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../admin/admin.css"> <!-- Path to your admin CSS file -->
-  <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+  <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
   <title>Sign In</title>
 </head>
 <body>
@@ -20,9 +17,14 @@
       <div class="admin-container my-5 bg-dark text-white p-4 rounded">
         <!-- Status message, if any -->
         <?php
-          if(isset($_GET['status'])) {
-            $status = htmlspecialchars($_GET["status"]);
-            echo "<div class='alert alert-danger text-center' role='alert'>".$status."</div>";
+          $messages = array(
+            'needCredentials' => 'Please sign in to continue.',
+            'incorrect' => 'That username or password is not right. Please try again.',
+            'blocked' => 'Too many tries in a row. Please wait an hour, then try again.',
+          );
+          $status = $_GET['status'] ?? '';
+          if (isset($messages[$status])) {
+            echo "<div class='alert alert-danger text-center' role='alert'>" . $messages[$status] . "</div>";
           }
         ?>
 

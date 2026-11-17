@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="44" viewBox="0 0 160 44">
+<defs>
+<clipPath id="torn"><path d="M6.0 2.2 L28.0 2.9 L50.0 2.7 L72.0 2.3 L94.0 3.6 L116.0 2.9 L138.0 3.0 L154.8 3.0 L154.8 6.2 L153.6 9.4 L153.2 12.6 L156.4 15.8 L152.7 19.0 L154.2 22.2 L155.6 25.4 L157.1 28.6 L154.2 31.8 L152.3 35.0 L153.2 38.2 L154.0 41.4 L132.0 41.1 L110.0 41.1 L88.0 41.0 L66.0 40.6 L44.0 40.7 L22.0 41.5 L1.9 41.0 L3.0 37.8 L5.5 34.6 L6.4 31.4 L1.9 28.2 L4.3 25.0 L7.5 21.8 L5.1 18.6 L2.4 15.4 L5.7 12.2 L7.9 9.0 L3.9 5.8 Z"/></clipPath>
+<filter id="paint" x="0" y="0" width="160" height="44" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.014 0.11" numOctaves="3" seed="11" result="cover"/>
+<feColorMatrix in="cover" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  5 0 0 0 -1.3" result="coverMask"/>
+<feFlood flood-color="#6f9fe6" result="paintColor"/>
+<feComposite in="paintColor" in2="coverMask" operator="in" result="paint"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.008 0.42" numOctaves="2" seed="16" result="streakNoise"/>
+<feColorMatrix in="streakNoise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.6 0 0 0 -0.62" result="streakMask"/>
+<feFlood flood-color="#2f5fd0" result="darkColor"/>
+<feComposite in="darkColor" in2="streakMask" operator="in" result="streaks"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.01 0.6" numOctaves="2" seed="20" result="lightNoise"/>
+<feColorMatrix in="lightNoise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1.4 0 0 0 -0.58" result="lights"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="14" result="grainNoise"/>
+<feColorMatrix in="grainNoise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.22 -0.06" result="grain"/>
+<feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="paint"/><feMergeNode in="streaks"/><feMergeNode in="lights"/><feMergeNode in="grain"/></feMerge>
+</filter>
+</defs>
+<g clip-path="url(#torn)" opacity="0.93">
+<rect width="160" height="44" fill="#efe5cc" filter="url(#paint)"/>
+</g>
+</svg>

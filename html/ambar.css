@@ -39,6 +39,15 @@
   --shadow-lifted: 0 18px 44px rgba(29, 29, 27, 0.16);
 
   --header-clearance: 12vh;
+
+  /* Painted tape scraps (stand-ins until Ambar's own scanned tape replaces
+     the files in miscIcons/tape/) */
+  --tape-blue: url('/miscIcons/tape/tape-blue.svg');
+  --tape-pink: url('/miscIcons/tape/tape-pink.svg');
+  --tape-yellow: url('/miscIcons/tape/tape-yellow.svg');
+  --tape-green: url('/miscIcons/tape/tape-green.svg');
+  --tape-lilac: url('/miscIcons/tape/tape-lilac.svg');
+  --tape-coral: url('/miscIcons/tape/tape-coral.svg');
 }
 
 /* ---------- Base ---------- */
@@ -62,6 +71,15 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* The tape scraps on the right-hand works reach a few pixels past a phone's
+   edge. iPhones ignore body's overflow-x and let the page be dragged
+   sideways, so trim at the page wrapper too. clip (not hidden) keeps it from
+   becoming a scroll box; hidden is the fallback for older Safari. */
+.page-container {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
 ::selection {
   background: rgba(239, 127, 174, 0.25); /* logo pink */
   color: var(--color-ink);
@@ -80,23 +98,6 @@ body {
   border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover { background: #bdbbb4; }
-
-/* Legacy font faces (still referenced by a few admin-era classes) */
-@font-face {
-  font-family: 'Nunito';
-  src: url('fonts/static/Nunito-Light.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'NunitoBold';
-  src: url('fonts/static/Nunito-SemiBold.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
 
 /* ---------- Links ---------- */
 a {
@@ -134,28 +135,10 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   pointer-events: auto;
 }
 
-.headerNoMove2 {
-  top: 0;
-  bottom: 0;
-  position: fixed;
-  width: 100%;
-  height: 150px;
-  z-index: 100;
-}
-
-.headerNoMove3 {
-  top: 0;
-  bottom: 0;
-  position: fixed;
-  width: 100%;
-  height: 18px;
-  z-index: 100;
-  color: white;
-  background-color: white;
-}
-
 .blockForHeader {
-  max-width: 21vw;
+  /* 19vw keeps the logo clear of the white content sheet, which starts at
+     24vw (5vw margin + 19vw, less the logo's -12px nudge) */
+  max-width: 19vw;
   margin-left: 5vw;
   margin-top: 1vw;
   padding: 0;
@@ -177,16 +160,32 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   flex-direction: row;
 }
 
+/* The logo is the page's main heading; the h1 itself adds no styling */
+.site-title {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: inherit;
+  line-height: 0;
+}
+
+.site-title a {
+  display: block;
+}
+
 .ambarNamePic {
   margin-top: 2vh;
   width: 100%;
+  height: auto;
   max-width: 250px;
   margin-left: -12px;
   transition: transform 0.4s var(--ease-out-soft);
 }
 
-a:hover .ambarNamePic {
-  transform: rotate(-2deg) scale(1.03);
+/* A gentle lift, the same motion as the gallery pictures */
+@media (hover: hover) {
+  a:hover .ambarNamePic {
+    transform: translateY(-2px) scale(1.02);
+  }
 }
 
 .ambarNamePicMobile {
@@ -195,16 +194,7 @@ a:hover .ambarNamePic {
   margin-left: 4vw !important;
   width: 44vw;
   max-width: 170px;
-}
-
-/* Legacy white strips kept for the modal open/close choreography */
-.whiteComeAndGo {
-  background-color: white;
-  color: white;
-  height: 20px;
-  position: fixed;
-  width: 100%;
-  z-index: 10000000;
+  height: auto;
 }
 
 /* ---------- Hamburger ---------- */
@@ -289,24 +279,39 @@ a:hover .ambarNamePic {
   padding-bottom: 4px;
 }
 
-/* Rainbow hairline underline — the site's signature hover */
+/* On hover a strip of painted tape is laid down behind the label, left to
+   right — the site's signature hover */
+.mainLinkGenres,
+.nav-link-container .mainLinkGenres {
+  isolation: isolate; /* keeps the tape behind the words, not behind the page */
+  text-decoration: none !important;
+}
+
 .mainLinkGenres:after,
 .nav-link-container .mainLinkGenres:after {
   content: '';
   position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  background: var(--amb-rainbow);
-  border-radius: 2px;
-  transition: width 0.35s var(--ease-out-soft);
+  z-index: -1;
+  left: -9px;
+  right: -5px;
+  top: 50%;
+  height: 1.75em;
+  margin-top: -1em;
+  background: var(--tape-menu, var(--tape-yellow)) center / 100% 100% no-repeat;
+  opacity: 0.85;
+  transform: rotate(-1.5deg);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.4s var(--ease-out-soft);
 }
 
 .mainLinkGenres:hover:after,
 .nav-link-container .mainLinkGenres:hover:after {
-  width: 100%;
+  clip-path: inset(0 0 0 0);
 }
+
+.nav-link-container:nth-child(4n+2) .mainLinkGenres:after { --tape-menu: var(--tape-pink); transform: rotate(1deg); }
+.nav-link-container:nth-child(4n+3) .mainLinkGenres:after { --tape-menu: var(--tape-blue); }
+.nav-link-container:nth-child(4n+4) .mainLinkGenres:after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
 
 /* ---------- Sub-links dropdown (Works → Painting / Drawing / …) ---------- */
 .hiddenLinkStuff {
@@ -410,8 +415,8 @@ a:hover .ambarNamePic {
 }
 
 .navLinksBoxMobile .mainLinkGenres:after {
-  height: 2px;
-  bottom: 6px;
+  height: 1.6em;
+  margin-top: -0.85em;
 }
 
 /* Overlay behind the drawer */
@@ -509,8 +514,12 @@ a:hover .ambarNamePic {
 
 .carousel-inner { width: 100%; }
 
+.carousel-link { display: block; }
+
 .carousel-pic {
   cursor: pointer;
+  width: auto;
+  height: auto;
   max-height: 72vh;
   max-width: 100%;
   margin: auto;
@@ -519,9 +528,13 @@ a:hover .ambarNamePic {
   transition: transform 0.6s var(--ease-out-soft), box-shadow 0.6s ease;
 }
 
-.carousel-pic:hover {
-  transform: scale(1.012);
-  box-shadow: var(--shadow-lifted);
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .carousel-pic:hover {
+    transform: scale(1.012);
+    box-shadow: var(--shadow-lifted);
+  }
 }
 
 .carousel-item {
@@ -578,17 +591,20 @@ a:hover .ambarNamePic {
   letter-spacing: 0.04em;
 }
 
-/* Small rainbow tick under each project title */
+/* A torn strip of painted tape under each project title (see "Painted
+   tape" below) */
 .project-header:after {
   content: '';
   display: block;
-  width: 44px;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--amb-rainbow);
-  margin: 0.9rem auto 0;
-  opacity: 0.85;
+  width: 104px;
+  aspect-ratio: 160 / 44;
+  background: var(--tape-title, var(--tape-blue)) center / 100% 100% no-repeat;
+  margin: 0.7rem auto 0;
+  transform: rotate(-2.5deg);
 }
+
+.project:nth-of-type(3n+2) .project-header:after { --tape-title: var(--tape-pink); transform: rotate(1.5deg); }
+.project:nth-of-type(3n+3) .project-header:after { --tape-title: var(--tape-yellow); transform: rotate(-1deg); }
 
 .project-description {
   color: var(--color-text-secondary);
@@ -601,13 +617,6 @@ a:hover .ambarNamePic {
   min-width: 51vw;
   /* Keep the original single-column layout — do not use grid */
   margin-top: 40px;
-}
-
-.projectWorksForRows {
-  column-count: 3;
-  column-gap: 0;
-  margin-top: 50px;
-  margin-left: 33px;
 }
 
 /* ---------- Artwork cards ---------- */
@@ -629,6 +638,24 @@ a:hover .ambarNamePic {
   margin-bottom: 0px;
 }
 
+/* Each work is a link to its own address (/work/<id>/<name>) */
+.work-card,
+.work-card:hover,
+.work-card:focus {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Keyboard focus on a work: show the title as on hover */
+.work-card:focus-visible {
+  outline-offset: 6px;
+}
+
+.work-card:focus-visible .img-overlay {
+  transform: translateY(0);
+  opacity: 1;
+}
+
 .img-container {
   margin: auto;
   overflow: hidden;
@@ -638,9 +665,13 @@ a:hover .ambarNamePic {
   position: relative;
 }
 
-.img-container:hover {
-  box-shadow: var(--shadow-medium);
-  transform: translateY(-4px);
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .img-container:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-4px);
+  }
 }
 
 .img-container img {
@@ -663,8 +694,12 @@ a:hover .ambarNamePic {
   max-height: none;
 }
 
-.img-container:hover img {
-  transform: scale(1.015);
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .img-container:hover img {
+    transform: scale(1.015);
+  }
 }
 
 /* Title reveal on hover — soft dark gradient, serif caption */
@@ -681,9 +716,13 @@ a:hover .ambarNamePic {
   pointer-events: none;
 }
 
-.img-container:hover .img-overlay {
-  transform: translateY(0);
-  opacity: 1;
+/* Hover effects only where there's a mouse: on a phone a tap would set them
+   off (and leave them stuck) just as the viewer opens */
+@media (hover: hover) {
+  .img-container:hover .img-overlay {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .overlay-title {
@@ -693,14 +732,6 @@ a:hover .ambarNamePic {
   font-weight: 500;
   letter-spacing: 0.05em;
   color: #ffffff;
-}
-
-.img-containerForRows {
-  width: 100%;
-  height: auto;
-  display: block;
-  break-inside: avoid;
-  padding: 10px;
 }
 
 /* ---------- Sparkle separators between projects ---------- */
@@ -716,7 +747,82 @@ a:hover .ambarNamePic {
   user-select: none;
 }
 
-.work-separator.last { visibility: hidden; }
+/* ---------- Painted tape: the works are taped to the page ----------
+   Each painting is held up by scraps of painted tape, as Ambar's tape works
+   are made of. Colours and placement change from one painting to the next
+   (in a repeating pattern) so it looks done by hand. The tape is two
+   pseudo-elements on the card, so the server-drawn and JS-drawn galleries
+   both get it with no change to their markup. */
+.projectWorks .work-card {
+  --tape-w: clamp(72px, 9vw, 132px);
+  --tape-a: var(--tape-yellow);
+  --tape-b: var(--tape-blue);
+}
+
+.projectWorks .work-card:before,
+.projectWorks .work-card:after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  width: var(--tape-w);
+  aspect-ratio: 160 / 44;
+  background: var(--tape-a) center / 100% 100% no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
+  transition: transform 0.45s var(--ease-out-soft);
+}
+
+.projectWorks .work-card:after {
+  background-image: var(--tape-b);
+}
+
+/* Pattern 1: across both top corners */
+.projectWorks .work-card:before {
+  left: 14px;
+  top: 12px;
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+
+.projectWorks .work-card:after {
+  right: 14px;
+  top: 12px;
+  transform: translate(50%, -50%) rotate(41deg);
+}
+
+/* Pattern 2: one strip over the top edge, one across the bottom-right corner */
+.projectWorks .work-card:nth-child(3n+2):before {
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -45%) rotate(-3deg);
+}
+
+.projectWorks .work-card:nth-child(3n+2):after {
+  top: auto;
+  right: 12px;
+  bottom: 12px;
+  transform: translate(50%, 50%) rotate(-36deg);
+}
+
+/* Pattern 3: top-left and bottom-right corners */
+.projectWorks .work-card:nth-child(3n+3):after {
+  top: auto;
+  right: 14px;
+  bottom: 14px;
+  transform: translate(50%, 50%) rotate(-42deg);
+}
+
+/* Colours, in a different rhythm to the placement */
+.projectWorks .work-card:nth-child(4n+2) { --tape-a: var(--tape-pink); --tape-b: var(--tape-green); }
+.projectWorks .work-card:nth-child(4n+3) { --tape-a: var(--tape-lilac); --tape-b: var(--tape-coral); }
+.projectWorks .work-card:nth-child(4n+4) { --tape-a: var(--tape-blue); --tape-b: var(--tape-yellow); }
+
+/* A taped-up painting doesn't float up on hover: the shadow deepens a
+   little, as if the tape were lifting */
+@media (hover: hover) {
+  .projectWorks .img-container:hover {
+    transform: none;
+  }
+}
 
 /* ==========================================================================
    Image modal
@@ -735,14 +841,8 @@ a:hover .ambarNamePic {
   opacity: 0.93;
 }
 
-.modal.fade .modal-dialog {
-  transform: scale(0.97);
-  transition: transform 0.3s var(--ease-out-soft);
-}
-
-.modal.show .modal-dialog {
-  transform: scale(1);
-}
+/* The viewer has no Bootstrap "fade": openViewer() / closeViewer() animate
+   it themselves (the painting grows out of the one that was tapped) */
 
 .centerLargePhoto {
   display: flex;
@@ -751,24 +851,162 @@ a:hover .ambarNamePic {
   position: relative;
 }
 
+/* The painting's size is worked out from its proportions (--w / --h, the
+   web copy's pixel size, set on the image) so the space is right before it
+   has loaded and it never jumps, and from --room: the height left for it
+   once the buttons above and the caption below have theirs, so the whole
+   viewer fits on the screen (fitViewerToScreen in photoFunctions.js, which
+   sets it). viewerImageWidth() there does the same sums. */
 .popUpImage {
-  max-height: 82vh;
+  max-height: var(--room, 74vh);
   max-width: 90vw;
+  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)), calc(var(--w) * 1px));
+  aspect-ratio: var(--w) / var(--h);
+  height: auto;
   border-radius: 3px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
-  margin-top: 4vh;
 }
 
 .popUpImageMobile {
-  max-height: 90vh;
+  max-height: var(--room, 74vh);
   max-width: 90vw;
-  min-width: 90vw;
+  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)));
+  aspect-ratio: var(--w) / var(--h);
+  height: auto;
   border-radius: 3px;
-  transition: transform 0.3s ease;
-  transform: translate3d(0, 0, 0);
 }
 
 #imageTitle, #imageDescription, #popUpImage { cursor: pointer; }
+
+/* While the next painting loads, the current one dims instead of vanishing */
+#popUpImage {
+  transition: opacity 0.2s ease;
+  transform-origin: 0 0; /* the open / close zoom is worked out from the top-left corner */
+}
+
+/* Opening: the caption, close button and arrows follow just after the
+   painting; closing: they go first */
+.modal.is-opening .imageInfo,
+.modal.is-opening .modal-close,
+.modal.is-opening .viewer-toolbar,
+.modal.is-opening .modal-nav-arrows,
+.modal.is-closing .imageInfo,
+.modal.is-closing .modal-close,
+.modal.is-closing .viewer-toolbar,
+.modal.is-closing .modal-nav-arrows {
+  opacity: 0;
+  transition: none;
+}
+
+.modal.is-arriving .imageInfo,
+.modal.is-arriving .modal-close,
+.modal.is-arriving .viewer-toolbar,
+.modal.is-arriving .modal-nav-arrows {
+  transition: opacity 0.35s ease 0.12s;
+}
+
+.modal.is-closing .imageInfo,
+.modal.is-closing .modal-close,
+.modal.is-closing .viewer-toolbar,
+.modal.is-closing .modal-nav-arrows {
+  transition: opacity 0.14s ease;
+}
+
+/* Room above the painting for the buttons, and a little below the caption
+   (sizes from fitViewerToScreen) */
+#bigPicModal .modal-dialog {
+  margin-top: var(--viewer-top, 66px);
+  margin-bottom: var(--viewer-bottom, 14px);
+}
+
+/* A long description shows three lines; "more" opens it up */
+#imageDescription {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.imageInfo.is-expanded #imageDescription {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.image-more {
+  background: none;
+  border: 0;
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.image-more[hidden] { display: none; }
+
+.image-more:hover { color: #fff; }
+
+/* Zoom and See to scale: round buttons beside the close button */
+.viewer-toolbar {
+  position: fixed;
+  top: 18px;
+  right: 74px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+}
+
+.viewer-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.viewer-icon[hidden] { display: none; }
+
+.viewer-icon:hover { background: rgba(255, 255, 255, 0.22); }
+
+.viewer-icon[aria-pressed="true"] {
+  background: #fff;
+  border-color: #fff;
+  color: var(--color-ink);
+}
+
+#popUpImage.is-loading {
+  opacity: 0.35;
+}
+
+/* The title and description fade while one painting gives way to the next */
+.imageInfo {
+  transition: opacity 0.28s ease;
+}
+
+.imageInfo.is-changing {
+  opacity: 0;
+  transition-duration: 0.18s;
+}
+
+.image-counter {
+  font-size: 0.75rem !important;
+  letter-spacing: 0.22em;
+  opacity: 0.5 !important;
+  margin-top: 2px;
+  min-height: 1em;
+}
 
 .imageInfo {
   color: white;
@@ -856,6 +1094,252 @@ a:hover .ambarNamePic {
 
 .nav-arrow:focus { outline: none; }
 
+/* ---------- Viewer tools: zoom and "See to scale" ---------- */
+.viewer-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 15px 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.viewer-tool[hidden] { display: none; }
+
+.viewer-tool:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+.viewer-tool[aria-pressed="true"] {
+  background: #fff;
+  border-color: #fff;
+  color: var(--color-ink);
+}
+
+/* Zooming in: the painting lifted into a layer over the whole viewer
+   (enterZoom in photoFunctions.js), dragged and pinched there */
+.zoom-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 8; /* under the close button */
+  display: none;
+  overflow: hidden;
+  background: rgba(18, 18, 16, 0.97);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.25s ease;
+}
+
+#bigPicModal.is-zoomed .zoom-layer {
+  display: block;
+  animation: zoomLayerIn 0.2s ease;
+}
+
+#bigPicModal.is-unzooming .zoom-layer {
+  background: rgba(18, 18, 16, 0);
+}
+
+@keyframes zoomLayerIn {
+  from { background: rgba(18, 18, 16, 0); }
+}
+
+.zoom-layer.is-dragging { cursor: grabbing; }
+
+.zoom-layer img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  border-radius: 3px;
+  -webkit-user-drag: none;
+}
+
+.zoom-bar {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 5px 5px 16px;
+  border-radius: 999px;
+  background: rgba(18, 18, 16, 0.72);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: default;
+  transition: opacity 0.15s ease;
+}
+
+#bigPicModal.is-unzooming .zoom-bar { opacity: 0; }
+
+/* Phones: no double-tap zoom of the whole page on the painting (the viewer
+   has its own), so taps aren't held up waiting for one */
+#popUpImage { touch-action: manipulation; }
+
+/* "See to scale": a wall, a floor, a figure and the painting, taped up */
+.scale-scene {
+  display: none;
+  position: relative;
+  width: min(90vw, 980px);
+  height: min(var(--room, 66vh), 580px);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--color-paper);
+  background-image: radial-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+#bigPicModal.is-scale .scale-scene {
+  display: block;
+  animation: scaleSceneIn 0.35s var(--ease-out-soft);
+}
+
+#bigPicModal.is-scale #popUpImage { display: none; }
+
+/* The arrows sit over the light wall now: draw them dark */
+#bigPicModal.is-scale .nav-arrow {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(29, 29, 27, 0.18);
+  opacity: 0.8;
+}
+
+#bigPicModal.is-scale .nav-arrow path { stroke: var(--color-ink); }
+
+@keyframes scaleSceneIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.scale-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #e9e4da;
+  border-top: 1px solid #d8d1c3;
+}
+
+.scale-person {
+  position: absolute;
+  fill: #c9c3b6;
+}
+
+/* Small works: close up, standing on a table beside a mug */
+.scale-mug {
+  position: absolute;
+  display: none;
+  fill: #c9c3b6;
+}
+
+.scale-scene.is-table .scale-mug { display: block; }
+.scale-scene.is-table .scale-person { display: none; }
+
+.scale-scene.is-table .scale-floor {
+  background: #ddcbae;
+  border-top: 1px solid #c9b28d;
+}
+
+/* Leaning on the wall rather than taped to it */
+.scale-scene.is-table .scale-art:before,
+.scale-scene.is-table .scale-art:after { display: none; }
+
+.scale-scene.is-table .scale-art {
+  box-shadow: 3px 4px 10px rgba(29, 29, 27, 0.25);
+}
+
+.scale-art {
+  position: absolute;
+  box-shadow: 0 6px 18px rgba(29, 29, 27, 0.22);
+  --tape-w: 40px;
+}
+
+.scale-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.scale-art:before,
+.scale-art:after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: var(--tape-w);
+  aspect-ratio: 160 / 44;
+  background: var(--tape-yellow) center / 100% 100% no-repeat;
+}
+
+.scale-art:before {
+  left: 3px;
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+
+.scale-art:after {
+  right: 3px;
+  background-image: var(--tape-pink);
+  transform: translate(50%, -50%) rotate(40deg);
+}
+
+.scale-back {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(29, 29, 27, 0.18);
+  color: var(--color-ink);
+}
+
+.scale-back:hover {
+  background: #fff;
+  border-color: rgba(29, 29, 27, 0.35);
+  color: var(--color-ink);
+}
+
+.scale-label {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  right: 18px;
+  margin: 0 !important;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem !important;
+  letter-spacing: 0.06em;
+  opacity: 1 !important;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 992px) {
+  .scale-scene {
+    width: 92vw;
+    height: min(var(--room, 60vh), 520px);
+  }
+}
+
 #spinner {
   position: absolute;
   top: 50%;
@@ -905,70 +1389,13 @@ a:hover .ambarNamePic {
   width: 100%;
 }
 
-.section-loading {
-  padding: 30px;
-  text-align: center;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-  box-shadow: var(--shadow-soft);
-  margin: 20px auto;
-  position: relative;
-  z-index: 5;
+/* Phones and tablets skip the home slideshow and go to the works
+   (resolveView in photoFunctions.js), so the slideshow index.php draws for
+   "/" stays hidden there until the works replace it */
+@media (max-width: 992px) and (hover: none) and (pointer: coarse) {
+  main[data-server-view="home"] { visibility: hidden; }
 }
 
-.section-loading .loading-spinner {
-  width: 36px;
-  height: 36px;
-  margin: 10px auto;
-}
-
-.fullpage-loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.92);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  pointer-events: none;
-}
-
-.fullpage-loading .loading-spinner {
-  width: 52px;
-  height: 52px;
-  margin-bottom: 18px;
-}
-
-.fullpage-loading p {
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-light);
-  letter-spacing: 0.08em;
-}
-
-/* Lazy loading fade-in */
-img.lazy-image {
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-img.lazy-image.loaded { opacity: 1; }
-
-img.loaded {
-  animation: imgFadeIn 0.55s ease;
-}
-
-@keyframes imgFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 /* ==========================================================================
    Current project (image / description flip cards)
@@ -1107,101 +1534,1118 @@ img.loaded {
   padding: 0 2vw;
 }
 
-#ambarPersoPic:hover {
-  transform: scale(1.015) rotate(-0.5deg);
-  box-shadow: var(--shadow-lifted);
+/* Lifts like a print raised off the table, the same motion as the gallery */
+@media (hover: hover) {
+  #ambarPersoPic:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lifted);
+  }
 }
 
-.iconsRow {
-  display: flex;
-  flex-direction: row;
-  margin: 3%;
-  justify-content: center;
-  align-items: center;
+/* Email addresses in the About text become links */
+.email-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--amb-pink);
+  text-underline-offset: 3px;
+}
+
+.email-link:hover {
+  color: var(--color-ink);
+  text-decoration-color: var(--color-ink);
 }
 
 /* ==========================================================================
-   Shop
+   Shop (markup: actions/shopPageFunctions.php; behaviour: js/shop.js)
+   The same paper, serif titles and painted tape as the works. Width-based
+   media queries here, not JS class swapping: nothing in the shop has a
+   ...Mobile twin.
    ========================================================================== */
-.shopItem {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  flex: 1 1 auto;
-  min-width: 220px;
-  max-width: 300px;
-  margin: 0 14px 5vh;
-  background: var(--color-background);
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
-  overflow: hidden;
-  transition: transform 0.35s var(--ease-out-soft), box-shadow 0.35s ease;
-}
-
-.shopItem:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-medium);
-}
-
-.shopItem img {
+.shop {
   width: 100%;
-  height: auto;
-  object-fit: cover;
-  display: block;
+  text-align: center;
 }
 
-.shopItem .item-details {
-  display: flex;
-  flex-direction: column;
-  padding: 14px 16px 6px;
+.shop-header {
+  margin-bottom: 2.6rem;
+}
+
+.shop-text-link {
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.shop-text-link:hover {
+  color: var(--amb-blue) !important;
+}
+
+.shop-empty {
+  padding: 8vh 20px 12vh;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-light);
+}
+
+.shop-empty .loading-spinner {
+  margin: 0 auto 18px;
+}
+
+/* A quiet notice: the shop is paused, something sold out... */
+.shop-status {
+  max-width: 520px;
+  margin: 0 auto 26px;
+  padding: 12px 18px;
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--amb-yellow);
+  border-radius: 4px;
+  background: var(--color-paper);
+  font-size: 0.92rem;
+  font-weight: var(--font-weight-light);
   text-align: left;
 }
 
-.shopItem .item-details h3 {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 500;
-  margin-bottom: 4px;
+.shop-status[hidden] {
+  display: none;
 }
 
-.shopItem .item-details p {
-  font-size: 0.88rem;
+/* A gallery's red dot: sold */
+.shop-sold {
+  color: #b5372b;
+}
+
+.shop-sold:before {
+  content: '';
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.55em;
+  border-radius: 50%;
+  background: #cf3b2e;
+}
+
+/* ---------- Everything for sale ---------- */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4rem 3.4vw;
+  align-items: start;
+  padding: 0 1vw;
+}
+
+@media (min-width: 1700px) {
+  .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.shop-card,
+.shop-card:hover,
+.shop-card:focus {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.shop-card:focus-visible {
+  outline-offset: 8px;
+}
+
+/* The picture is taped up like the works are: two scraps per picture, in
+   the same three placements and four colour pairs, so no two neighbours
+   match */
+.shop-card-picture,
+.shop-item-picture {
+  position: relative;
+  display: block;
+  --tape-w: clamp(48px, 27%, 112px);
+  --tape-a: var(--tape-yellow);
+  --tape-b: var(--tape-blue);
+}
+
+.shop-card-picture:before,
+.shop-card-picture:after,
+.shop-item-picture:before,
+.shop-item-picture:after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  width: var(--tape-w);
+  aspect-ratio: 160 / 44;
+  background: var(--tape-a) center / 100% 100% no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
+}
+
+.shop-card-picture:before,
+.shop-item-picture:before {
+  left: 12px;
+  top: 10px;
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+
+.shop-card-picture:after,
+.shop-item-picture:after {
+  background-image: var(--tape-b);
+  right: 12px;
+  top: 10px;
+  transform: translate(50%, -50%) rotate(41deg);
+}
+
+.shop-card:nth-child(3n+2) .shop-card-picture:before {
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -45%) rotate(-3deg);
+}
+
+.shop-card:nth-child(3n+2) .shop-card-picture:after {
+  top: auto;
+  bottom: 10px;
+  transform: translate(50%, 50%) rotate(-36deg);
+}
+
+.shop-card:nth-child(3n+3) .shop-card-picture:after {
+  top: auto;
+  bottom: 12px;
+  transform: translate(50%, 50%) rotate(-42deg);
+}
+
+.shop-card:nth-child(4n+2) .shop-card-picture { --tape-a: var(--tape-pink); --tape-b: var(--tape-green); }
+.shop-card:nth-child(4n+3) .shop-card-picture { --tape-a: var(--tape-lilac); --tape-b: var(--tape-coral); }
+.shop-card:nth-child(4n+4) .shop-card-picture { --tape-a: var(--tape-blue); --tape-b: var(--tape-yellow); }
+
+.shop-item-picture { --tape-w: clamp(64px, 20%, 124px); --tape-a: var(--tape-pink); --tape-b: var(--tape-yellow); }
+
+.shop-card .img-container,
+.shop-item-picture .img-container {
+  width: 100%;
+}
+
+.shop-card .img-container img,
+.shop-item-picture .img-container img {
+  width: 100%;
+  max-height: none;
+}
+
+/* Taped-up pictures don't float up on hover (as on the Works page) */
+@media (hover: hover) {
+  .shop-card .img-container:hover,
+  .shop-item-picture .img-container:hover {
+    transform: none;
+  }
+}
+
+.shop-no-picture {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+}
+
+.shop-card-text {
+  padding-top: 16px;
+}
+
+.shop-card-name {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+
+.shop-card-meta,
+.shop-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.shop-card-type:after {
+  content: '\00b7';
+  margin: 0 0.7em;
+  color: var(--color-faint);
+}
+
+.shop-card-price {
+  color: var(--color-ink);
+}
+
+/* ---------- One item ---------- */
+.shop-item {
+  text-align: left;
+}
+
+.shop-crumb {
+  margin: 0 0 30px;
+  font-size: 0.74rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.shop-crumb a {
+  color: var(--color-text-secondary);
+  padding: 6px 0;
+}
+
+.shop-crumb a:hover {
+  color: var(--color-ink);
+}
+
+.shop-item-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 4vw;
+  align-items: start;
+}
+
+.shop-item-picture {
+  cursor: zoom-in;
+}
+
+.shop-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.shop-thumb {
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+  background: none;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.25s ease, border-color 0.25s ease;
+}
+
+.shop-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-thumb:hover,
+.shop-thumb.is-current {
+  opacity: 1;
+}
+
+.shop-thumb.is-current {
+  border-color: var(--color-ink);
+}
+
+/* The words stay beside a tall picture as the page scrolls */
+.shop-item-info {
+  position: sticky;
+  top: 44px;
+}
+
+.shop-item-title {
+  margin: 8px 0 10px;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  color: var(--color-ink);
+}
+
+.shop-item-details {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-secondary);
+}
+
+.shop-item-price {
+  margin: 0 0 20px;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-ink);
+}
+
+.shop-sold-large {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.shop-item .shop-status {
+  margin-left: 0;
+}
+
+.shop-options {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+}
+
+.shop-options legend,
+.shop-quantity-label {
+  width: auto;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.shop-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shop-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.shop-option:hover {
+  border-color: var(--color-faint);
+}
+
+.shop-option.is-chosen {
+  border-color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+.shop-option:focus-within {
+  outline: 2px solid var(--amb-blue);
+  outline-offset: 3px;
+}
+
+.shop-option.is-out {
+  cursor: default;
+  color: var(--color-faint);
+  background: var(--color-paper);
+}
+
+.shop-option.is-out:hover {
+  border-color: var(--color-line);
+}
+
+.shop-option-price {
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.shop-option.is-chosen .shop-option-price {
+  color: var(--color-ink);
+}
+
+.shop-one-option {
+  margin: -8px 0 18px;
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-light);
-  margin-bottom: 6px;
 }
 
-/* Plain-link buy buttons (if ever rendered as anchors) */
-.shopItem a.buy-button {
-  margin: 4px 16px 16px;
-  align-self: flex-start;
+.shop-quantity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 20px;
+}
+
+.shop-quantity[hidden] {
+  display: none;
+}
+
+.shop-quantity-label {
+  margin: 0;
+}
+
+.shop-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+}
+
+.shop-step {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.shop-step:disabled {
+  color: var(--color-faint);
+  cursor: default;
+}
+
+.shop-quantity-value {
+  min-width: 1.6em;
+  text-align: center;
+  color: var(--color-ink);
+}
+
+.shop-left {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.shop-left[hidden],
+.shop-added[hidden] {
+  display: none;
+}
+
+/* The shop's one button: the newsletter button, a size up */
+.shop-button,
+a.shop-button {
+  display: inline-block;
+  width: 100%;
+  max-width: 360px;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 999px;
   background: var(--color-ink);
   color: #fff !important;
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
+  font-family: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  padding: 9px 22px;
-  border-radius: 999px;
+  text-align: center;
+  cursor: pointer;
   transition: background 0.25s ease, transform 0.25s ease;
 }
 
-.shopItem a.buy-button:hover {
+.shop-button:hover {
   background: #3a3a37;
   transform: translateY(-1px);
 }
 
-/* Shopify buy-button embeds render their own product card */
-.shopItem .buy-button-embed,
-.shopItem .buy-button {
-  padding: 14px 14px 6px;
+.shop-button:disabled {
+  background: #8d8c86;
+  cursor: default;
+  transform: none;
 }
 
-.shop-top-space {
+.shop-added {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.shop-item-description {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-line);
+  font-weight: var(--font-weight-light);
+}
+
+.shop-item-description p {
+  margin: 0;
+}
+
+.shop-item-notes {
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
+  font-size: 0.86rem;
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-secondary);
+}
+
+.shop-item-notes li {
+  position: relative;
+  margin-bottom: 7px;
+  padding-left: 20px;
+}
+
+/* (a scrap of tape for a bullet) */
+.shop-item-notes li:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 11px;
+  height: 4px;
+  background: var(--tape-blue) center / 100% 100% no-repeat;
+  transform: rotate(-8deg);
+}
+
+.shop-item-notes li:nth-child(4n+2):before { background-image: var(--tape-pink); }
+.shop-item-notes li:nth-child(4n+3):before { background-image: var(--tape-yellow); }
+.shop-item-notes li:nth-child(4n+4):before { background-image: var(--tape-green); }
+
+/* In the artwork viewer: "Available in the shop", under a work that is */
+.image-shop,
+.image-shop:link,
+.image-shop:visited {
+  display: inline-block;
+  margin-top: 8px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.image-shop:hover {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+.image-shop[hidden] {
+  display: none;
+}
+
+/* ---------- The basket, and the thank-you page ---------- */
+.basket-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr);
+  gap: 4vw;
+  align-items: start;
+  text-align: left;
+}
+
+.basket-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.basket-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.basket-line-picture {
+  flex: none;
+  width: 84px;
+}
+
+.basket-line-picture img {
   display: block;
-  height: 20px;
-  border-top: 1px solid transparent;
-  padding-top: 20px;
   width: 100%;
+  height: auto;
+  border-radius: 2px;
+  box-shadow: var(--shadow-soft);
+}
+
+.basket-line-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.basket-line-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+
+.basket-line-option {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-secondary);
+}
+
+.basket-line-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.basket-line-controls .shop-step {
+  width: 34px;
+  height: 34px;
+}
+
+.basket-remove {
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1px solid var(--color-line);
+  background: none;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.basket-remove:hover {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+
+.basket-line-price {
+  flex: none;
+  padding-top: 3px;
+  white-space: nowrap;
+  color: var(--color-ink);
+}
+
+.basket-summary {
+  padding: 24px 24px 22px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: var(--color-paper);
+}
+
+.basket-summary label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.basket-summary select {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 11px 12px;
+  border: 1px solid #d5d3cd;
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+/* Promo code: a quiet link that opens a small box */
+.basket-code {
+  margin: -6px 0 20px;
+}
+
+.basket-code-toggle,
+.basket-code-remove {
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1px solid var(--color-line);
+  background: none;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.basket-code-toggle:hover,
+.basket-code-remove:hover {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+
+.basket-code-toggle[hidden],
+.basket-code-form[hidden],
+.basket-code-problem[hidden] {
+  display: none;
+}
+
+.basket-code-form {
+  display: flex;
+  gap: 8px;
+}
+
+.basket-code-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d5d3cd;
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.basket-code-form input::placeholder {
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-faint);
+}
+
+.basket-code-form button {
+  flex: none;
+  padding: 0 18px;
+  border: 1px solid var(--color-ink);
+  border-radius: 999px;
+  background: none;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.basket-code-form button:hover {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.basket-code-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.basket-code-problem {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: #b5372b;
+}
+
+.basket-code-on {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.basket-code-on b {
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.08em;
+}
+
+.basket-totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  margin: 0 0 22px;
+}
+
+.basket-totals dt {
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-secondary);
+}
+
+.basket-totals dd {
+  margin: 0;
+  text-align: right;
+  color: var(--color-ink);
+}
+
+.basket-totals .is-total {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.basket-summary .shop-button {
+  max-width: none;
+}
+
+.basket-summary .shop-status {
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.basket-note {
+  margin: 14px 0 0;
+  font-size: 0.82rem;
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-secondary);
+}
+
+.basket-more {
+  margin: 18px 0 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Paying on the basket page: the order on one side, the form on the other.
+   The address and card boxes are Stripe's (their look is set in js/shop.js,
+   STRIPE_APPEARANCE); the email and phone boxes are made to match them. */
+/* (the form gets the wider side: Stripe's card box needs the room) */
+@media (min-width: 993px) {
+  .basket-layout.is-checkout {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 1.15fr);
+  }
+}
+
+.checkout-order .basket-totals {
+  margin-top: 20px;
+}
+
+.checkout-back:not(.shop-button) {
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1px solid var(--color-line);
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.checkout-back:not(.shop-button):hover {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+
+.checkout-back.shop-button {
+  margin-top: 18px;
+}
+
+.checkout-back:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.checkout-heading {
+  margin: 26px 0 12px;
+  font-family: var(--font-primary);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.checkout-heading:first-child {
+  margin-top: 0;
+}
+
+.checkout-field {
+  margin-bottom: 12px;
+}
+
+.basket-summary .checkout-field label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-secondary);
+}
+
+.checkout-field input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d5d3cd;
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.checkout-field input:focus {
+  outline: none;
+  border-color: var(--color-ink);
+}
+
+.checkout-stripe {
+  min-height: 44px;
+}
+
+.checkout-form .basket-problem {
+  margin: 20px 0 0;
+}
+
+.checkout-pay {
+  margin-top: 22px;
+}
+
+.thanks-body {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.thanks-lead {
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-light);
+  text-align: center;
+}
+
+.thanks-number {
+  margin: 0 0 26px;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.thanks-body .basket-totals {
+  margin-top: 20px;
+}
+
+.thanks-address {
+  font-weight: var(--font-weight-light);
+}
+
+.thanks-address span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- The basket button that follows the visitor round the site ---------- */
+.basket-pill,
+.basket-pill:link,
+.basket-pill:visited {
+  position: fixed;
+  top: 24px;
+  right: 2.4vw;
+  z-index: 1001;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px 9px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-medium);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s var(--ease-out-soft);
+}
+
+.basket-pill:hover {
+  border-color: var(--amb-pink);
+  box-shadow: var(--shadow-lifted);
+}
+
+.basket-pill b {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0;
+  text-align: center;
+}
+
+/* (a little jump when something lands in it) */
+.basket-pill.is-bumped {
+  transform: scale(1.08);
+}
+
+@media (max-width: 992px) {
+  .shop {
+    padding: 0 5vw;
+  }
+
+  .shop-grid {
+    gap: 2.8rem 6vw;
+    padding: 0;
+  }
+
+  .shop-card-name {
+    font-size: 1.12rem;
+  }
+
+  .shop-card-meta {
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+  }
+
+  .shop-item-layout,
+  .basket-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 34px;
+  }
+
+  .shop-item-info {
+    position: static;
+  }
+
+  .shop-item-title {
+    font-size: 2.1rem;
+  }
+
+  .shop-button {
+    max-width: none;
+  }
+
+  /* Beside the menu button, in the bar along the top */
+  .basket-pill,
+  .basket-pill:link,
+  .basket-pill:visited {
+    top: 19px;
+    right: 66px;
+    padding: 7px 10px 7px 12px;
+    box-shadow: none;
+  }
+
+  .basket-pill span {
+    display: none;
+  }
+}
+
+/* Narrow cards: the kind and the price each get their own line */
+@media (max-width: 600px) {
+  .shop-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .shop-card-type:after {
+    content: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .basket-line {
+    gap: 14px;
+  }
+
+  .basket-line-picture {
+    width: 66px;
+  }
 }
 
 /* ==========================================================================
@@ -1292,8 +2736,14 @@ img.loaded {
 }
 
 /* ==========================================================================
-   Floating newsletter nudge (landing view only)
+   Floating newsletter nudge (every page, until dismissed with its x)
    ========================================================================== */
+/* ...except while paying: it would drift over the checkout form */
+body:has(#imagesAndContent[data-view="shop-basket"]) .newsletter-float,
+body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
+  display: none;
+}
+
 .newsletter-float {
   position: fixed;
   left: 22vw; /* keep the drift over the content sheet, off the nav column */
@@ -1407,14 +2857,85 @@ img.loaded {
 /* ==========================================================================
    Misc / utilities
    ========================================================================== */
-.invisible { opacity: 0 !important; }
-.invisibleText { opacity: 0 !important; }
-.hidden-maintain-space { visibility: hidden; }
-
-.no-scroll {
+/* Page held still behind the artwork viewer: it just can't scroll. (Not
+   pinned with position: fixed, which on phones counts as scrolling to the top
+   and brings the browser's bars sliding back in as the viewer opens.) */
+html.no-scroll,
+html.no-scroll body {
   overflow: hidden;
-  position: fixed;
-  width: 100%;
+}
+
+html.no-scroll {
+  overscroll-behavior: none;
+}
+
+/* A swipe inside the viewer never scrolls or pull-to-refreshes the page.
+   The viewer only scrolls when a very tall painting and its caption don't
+   fit (.can-scroll, set by updateViewerScrolling), and never while opening
+   or closing: on iPhones a scrolling layer can skip drawing its contents for
+   a few frames when it appears. */
+#bigPicModal {
+  overscroll-behavior: contain;
+  overflow: hidden !important;
+}
+
+#bigPicModal.can-scroll:not(.is-opening):not(.is-arriving):not(.is-closing) {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* The dark background gets its own layer from the start (as PhotoSwipe's) */
+.modal-backdrop {
+  will-change: opacity;
+}
+
+/* The viewer and its dark background stay on the page all the time,
+   invisible while closed (.is-idle), so opening a painting puts nothing new
+   on the page: it starts sooner and moves more smoothly on phones
+   (setupViewerLayer in photoFunctions.js) */
+#bigPicModal {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  justify-content: safe center;
+  align-content: center;
+  align-items: center;
+  will-change: opacity;
+}
+
+#bigPicModal.is-idle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#bigPicModal.is-idle * {
+  pointer-events: none !important;
+}
+
+#bigPicModal #popUpImage {
+  will-change: transform;
+}
+
+.modal-backdrop.viewer-backdrop {
+  opacity: 0.003;
+  pointer-events: none;
+}
+
+.modal-backdrop.viewer-backdrop.show {
+  opacity: 0.93;
+}
+
+/* Phones and tablets: opening the viewer changes nothing at all about the
+   page underneath. Switching its scrolling off (as Bootstrap's "modal-open"
+   and .no-scroll do) makes Safari repaint the whole page, and the paintings
+   blink white before the dark background arrives. The viewer stops the
+   finger scrolling the page instead (setupViewer). These are the values
+   body has anyway, so nothing changes. */
+@media (hover: none), (pointer: coarse) {
+  body.modal-open {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 }
 
 .error-message {
@@ -1430,11 +2951,44 @@ img.loaded {
   font-weight: var(--font-weight-light);
 }
 
+/* Page not found */
+.not-found {
+  width: 100%;
+  text-align: center;
+  padding: 12vh 20px;
+}
+
+.not-found h2 {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+
+.not-found p {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-light);
+}
+
+.not-found-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding-bottom: 4px;
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-ink) !important;
+  border-bottom: 2px solid transparent;
+  border-image: var(--amb-rainbow) 1;
+}
+
 /* Bootstrap modal centering (kept from original) */
 .modal.show {
   display: flex !important;
   flex-direction: column;
   justify-content: center;
+  justify-content: safe center; /* a very tall painting can still be scrolled to its top */
   align-content: center;
   align-items: center;
 }
@@ -1460,8 +3014,6 @@ img.loaded {
   .hamburger-menu { display: block; }
 
   .navLinksBox { display: none; }
-
-  .navLinksBoxMobile .mainLinkGenres:after { height: 2px; }
 
   #imagesAndContent {
     width: 92vw;
@@ -1556,6 +3108,17 @@ img.loaded {
     height: 38px;
   }
 
+  .viewer-toolbar {
+    top: 12px;
+    right: 58px;
+    gap: 8px;
+  }
+
+  .viewer-icon {
+    width: 38px;
+    height: 38px;
+  }
+
   .modal-dialog { margin: 10px; }
 
   .project-header h2,
@@ -1566,11 +3129,6 @@ img.loaded {
     margin: 0 auto;
   }
 
-  .shopItem {
-    max-width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-  }
 }
 
 /* ---------- Reduced motion ---------- */
@@ -1587,4 +3145,114 @@ img.loaded {
     animation: none;
     border-top-color: var(--color-line);
   }
+}
+
+/* ==========================================================================
+   TEMPORARY: iPhone flash test switch (?vt= in the address; see
+   VIEWER_TESTS in photoFunctions.js). None of this applies without it.
+   ========================================================================== */
+.vt-label {
+  position: absolute;
+  top: 24px;
+  right: 66px; /* just left of the menu button */
+  z-index: 2;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+/* Probe 2: a small layer of its own, in the margin left of the paintings */
+.vt-dot {
+  position: fixed;
+  left: 3px;
+  top: 50%;
+  z-index: 1100;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--amb-pink);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Probe 3: the dark background on its own */
+.modal-backdrop.vt-dim {
+  pointer-events: none;
+}
+
+/* Test 10: no blurred backgrounds */
+html.vt-no-blur .blockForHeaderMobile,
+html.vt-no-blur .navLinksBoxMobile,
+html.vt-no-blur .nav-overlay,
+html.vt-no-blur .newsletter-float-inner {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Test 12: no will-change on the dark background */
+html.vt-no-will-change .modal-backdrop {
+  will-change: auto;
+}
+
+/* ?vt=menu: the list of tests */
+.vt-menu {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 8px 4px 40px;
+}
+
+.vt-menu h2 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.vt-menu p {
+  color: var(--color-text-secondary);
+}
+
+.vt-menu ol {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.vt-menu li {
+  margin-bottom: 8px;
+}
+
+.vt-menu a {
+  display: block;
+  padding: 12px 14px 12px 50px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: var(--color-paper);
+}
+
+.vt-menu b {
+  position: absolute;
+  left: 14px;
+  top: 11px;
+  font-size: 1.1rem;
+}
+
+.vt-menu span {
+  display: block;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.vt-menu small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }

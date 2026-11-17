@@ -1,719 +1,2663 @@
-var selectWorksAreShown = false;
-var currentImageIndex = 0; // Global variable to track the current image index
-let images = []; // Global array to store image URLs
-let startX, startY;
-let isPinching = false;
-var imageIsRows = ''; //img-containerForRows - keep as empty string for single column
-var projectIsRows = ''; //projectWorksForRows - keep as empty string for single column
+// ==========================================================================
+// Public site: pages, galleries and the artwork viewer
+// ==========================================================================
+//
+// The whole public site is one page (index.php); everything visible is drawn
+// here. The address bar is kept in step with what's on screen, so the
+// browser's Back/Forward buttons, bookmarks and shared links all work:
+//
+//   /                  home slideshow (phones and tablets go to the works)
+//   /select-works      the works, grouped by project
+//   /work/<id>/<name>  the works, scrolled to that painting, open in the viewer
+//   /about  /current-project
+//   /shop  /shop/<id>/<name>  /shop/basket  /shop/thank-you   (drawn by shop.js)
+//   anything else      "page not found" (index.php also sends a real 404)
+
+var BREAKPOINT = 992;
+var GALLERY_SIZES = '(max-width: 992px) 92vw, 62vw';
+var WEB_VARIANT_WIDTHS = [800, 1200]; // same as AMB_WEB_VARIANT_WIDTHS in imageManipulationFunctions.php
+var PAGE_TITLES = {
+    'home': 'Ambar Velasco Portfolio',
+    'works': 'Select Works - Ambar Velasco',
+    'about': 'About - Ambar Velasco',
+    'shop': 'Shop - Ambar Velasco',
+    'shop-item': 'Shop - Ambar Velasco',
+    'shop-basket': 'Basket - Ambar Velasco',
+    'shop-thanks': 'Thank you - Ambar Velasco',
+    'current-project': 'Current Project - Ambar Velasco',
+    'notfound': 'Page not found - Ambar Velasco'
+};
+
 var isMobile = false;
+var currentView = null;      // which page is drawn: 'home', 'works', 'about', ...
+var viewReady = false;       // true once that page's content has arrived
+var shownPath = null;        // the shop's pages share a few views: the address of the one drawn
+var pageTitle = document.title; // the page's own title (the viewer borrows the title bar while open)
+var galleryItems = [];       // the works on the current page, in order
+var cachedRequests = {};     // API responses, fetched once per visit
+var aboutLayout = null;
 var zIndexCounter = 22;
+
+// index.php sends each page already drawn, along with the data it drew it
+// from (AMB_PAGE_DATA), so the first page of a visit needs no requests
+var pageData = window.AMB_PAGE_DATA || {};
+var pageIsServerDrawn = false; // the page being shown is the one index.php drew
+
+// The artwork viewer (the full-screen modal)
+var viewer = {
+    items: [],
+    index: 0,
+    open: false,
+    basePath: '/select-works',  // the page underneath, restored on close
+    closingFromHistory: false,
+    loadToken: 0,
+    opening: false,          // the open / close animations are running
+    closing: false,
+    waitingForImage: false,  // opened with nothing to show yet: appears once loaded
+    afterOpening: null,      // swap in the sharper copy once the opening has finished
+    source: null,            // { index, img }: the picture on the page it grew out of
+    hiddenInPage: [],        // pictures on the page hidden while their twin is in the viewer
+    hidingNow: false,        // closeViewer's own final, instant hide
+    room: 0,                 // height left for the painting (fitViewerToScreen)
+    loading: null            // { work, src }: the copy being shown / loaded
+};
 var scrollPosition = 0;
+var startX, startY;
+var isPinching = false;
 
-$(window).on("load", function() {
-    // Check responsive layout
-    setupResponsiveLayout();
+// We put the scroll position back ourselves (see rememberScroll)
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
 
-    // Fix width of all thumbnails
-    $('.size12020, .size12021, .size12022').each(function(index, element) {
-        let theWidth = this.width;
-        $(this).closest('.holdForNow, .holdForNowNew').css("min-width", (theWidth - 1) + "px");
-        $(this).closest('.holdPhotoandBlack, .holdPhotoandBlackNew').css("min-width", (theWidth - 1) + "px");
+// --------------------------------------------------------------------------
+// TEMPORARY test switch, for the white flash iPhones show when a painting
+// opens. ?vt=<number> in the address picks one test and ?vt=menu lists them;
+// without it none of this does anything. Each test changes one thing about
+// opening a painting, or (the probes) does one thing on its own instead of
+// opening it. Remove once the flash is fixed.
+// --------------------------------------------------------------------------
+var VIEWER_TESTS = [
+    { id: '0', name: 'Normal',
+      about: 'Nothing changed: the site exactly as it is.' },
+    { id: '1', name: 'Probe: the page is redrawn', probe: 'redraw',
+      about: 'A tap does not open the painting. The whole page is drawn again (the margins turn pink). Do the paintings blink?' },
+    { id: '2', name: 'Probe: one tiny new layer', probe: 'layer',
+      about: 'A tap does not open the painting. A small pink dot appears at the left edge. Do the paintings blink?' },
+    { id: '3', name: 'Probe: the dark background alone', probe: 'backdrop',
+      about: 'A tap does not open the painting. Only the viewer\'s dark background comes in. Do the paintings blink before it darkens?' },
+    { id: '4', name: 'Pictures decoded at once', syncDecode: true,
+      about: 'The page\'s pictures use decoding="sync" instead of "async".' },
+    { id: '5', name: 'Pictures on screen decoded first', predecode: true,
+      about: 'The pictures on screen are decoded before the viewer opens.' },
+    { id: '9', name: 'Address and title unchanged', noHistory: true,
+      about: 'Opening changes neither the address (no pushState) nor the page title.' },
+    { id: '10', name: 'No blur, no newsletter bubble', noBlur: true,
+      about: 'No blurred header or menu, and no floating newsletter bubble.' },
+    { id: '11', name: 'No animation', noAnim: true,
+      about: 'The painting and the dark background appear at once, with no growing or fading.' },
+    { id: '12', name: 'No will-change, focus or bar colour', noWillChange: true, noFocus: true, noThemeColor: true,
+      about: 'No will-change hints, the viewer is not focused, and the browser bar keeps its colour.' }
+];
 
-        // Correct the source of the larger images
-        let idOfForm = "#" + ($(this).hasClass('size12020') ? '20' :
-                $(this).hasClass('size12021') ? '21' : '22') +
-            $(this).attr("id") + "IMG";
-        let imgPath = $(idOfForm).attr("sourceForJS");
-        $(idOfForm).attr("src", imgPath);
+// The test asked for (empty without ?vt=)
+var VT = (function () {
+    var asked = (/[?&]vt=([^&#]*)/.exec(location.search) || [])[1];
+    var test = VIEWER_TESTS.filter(function (each) {
+        return each.id === asked;
+    })[0];
+    return $.extend({ menu: asked === 'menu' }, test);
+})();
+
+// --------------------------------------------------------------------------
+// Small helpers
+// --------------------------------------------------------------------------
+
+function webImageUrl(location) {
+    return '/baseImages/web/' + encodeURIComponent(location);
+}
+
+function thumbnailUrl(location) {
+    return '/thumbnails/' + encodeURIComponent(location);
+}
+
+// A narrower copy of the web copy (made on first request by webImage.php)
+function webVariantUrl(location, width) {
+    return '/baseImages/web/' + width + '/' + encodeURIComponent(location);
+}
+
+// Every size of a work for srcset, so each screen downloads only what it
+// needs. Same as ambWorkSrcset() in publicPageFunctions.php.
+function workSrcset(work) {
+    var sources = [thumbnailUrl(work.location) + ' 400w'];
+    WEB_VARIANT_WIDTHS.forEach(function (width) {
+        if (width < work.width) {
+            sources.push(webVariantUrl(work.location, width) + ' ' + width + 'w');
+        }
     });
+    sources.push(webImageUrl(work.location) + ' ' + work.width + 'w');
+    return sources.join(', ');
+}
 
-    // Make invisible elements visible with a delay for text
-    $('.invisible').removeClass('invisible');
+// How wide a painting is drawn in the viewer, in CSS pixels (the same sums
+// as .popUpImage / .popUpImageMobile in ambar.css)
+function viewerImageWidth(work) {
+    var ratio = work.width / work.height;
+    var mobile = window.innerWidth <= BREAKPOINT;
+    var room = viewer.room || window.innerHeight * (mobile ? 0.9 : 0.82);
+    if (mobile) {
+        return Math.min(window.innerWidth * 0.9, room * ratio);
+    }
+    return Math.min(window.innerWidth * 0.9, room * ratio, work.width);
+}
 
-    setTimeout(function() {
-        $('.invisibleText').removeClass('invisibleText');
-    }, 500);
+// The viewer always fits on the screen, with nothing to scroll to: the
+// buttons along the top, then the painting, then its title and
+// description. This works out the height left for the painting once the
+// others have their room (the caption is measured, so it's right for each
+// painting) and gives it to ambar.css as --room. A description opened up
+// with "more" can make the painting smaller, but never below 40% of the
+// screen; past that the viewer scrolls (updateViewerScrolling).
+var VIEWER_TOP_PX = 66;          // clear of the close / zoom / scale buttons
+var VIEWER_TOP_PX_MOBILE = 58;
+var VIEWER_BOTTOM_PX = 14;
 
-    createAndShowSideBarLinks();
-});
+function fitViewerToScreen() {
+    var modal = document.getElementById('bigPicModal');
+    var info = document.getElementById('imageInfo');
+    var top = window.innerWidth <= BREAKPOINT ? VIEWER_TOP_PX_MOBILE : VIEWER_TOP_PX;
+    var screenH = modal.clientHeight || window.innerHeight;
+    var room = screenH - top - VIEWER_BOTTOM_PX - info.offsetHeight;
+    viewer.room = Math.floor(Math.max(room, screenH * 0.4));
+    modal.style.setProperty('--viewer-top', top + 'px');
+    modal.style.setProperty('--viewer-bottom', VIEWER_BOTTOM_PX + 'px');
+    modal.style.setProperty('--room', viewer.room + 'px');
+}
 
-// Add window resize handler
-$(window).on("resize", function() {
-    setupResponsiveLayout();
-});
+// A long description shows its first lines, with "more" to open it up
+function setUpDescription() {
+    var desc = document.getElementById('imageDescription');
+    $('#imageInfo').removeClass('is-expanded');
+    $('#imageMore').text('more').prop('hidden', desc.scrollHeight <= desc.clientHeight + 1);
+}
+
+// The smallest copy that still fills the viewer sharply on this screen
+function viewerImageUrl(work) {
+    if (!work.width || !work.height) {
+        return webImageUrl(work.location);
+    }
+    var needed = viewerImageWidth(work) * (window.devicePixelRatio || 1);
+    for (var i = 0; i < WEB_VARIANT_WIDTHS.length; i++) {
+        var width = WEB_VARIANT_WIDTHS[i];
+        if (width < work.width && width >= needed) {
+            return webVariantUrl(work.location, width);
+        }
+    }
+    return webImageUrl(work.location);
+}
+
+function originalImageUrl(location) {
+    return '/baseImages/' + encodeURIComponent(location);
+}
+
+// A phone or tablet (touch is how it's used), whatever its width
+function isTouchScreen() {
+    return !!window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+}
+
+function isTouchDevice() {
+    return window.innerWidth <= BREAKPOINT && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+// The page has smooth scrolling for in-page jumps, but putting the page back
+// where it was must be instant, or it visibly glides down from the top
+function instantScrollTo(y) {
+    var html = document.documentElement;
+    var previous = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo(0, Math.max(0, y));
+    html.style.scrollBehavior = previous;
+}
+
+function currentScrollY() {
+    return viewer.open ? scrollPosition : window.pageYOffset;
+}
+
+// Save how far down the current page is, so Back can return to the same spot
+function rememberScroll() {
+    history.replaceState($.extend({}, history.state, { scrollY: currentScrollY() }), '');
+}
+
+function projectSectionId(title) {
+    var slug = String(title).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return 'section-' + (slug || 'project');
+}
+
+function multiline(text) {
+    return text ? String(text).replace(/\n/g, '<br>') : '';
+}
+
+function loadingHtml(message) {
+    return '<div class="loading-container"><div class="loading-spinner"></div><p>' + message + '</p></div>';
+}
+
+function errorHtml(message) {
+    return '<div class="error-message"><p>' + message + '</p></div>';
+}
+
+// Runs draw(data) once the request has its data: straight away if it's
+// already here (no spinner, no flicker), otherwise when it arrives
+function whenLoaded(request, draw, failed) {
+    var drawn = $.Deferred();
+    request.done(function (data) {
+        draw(data);
+        drawn.resolve();
+    }).fail(function () {
+        failed();
+        drawn.reject();
+    });
+    return drawn.promise();
+}
+
+function isLoaded(request) {
+    return request.state() === 'resolved';
+}
+
+// One request per kind of data per visit; a failed request is retried next time
+function fetchPublicWorks(view) {
+    if (!cachedRequests[view] && pageData[view]) {
+        cachedRequests[view] = $.Deferred().resolve(pageData[view]).promise();
+    }
+    if (!cachedRequests[view]) {
+        cachedRequests[view] = $.ajax({
+            url: '/actions/publicWorksAPI.php',
+            data: { view: view },
+            dataType: 'json'
+        }).then(function (response) {
+            return response.projects || response.works || [];
+        });
+        cachedRequests[view].fail(function () {
+            delete cachedRequests[view];
+        });
+    }
+    return cachedRequests[view];
+}
+
+// <img> for a work: a small or web-sized copy depending on the screen,
+// loaded only as it scrolls near (lazy), with its space reserved up front so
+// the page doesn't jump around while pictures arrive
+function workImage(work, options) {
+    var img = document.createElement('img');
+    img.loading = options.lazy ? 'lazy' : 'eager';
+    img.decoding = 'sync';  // not async: iPhones blank async pictures for a few frames when a painting opens
+    // The page's first painting: fetch it ahead of everything else
+    if (options.priority) {
+        img.setAttribute('fetchpriority', 'high');
+    }
+    if (work.width && work.height) {
+        img.width = work.width;
+        img.height = work.height;
+        if (options.sizes && work.width > 400) {
+            img.sizes = options.sizes;
+            img.srcset = workSrcset(work);
+        }
+    }
+    img.src = webImageUrl(work.location);
+    img.alt = work.name;
+    img.setAttribute('data-original', originalImageUrl(work.location));
+    if (options.className) {
+        img.className = options.className;
+    }
+    return img;
+}
+
+// If a web-sized copy can't be loaded for any reason, show the original instead
+document.addEventListener('error', function (event) {
+    var img = event.target;
+    if (!img || img.tagName !== 'IMG' || !img.getAttribute('data-original') || img.getAttribute('data-fell-back')) {
+        return;
+    }
+    img.setAttribute('data-fell-back', '1');
+    img.removeAttribute('srcset');
+    img.src = img.getAttribute('data-original');
+}, true);
+
+// --------------------------------------------------------------------------
+// Responsive layout (desktop / mobile class pairs, swapped at 992px)
+// --------------------------------------------------------------------------
 
 function setupResponsiveLayout() {
-    if (window.innerWidth <= 992) {
-        // Apply mobile classes
-        $('#popUpImage').removeClass('popUpImage').addClass('popUpImageMobile');
-        $('#imagesAndContent').removeClass('imagesAndContent').addClass('imagesAndContentMobile');
-        $('#blockForHeader').removeClass('blockForHeader').addClass('blockForHeaderMobile');
-        $('#whiteForTheTopMaybe').addClass('headerNoMove3');
-        $("#whiteForTheTopMaybe").attr('id', 'whiteForTheTop');
-        $('#whiteForTheTop').addClass('headerNoMove3');
-        $('#navLinksBox').removeClass('navLinksBox').addClass('navLinksBoxMobile');
-        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
-        $('#selectProjectCategories').removeClass('hiddenLinkStuff').addClass('hiddenLinkStuffMobile');
-        $('#ambName').removeClass('ambarNamePic').addClass('ambarNamePicMobile');
+    var mobile = window.innerWidth <= BREAKPOINT;
 
-        imageIsRows = '';
-        projectIsRows = '';
-        isMobile = true;
+    $('#popUpImage').toggleClass('popUpImageMobile', mobile).toggleClass('popUpImage', !mobile);
+    $('#imagesAndContent').toggleClass('imagesAndContentMobile', mobile).toggleClass('imagesAndContent', !mobile);
+    $('#blockForHeader').toggleClass('blockForHeaderMobile', mobile).toggleClass('blockForHeader', !mobile);
+    $('#navLinksBox').toggleClass('navLinksBoxMobile', mobile).toggleClass('navLinksBox', !mobile);
+    $('#homePageCarousel').toggleClass('homePageCarouselMobile', mobile).toggleClass('homePageCarousel', !mobile);
+    $('#selectProjectCategories').toggleClass('hiddenLinkStuffMobile', mobile).toggleClass('hiddenLinkStuff', !mobile);
+    $('#ambName').toggleClass('ambarNamePicMobile', mobile).toggleClass('ambarNamePic', !mobile);
 
-        // Improve tap targets for mobile
-        const allLinks = document.querySelectorAll('a');
-        allLinks.forEach(link => {
-            link.style.padding = '.05em';
-            link.style.margin = '-.05em';
-        });
+    // Bigger tap targets for the menu links on phones
+    $('#navLinksBox a').each(function () {
+        this.style.padding = mobile ? '.05em' : '';
+        this.style.margin = mobile ? '-.05em' : '';
+    });
+    if (mobile) {
+        $('#navLinksBox a.mainLinkGenres').css({ padding: '.7em', margin: '-.7em' });
+    }
 
-        const genreLinks = document.querySelectorAll('a.mainLinkGenres');
-        genreLinks.forEach(link => {
-            link.style.padding = '.7em';
-            link.style.margin = '-.7em';
-        });
-    } else {
-        // Apply desktop classes
-        $('#popUpImage').removeClass('popUpImageMobile').addClass('popUpImage');
-        $('#imagesAndContent').removeClass('imagesAndContentMobile').addClass('imagesAndContent');
-        $('#blockForHeader').removeClass('blockForHeaderMobile').addClass('blockForHeader');
-        $('#navLinksBox').removeClass('navLinksBoxMobile').addClass('navLinksBox');
-        $('#homePageCarousel').removeClass('homePageCarouselMobile').addClass('homePageCarousel');
-        $('#selectProjectCategories').removeClass('hiddenLinkStuffMobile').addClass('hiddenLinkStuff');
-        $('#ambName').removeClass('ambarNamePicMobile').addClass('ambarNamePic');
+    isMobile = mobile;
 
-        imageIsRows = '';
-        projectIsRows = '';
-        isMobile = false;
-
-        // Reset tap targets for desktop
-        const allLinks = document.querySelectorAll('a');
-        allLinks.forEach(link => {
-            link.style.padding = '';
-            link.style.margin = '';
-        });
+    // The About page has a stacked layout for narrower screens
+    if (currentView === 'about' && viewReady && aboutLayout !== (window.innerWidth <= 1206 ? 'stacked' : 'side')) {
+        renderAbout(true);
     }
 }
 
-$(document).ready(function() {
-    // Setup mobile menu toggle
-    $('#hamburgerMenu').on('click', function(e) {
-        e.stopPropagation();
-        $(this).toggleClass('active');
-        $('#navLinksBox').toggleClass('active');
-        $('.nav-overlay').toggleClass('active');
-        $('#sideBySide').toggleClass('menu-open');
-    });
+$(window).on('resize', setupResponsiveLayout);
 
-    // Close menu when clicking the overlay
-    $('.nav-overlay').on('click', function() {
-        $('#hamburgerMenu').removeClass('active');
-        $('#navLinksBox').removeClass('active');
-        $(this).removeClass('active');
-        $('#sideBySide').removeClass('menu-open');
-    });
+// --------------------------------------------------------------------------
+// Moving between pages
+// --------------------------------------------------------------------------
 
-    // Special handling for newsletter and submenu toggles
-    $(document).on('click', '#navLinksBox a', function(e) {
-        if (window.innerWidth <= 992) {
-            // Check if this is a toggle link (for newsletter or submenu)
-            const isToggleLink = (
-                $(this).text() === "Works" ||
-                $(this).text() === "Newsletter"
-            );
+function parseRoute(pathname) {
+    var path = '/' + String(pathname).replace(/^\/+|\/+$/g, '');
+    var pages = {
+        '/': 'home',
+        '/index.php': 'home',
+        '/select-works': 'works',
+        '/about': 'about',
+        '/shop': 'shop',
+        '/current-project': 'current-project'
+    };
+    if (pages[path]) {
+        return { view: pages[path], path: path === '/index.php' ? '/' : path };
+    }
+    var match = path.match(/^\/work\/(\d+)(?:\/[^\/]*)?$/);
+    if (match) {
+        return { view: 'works', path: path, workId: Number(match[1]) };
+    }
+    if (path === '/shop/basket') {
+        return { view: 'shop-basket', path: path };
+    }
+    if (path === '/shop/thank-you') {
+        return { view: 'shop-thanks', path: path };
+    }
+    if (/^\/shop\/\d+(?:\/[^\/]*)?$/.test(path)) {
+        return { view: 'shop-item', path: path };
+    }
+    return { view: 'notfound', path: path };
+}
 
-            // If it's a toggle link, prevent menu from closing
-            if (isToggleLink) {
-                e.stopPropagation();
-            } else if (!$(this).closest('#selectProjectCategories').length &&
-                !$(this).closest('#newsletterSignUp').length) {
-                // If it's a regular link (not in a submenu or newsletter), close the menu
-                $('#hamburgerMenu').removeClass('active');
-                $('#navLinksBox').removeClass('active');
-                $('.nav-overlay').removeClass('active');
-                $('#sideBySide').removeClass('menu-open');
-            }
+function isShopView(view) {
+    return String(view).indexOf('shop') === 0;
+}
+
+// True when that page is the one already on screen. Each shop item has its
+// own address but the same view, so for the shop the address has to match too.
+function isShowing(view, route) {
+    return view === currentView && (!isShopView(view) || route.path === shownPath);
+}
+
+// Phones and tablets skip the home slideshow and land on the works
+function resolveView(route) {
+    return route.view === 'home' && isTouchDevice() ? 'works' : route.view;
+}
+
+// Draws a page (without touching the address bar). Returns a promise that
+// resolves once the page's content is on screen.
+function renderView(view, route) {
+    if (isShowing(view, route) && viewReady) {
+        return $.Deferred().resolve().promise();
+    }
+    if (isShopView(view)) {
+        shownPath = route.path;
+        return renderShopPage(view, route.path); // shop.js
+    }
+    switch (view) {
+        case 'works': return renderWorks();
+        case 'about': return renderAbout();
+        case 'current-project': return renderCurrentProject();
+        case 'notfound': return renderNotFound();
+        default: return renderHome();
+    }
+}
+
+// Go to another page of the site, adding it to the browser history.
+// options.section: scroll to that project section once the works are shown.
+function goTo(path, options) {
+    options = options || {};
+    if (viewer.open) {
+        closeViewer({ fromHistory: true, instantly: true });
+    }
+
+    var route = parseRoute(path);
+    var view = resolveView(route);
+    var changingPage = !isShowing(view, route);
+
+    if (path !== location.pathname) {
+        rememberScroll();
+        var newPath = view === 'works' && route.view === 'home' ? '/select-works' : path;
+        history.pushState({ path: newPath }, '', newPath);
+    }
+
+    var ready = renderView(view, route);
+    if (changingPage && !options.section) {
+        instantScrollTo(0);
+    }
+
+    ready.then(function () {
+        if (options.section) {
+            scrollToSection(options.section, !changingPage);
         }
     });
+    return ready;
+}
+window.goTo = goTo;
 
-    // Prevent newsletter form clicks from closing the menu
-    $(document).on('click', '#newsletterSignUp, #newsletterEmail, #newsletterSubmit', function(e) {
-        if (window.innerWidth <= 992) {
-            e.stopPropagation();
-        }
-    });
+// Back / Forward
+window.addEventListener('popstate', function (event) {
+    var route = parseRoute(location.pathname);
+    var view = resolveView(route);
+    var state = event.state || {};
 
-    // Setup modal for click outside to close
-    $('#bigPicModal').on('click', function(event) {
-        if (!$(event.target).closest('#popUpImage, .modal-nav-arrows, .nav-arrow').length) {
-            $('#bigPicModal').modal('hide');
-        }
-    });
+    // Forward into a painting that's on the page already
+    if (route.workId && currentView === 'works' && viewReady) {
+        openSharedWork(route.workId, { fromHistory: true });
+        return;
+    }
 
-    // Modal scroll management
-    $('.modal').on('hidden.bs.modal', function() {
-        $('body').removeClass('no-scroll').css('top', '');
-        $(window).scrollTop(scrollPosition);
-        $('#modifyZIndex').removeClass('headerNoMove2').addClass('headerNoMove');
-        $('#whiteForTheTop').removeClass('headerNoMove3').addClass('whiteComeAndGo');
-    });
+    // Back from a painting to the page it was opened from: it shrinks back
+    // into place. Anywhere else: close at once, the page is about to change.
+    if (viewer.open) {
+        closeViewer({ fromHistory: true, instantly: !isShowing(view, route) || !!route.workId });
+    }
 
-    $('.modal').on('show.bs.modal', function() {
-        scrollPosition = $(window).scrollTop();
-        $('body').addClass('no-scroll').css('top', -scrollPosition);
-        $('#modifyZIndex').removeClass('headerNoMove').addClass('headerNoMove2');
-        $('#whiteForTheTop').removeClass('whiteComeAndGo').addClass('headerNoMove3');
-    });
+    // e.g. Back after closing the viewer: the right page is already showing
+    if (isShowing(view, route) && !route.workId) {
+        return;
+    }
 
-    // Image modal click handlers
-    document.getElementById('popUpImage').addEventListener('click', function(event) {
-        if (isPinching) {
-            return;
-        }
-        let imgWidth = this.clientWidth;
-        let xCoordinate = event.offsetX; // Get the x coordinate of the click
-
-        if (xCoordinate < imgWidth / 2) {
-            // Click on the left side
-            changeImage(-1); // Go to the previous image
+    renderView(view, route).then(function () {
+        if (route.workId) {
+            openSharedWork(route.workId, {});
         } else {
-            // Click on the right side
-            changeImage(1); // Go to the next image
+            instantScrollTo(typeof state.scrollY === 'number' ? state.scrollY : 0);
         }
     });
-
-    document.addEventListener('keydown', function(event) {
-        if ($('#bigPicModal').hasClass('show')) {
-            if (event.keyCode === 37) { // Left arrow key
-                changeImage(-1); // Go to the previous image
-            } else if (event.keyCode === 39) { // Right arrow key
-                changeImage(1); // Go to the next image
-            }
-        }
-    });
-
-    // Touch events for mobile
-    document.getElementById('popUpImage').addEventListener('touchstart', function(e) {
-        isPinching = false;
-        if (e.touches.length === 1) {
-            this.style.transition = 'none';  // Disable transitions for immediate feedback
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-        } else if (e.touches.length === 2) {
-            // Prepare for a pinch gesture
-            isPinching = true;
-        }
-    }, false);
-
-    document.getElementById('popUpImage').addEventListener('touchmove', function(e) {
-        if (e.touches.length === 2) {
-            // Continue to handle pinch gesture
-            isPinching = true;
-        } else if (e.touches.length === 1 && !isPinching) {
-            // Handle single finger swipe
-            let currentX = e.touches[0].clientX;
-            let currentY = e.touches[0].clientY;
-            let deltaX = Math.round((currentX - startX) * 0.3);  // Reduced movement for more control
-            let deltaY = currentY - startY;
-
-            // Provide feedback by translating image based on finger movement
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                e.preventDefault();  // Prevent scrolling when moving horizontally
-                this.style.transform = `translateX(${deltaX}px)`;
-            }
-        }
-    }, false);
-
-    document.getElementById('popUpImage').addEventListener('touchend', function(e) {
-        this.style.transition = 'transform 0.3s ease';  // Re-enable transitions
-        if (!isPinching && e.changedTouches.length === 1) {
-            let endX = e.changedTouches[0].clientX;
-            let endY = e.changedTouches[0].clientY;
-            let deltaX = endX - startX;
-            let deltaY = endY - startY;
-
-            // Determine if the swipe was primarily vertical and downward
-            if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
-                // Clear downward swipe, minimal horizontal movement
-                $('#bigPicModal').modal('hide');  // Close the modal
-            } else if (Math.abs(deltaX) > window.innerWidth * 0.1 && !isPinching) {
-                // Horizontal swipe exceeds threshold
-                changeImage(deltaX > 0 ? -1 : 1);
-            } else {
-                // Swipe did not meet any criteria for action
-                this.style.transform = '';  // Reset position
-            }
-        }
-    }, false);
-
-    // Add arrow navigation
-    const prevArrow = document.getElementById('prevImage');
-    const nextArrow = document.getElementById('nextImage');
-
-    if (prevArrow) {
-        prevArrow.addEventListener('click', function() {
-            changeImage(-1);
-        });
+    if (typeof state.scrollY !== 'number') {
+        instantScrollTo(0);
     }
-
-    if (nextArrow) {
-        nextArrow.addEventListener('click', function() {
-            changeImage(1);
-        });
-    }
-
-    // Determine page type by route and load appropriate content
-    var path = window.location.pathname;
-
-    if (path === '/shop') {
-        loadShop();
-    } else if (path === '/select-works') {
-        getProjectsAndWorks();
-    } else if (path === '/about') {
-        openInfo();
-    } else if (path === '/current-project') {
-        openCurrentProject();
-    } else if (window.innerWidth <= 992) {
-        // On mobile, land directly on the works instead of the carousel
-        getProjectsAndWorks();
-        spawnNewsletterFloat();
-    } else {
-        getCarousel();
-    }
-
-    // The newsletter float only lives on the landing view — remove it as
-    // soon as the visitor navigates anywhere via the nav
-    $(document).on('click', '#navLinksBox a', function() {
-        $('#newsletterFloat').fadeOut(300, function() { $(this).remove(); });
-    });
 });
 
-function createAndShowSideBarLinks() {
-    return;
-    // Keep empty as per original code
+function setView(view) {
+    leaveCheckout(view); // shop.js: a payment left unfinished is given up
+    var main = document.getElementById('imagesAndContent');
+    pageIsServerDrawn = main.getAttribute('data-server-view') === view;
+    main.removeAttribute('data-server-view');
+    currentView = view;
+    viewReady = false;
+    pageTitle = PAGE_TITLES[view] || PAGE_TITLES.home;
+    document.title = pageTitle;
+    $('#imagesAndContent').attr('data-view', view);
+    drawBasketPill(); // shop.js: the basket button isn't shown on the basket page itself
 }
 
-function accessPictureForm(divName) {
-    let newDiveName = '#' + divName;
-    $(newDiveName).modal('show');
-}
-
-function getProjectsAndWorks(partOfThePage) {
-    $('#imagesAndContent').css('padding-top', '50px');
-
-    if (selectWorksAreShown) {
-        return;
-    }
-
-    $.ajax({
-        url: "../actions/projectsAPI.php",
-        type: "GET",
-        data: {'activity': 'active'},
-        dataType: "json",
-        success: function(data) {
-            makeProjectCards(data, partOfThePage);
-        },
-        error: function() {
-            console.log("An error occurred.");
-        },
-    });
-
-    selectWorksAreShown = true;
-}
-
-// Add this to photoFunctions.js
-function loadProjectSection(projectSectionId) {
-    // Create and show a fixed loading overlay
-    ensureDropdownOpen('selectProjectCategories');
-
-    const loadingOverlay = $('<div>').addClass('fullpage-loading')
-        .html('<div class="loading-spinner"></div><p>Loading images...</p>');
-    $('body').append(loadingOverlay);
-
-    // Make sure projects are loaded
-    if (!selectWorksAreShown) {
-        // If projects aren't loaded, load them first
-        $.ajax({
-            url: "../actions/projectsAPI.php",
-            type: "GET",
-            data: {'activity': 'active'},
-            dataType: "json",
-            success: function(data) {
-                makeProjectCards(data, null); // Load projects but don't scroll yet
-
-                // After projects load, wait for images and then scroll
-                preloadVisibleImagesAndScroll(projectSectionId);
-            },
-            error: function(xhr, status, error) {
-                console.log("Error loading projects:", error);
-                $('.fullpage-loading').remove();
-            }
-        });
-    } else {
-        // Projects already loaded, just preload visible images and scroll
-        preloadVisibleImagesAndScroll(projectSectionId);
+// For a page whose title depends on what it shows (a shop item's name)
+function setPageTitle(title) {
+    pageTitle = title;
+    if (!viewer.open) {
+        document.title = title;
     }
 }
 
-// Helper function to preload images and scroll
-function preloadVisibleImagesAndScroll(projectSectionId) {
-    const targetSection = document.getElementById(projectSectionId);
-    if (!targetSection) {
-        $('.fullpage-loading').remove();
-        return;
+// --------------------------------------------------------------------------
+// Works page
+// --------------------------------------------------------------------------
+
+function renderWorks() {
+    setView('works');
+    var content = $('#imagesAndContent').css('padding-top', '50px');
+    var request = fetchPublicWorks('projects');
+    var keepServerDrawn = pageIsServerDrawn;
+    if (!isLoaded(request)) {
+        content.html(loadingHtml('Loading works...'));
     }
 
-    // Get all unloaded images in the document
-    const lazyImages = document.querySelectorAll('img[data-src]');
-
-    // If no images need loading, scroll immediately
-    if (lazyImages.length === 0) {
-        $('.fullpage-loading').remove();
-        smoothScrollTo(projectSectionId);
-        return;
-    }
-
-    // Create a counter to track loaded images
-    let loadedCount = 0;
-    let errorCount = 0;
-    const totalImages = lazyImages.length;
-
-    // Update loading message
-    $('.fullpage-loading p').text(`Loading images (0/${totalImages})...`);
-
-    // Set a safety timeout in case some images never load
-    const safetyTimeout = setTimeout(() => {
-        // Force finish loading after 10 seconds if not all images loaded
-        if (loadedCount + errorCount < totalImages) {
-            console.warn(`Timed out waiting for all images. Loaded: ${loadedCount}, Errors: ${errorCount}, Total: ${totalImages}`);
-
-            // Force load remaining images
-            lazyImages.forEach(img => {
-                if (!img.classList.contains('loaded') && !img.classList.contains('error')) {
-                    img.src = img.dataset.src || '';
-                    img.removeAttribute('data-src');
-                    img.classList.add('loaded');
-                }
-            });
-
-            // Remove overlay and scroll
-            $('.fullpage-loading').fadeOut(300, function() {
-                $(this).remove();
-                smoothScrollTo(projectSectionId);
-            });
-        }
-    }, 10000); // 10 second timeout
-
-    // Function to check if loading is complete
-    function checkComplete() {
-        if (loadedCount + errorCount >= totalImages) {
-            clearTimeout(safetyTimeout);
-
-            // All images processed, remove overlay and scroll
-            $('.fullpage-loading').fadeOut(300, function() {
-                $(this).remove();
-                smoothScrollTo(projectSectionId);
-            });
-        } else {
-            // Update progress message
-            $('.fullpage-loading p').text(`Loading images (${loadedCount + errorCount}/${totalImages})...`);
-        }
-    }
-
-    // Load all images with proper error handling
-    lazyImages.forEach(img => {
-        // Skip if already loaded
-        if (img.classList.contains('loaded') || img.classList.contains('error')) {
-            loadedCount++;
-            checkComplete();
+    return whenLoaded(request, function (projects) {
+        if (currentView !== 'works') {
             return;
         }
+        if (keepServerDrawn) {
+            galleryItems = [].concat.apply([], projects.map(function (project) { return project.works; }));
+            viewReady = true;
+            return;
+        }
+        content.empty();
+        var items = [];
 
-        const newImg = new Image();
+        projects.forEach(function (project, projectIndex) {
+            var section = createProjectElement(project);
+            var grid = section.find('.projectWorks');
+            project.works.forEach(function (work) {
+                // The first couple of pictures load straight away; the rest
+                // load as the visitor scrolls towards them
+                grid.append(createWorkCard(work, items.length, items.length > 1));
+                items.push(work);
+            });
+            if (projectIndex < projects.length - 1) {
+                section.append('<div class="work-separator" aria-hidden="true"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
+            }
+            content.append(section);
+        });
 
-        newImg.onload = function() {
-            // Replace data-src with actual src
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-            img.classList.add('loaded');
-            loadedCount++;
-            checkComplete();
-        };
-
-        newImg.onerror = function() {
-            console.error('Failed to load image:', img.dataset.src);
-            // Mark as error but still show something
-            img.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22232%22%20height%3D%22131%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20232%20131%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_188f638d5a2%20text%20%7B%20fill%3A%236c757d%3Bfont-family%3Avar%28--font-primary%29%3Bfont-size%3A12px%3Bfont-weight%3Avar%28--font-weight-light%29%3B%20%7D%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_188f638d5a2%22%3E%3Crect%20width%3D%22232%22%20height%3D%22131%22%20fill%3D%22%23f5f5f5%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2288.5%22%20y%3D%2270.6%22%3EImage%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E';
-            img.removeAttribute('data-src');
-            img.classList.add('error');
-            errorCount++;
-            checkComplete();
-        };
-
-        // Start loading (with a slight delay between images to prevent overloading)
-        setTimeout(() => {
-            newImg.src = img.dataset.src;
-        }, 50 * lazyImages.indexOf(img)); // Stagger loading slightly
-    });
-}
-
-// Smooth scrolling function
-function smoothScrollTo(elementId) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    console.log("scrolling now")
-
-    const headerOffset = 100;
-    const elementPosition = element.getBoundingClientRect().top;
-    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-    window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-    });
-}
-
-
-// Modify the jumpToSection function in photoFunctions.js
-function jumpToSection(partOfThePage) {
-    if (partOfThePage != null) {
-        loadProjectSection(partOfThePage);
-    }
-}
-
-function fetchWorkIdsForProject(id) {
-    return $.ajax({
-        url: '../actions/worksOfProjectsAPI.php',
-        type: 'GET',
-        data: {'projectId': id},
-        dataType: 'json'
+        galleryItems = items;
+        viewReady = true;
+    }, function () {
+        if (currentView === 'works') {
+            content.html(errorHtml('Sorry, there was a problem loading the works. Please try again later.'));
+        }
     });
 }
 
 function createProjectElement(project) {
-    let title = project.title;
-    let description = project.description ? project.description.replace(/\n/g, '<br>') : '';
-
-    // Create project wrapper with the SINGLE column layout
-    let projectDiv = $('<div>').addClass('project').attr({
-        'alt': title,
-        'id': 'projectSection' + title.trim()
-    }).css({
-        'border': '0px',
-        'text-align': 'center'
-    });
-
-    // Create header section
-    let titleAndDescriptionDiv = $('<div>').addClass('project-header');
-    let insertTitle = $('<h2>').text(title).addClass('project-title');
-    let insertDescription = $('<p>').html(description).addClass('project-description');
-
-    titleAndDescriptionDiv.append(insertTitle, insertDescription);
-
-    // Create works container with SINGLE column layout
-    let worksOfProjectDiv = $('<div>').addClass('projectWorks');
-
-    // Assemble project
-    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv);
-
-    return projectDiv;
+    var section = $('<section>').addClass('project').attr('id', projectSectionId(project.title));
+    var header = $('<div>').addClass('project-header');
+    header.append($('<h2>').addClass('project-title').text(project.title));
+    if (project.description) {
+        header.append($('<p>').addClass('project-description').html(multiline(project.description)));
+    }
+    section.append(header, $('<div>').addClass('projectWorks'));
+    return section;
 }
 
-function makeProjectCards(projects, partOfThePage) {
-    $('#imagesAndContent').empty();
-    images.length = 0;
-
-    // Show loading indicator
-    $('#imagesAndContent').html('<div class="loading-container"><div class="loading-spinner"></div><p>Loading projects...</p></div>');
-
-    let projectPromises = projects.map(project => {
-        return fetchWorkIdsForProject(project.id).then(workIds => {
-            return getWorksInfoFromIdsArray(workIds).then(allWorksForProject => {
-                return {project, allWorksForProject}; // Return project info with its works
-            });
-        });
-    });
-
-    Promise.all(projectPromises).then(results => {
-        $('#imagesAndContent').empty();
-
-        results.forEach(({project, allWorksForProject}) => {
-            let mainProj = createProjectElement(project);
-            allWorksForProject.forEach(information => {
-                let card = createWorkCardElement(information);
-                mainProj.find('.projectWorks').first().append(card);
-            });
-            if (projects[projects.length - 1].title != project.title) {
-                mainProj.append('<div class="work-separator" id="seperator' + project.title + '"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
-            }
-            $('#imagesAndContent').append(mainProj);
-        });
-
-        // Enable lazy loading
-        enableLazyLoading();
-
-        // Jump to specific section if needed
-        jumpToSection(partOfThePage);
-
-        // Update browser history and title
-        history.pushState({page: 'select-works'}, 'Select Works', '/select-works');
-        document.title = 'Select Works - Ambar Velasco';
-    }).catch(error => {
-        console.error('Error:', error);
-        $('#imagesAndContent').html('<div class="error-message"><p>Sorry, there was a problem loading projects. Please try again later.</p></div>');
-    });
+// Each work is a real link to its own address, so it can be opened in a new
+// tab, copied and shared; a normal click opens the viewer instead
+function createWorkCard(work, index, lazy) {
+    var container = $('<div>').addClass('img-container');
+    container.append(workImage(work, { sizes: GALLERY_SIZES, lazy: lazy, priority: index === 0 }));
+    container.append(
+        $('<div>').addClass('img-overlay').attr('aria-hidden', 'true')
+            .append($('<h3>').addClass('overlay-title').text(work.name))
+    );
+    return $('<a>').addClass('card work-card').attr({
+        href: work.path,
+        'data-index': index,
+        'aria-label': work.name
+    }).append(container);
 }
 
-// Enable lazy loading for images
-// Add this to enhance the enableLazyLoading function
-function enableLazyLoading() {
-    // First, handle any images that should be immediately visible
-    const immediateLoadImages = document.querySelectorAll('img[data-src]:not(.lazy-defer)');
-    immediateLoadImages.forEach(img => {
-        img.src = img.dataset.src;
-        img.removeAttribute('data-src');
-        img.classList.add('loaded');
-    });
+$(document).on('click', '.work-card', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return; // let "open in new tab" and friends work as normal
+    }
+    event.preventDefault();
+    if (VT.id && testInsteadOfOpening(this)) {
+        return;
+    }
+    openViewer(galleryItems, Number(this.getAttribute('data-index')), { from: this });
+});
 
-    // Then set up lazy loading for the rest
-    if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src) {
-                        img.src = img.dataset.src;
-                        img.removeAttribute('data-src');
-                        img.classList.add('loaded');
-                        observer.unobserve(img);
-                    }
-                }
-            });
-        }, { rootMargin: '200px 0px' }); // Larger margin to start loading earlier
+// Scroll so a painting sits in the middle of the screen (or near the top if
+// it's taller than the screen)
+function scrollWorkIntoView(index) {
+    var card = document.querySelector('.work-card[data-index="' + index + '"]');
+    if (!card) {
+        return;
+    }
+    var rect = card.getBoundingClientRect();
+    var room = window.innerHeight - rect.height;
+    instantScrollTo(window.pageYOffset + rect.top - (room > 120 ? room / 2 : 90));
+}
 
-        document.querySelectorAll('img[data-src].lazy-defer').forEach(img => {
-            imageObserver.observe(img);
-        });
+function scrollToSection(sectionId, smooth) {
+    var section = document.getElementById(sectionId);
+    if (!section) {
+        return;
+    }
+    var top = section.getBoundingClientRect().top + window.pageYOffset - 100;
+    if (smooth) {
+        window.scrollTo({ top: top, behavior: 'smooth' });
     } else {
-        // Fallback for browsers without IntersectionObserver
-        document.querySelectorAll('img[data-src]').forEach(img => {
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-            img.classList.add('loaded');
-        });
+        instantScrollTo(top);
     }
 }
 
-function createWorkCardElement(information) {
-    let imageURL = "baseImages/" + information.location;
-    let thumbnailURL = "baseImages/" + information.location;
-    let title = information.name;
-    let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
-    let long_description = information.long_description;
+// Opening a shared /work/<id> link: scroll the works to that painting, then
+// open it. A work that isn't on the Works page (e.g. only in the slideshow)
+// is shown on its own.
+function openSharedWork(workId, options) {
+    var index = -1;
+    for (var i = 0; i < galleryItems.length; i++) {
+        if (galleryItems[i].id === workId) {
+            index = i;
+            break;
+        }
+    }
 
-    // Create image info object for the modal
-    let imageInfo = {
-        url: imageURL,
-        title: title,
-        description: description,
-        long_description: long_description
-    };
-
-    // Create image container
-    let imageContainer = $('<div>').addClass('img-container');
-
-    // Create the image element with data-src for lazy loading
-    let imgElement = $('<img>')
-        .attr({
-            'data-src': thumbnailURL,
-            'src': 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', // Tiny placeholder
-            'alt': title,
-            'title': title,
-            'decoding': 'async'
+    if (index >= 0) {
+        if (!options.fromHistory) {
+            scrollWorkIntoView(index);
+        }
+        openViewer(galleryItems, index, {
+            addressIsSet: true,
+            from: document.querySelector('.work-card[data-index="' + index + '"]')
         });
+        return;
+    }
 
-    imageContainer.append(imgElement);
-
-    // Create overlay that shows on hover
-    let overlay = $('<div>').addClass('img-overlay');
-    let overlayTitle = $('<h3>').text(title).addClass('overlay-title');
-    overlay.append(overlayTitle);
-    imageContainer.append(overlay);
-
-    // Create card
-    let card = $('<div>').addClass('card').attr('alt', title).css({
-        'border': '0px',
-        'text-align': 'center'
-    }).append(imageContainer);
-
-    // Add click handler
-    card.on('click', function() {
-        makeBigPic(imageURL);
-    });
-
-    // Add to global images array
-    images.push(imageInfo);
-
-    return card;
-}
-
-function getWorksInfoFromIdsArray(projectIds) {
-    return $.ajax({
-        url: '../actions/getWorksByIdArray.php',
-        method: 'GET',
-        data: {'projectIds': projectIds},
-        dataType: 'json',
-    });
-}
-
-function getCarousel() {
-    genre = {
-        theYear: 'carousel'
+    if (pageData.work && pageData.work.id === workId) {
+        openViewer([pageData.work], 0, { addressIsSet: true });
+        return;
     }
 
     $.ajax({
-        url: 'actions/picturesAPI.php',
-        method: 'GET',
-        data: genre,
-        dataType: 'json',
-        success: function(response) {
-            createCarousel(response);
-            spawnNewsletterFloat();
-        },
-        error: function(xhr, status, error) {
-            console.log('Error:', error);
+        url: '/actions/publicWorksAPI.php',
+        data: { view: 'work', id: workId },
+        dataType: 'json'
+    }).then(function (response) {
+        openViewer([response.work], 0, { addressIsSet: true });
+    }, function () {
+        // Hidden or deleted since the link was shared: just show the works
+        history.replaceState({ path: '/select-works' }, '', '/select-works');
+    });
+}
+
+// --------------------------------------------------------------------------
+// The artwork viewer
+// --------------------------------------------------------------------------
+
+// Opening: the painting grows out of the picture that was clicked while the
+// room dims around it; closing, it shrinks back into its place. Without a
+// picture to start from (a shared link, Back / Forward) it fades up gently.
+var VIEWER_OPEN_MS = 420;
+var VIEWER_CLOSE_MS = 320;
+var VIEWER_OPEN_EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';   // quick to start, long soft landing
+var VIEWER_CLOSE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+// The browser's bar colour (phones): the page's, and the viewer's dark
+// background as it looks over the page
+var PAGE_THEME_COLOR = '#ffffff';
+var VIEWER_THEME_COLOR = '#222220';
+// Never animate opacity up from exactly 0: browsers don't draw an element
+// at 0, then need frames to catch up (PhotoSwipe's MIN_OPACITY)
+var VIEWER_MIN_OPACITY = 0.003;
+
+// options.addressIsSet: the address bar already shows this work (a shared
+// link, or Back/Forward), so don't add a history entry
+// options.from: the picture (or card) on the page that was clicked
+function openViewer(items, index, options) {
+    if (!items.length) {
+        return;
+    }
+    if (viewer.closing) {
+        finishClosing();
+    }
+    var wasOpen = viewer.open;
+    var modal = document.getElementById('bigPicModal');
+    // A shared painting link arrives with the viewer already drawn open
+    var preopened = modal.hasAttribute('data-preopened');
+    var source = null;
+    viewer.items = items;
+    viewer.index = index;
+
+    if (!wasOpen) {
+        // Start clean rather than flashing the last painting viewed
+        if (!preopened) {
+            document.getElementById('popUpImage').removeAttribute('src');
+            source = pageImageToGrowFrom(options.from);
+        }
+        var here = parseRoute(location.pathname);
+        viewer.basePath = here.workId ? '/select-works' : here.path;
+    }
+
+    var work = items[index];
+    if (!options.addressIsSet && location.pathname !== work.path && !VT.noHistory) {
+        rememberScroll();
+        history.pushState({ path: work.path, viewer: true }, '', work.path);
+    }
+
+    if (wasOpen) {
+        showViewerImage();
+        return;
+    }
+
+    viewer.open = true;
+    viewer.source = source ? { index: index, img: source } : null;
+    // The picture on the page is already loaded: it stands in until the
+    // sharper copy is ready, so the painting is there from the first frame
+    showViewerImage(0, preopened ? null : {
+        placeholder: source ? (source.currentSrc || source.src) : null,
+        placeholderWidth: source ? source.naturalWidth : 0
+    });
+    // (shown at once: the animation below is the only motion)
+    viewerModal('show');
+    // A plain focus() can nudge the page's scroll on iPhones, which makes
+    // Safari redraw it. Focus without scrolling, so Escape still closes.
+    if (!VT.noFocus) {
+        modal.focus({ preventScroll: true });
+    }
+    pauseSlideshow(true);
+
+    if (preopened) {
+        setThemeColor(VIEWER_THEME_COLOR);
+        // Take over the open viewer, and swap the page's own dark
+        // background for the viewer's identical one
+        modal.removeAttribute('data-preopened');
+        $('#preopenedBackdrop').remove();
+        updateViewerScrolling();
+    } else {
+        animateOpening(source);
+    }
+}
+
+// The picture to grow the painting out of, if it's loaded and on screen
+function pageImageToGrowFrom(el) {
+    if (!el || prefersReducedMotion()) {
+        return null;
+    }
+    var img = el.tagName === 'IMG' ? el : el.querySelector('img');
+    return isUsablePageImage(img) ? img : null;
+}
+
+// ...and the one to shrink it back into: where it came from, or the current
+// painting's picture if it's on screen
+function pageImageToShrinkInto() {
+    if (prefersReducedMotion()) {
+        return null;
+    }
+    var candidates = [];
+    if (viewer.source && viewer.source.index === viewer.index) {
+        candidates.push(viewer.source.img);
+    }
+    if (viewer.items === galleryItems) {
+        candidates.push(document.querySelector('.work-card[data-index="' + viewer.index + '"] img'));
+        candidates.push(document.querySelector('.carousel-link[data-index="' + viewer.index + '"] img'));
+    }
+    for (var i = 0; i < candidates.length; i++) {
+        if (isUsablePageImage(candidates[i])) {
+            return candidates[i];
+        }
+    }
+    return null;
+}
+
+function isUsablePageImage(img) {
+    if (!img || !img.complete || !img.naturalWidth || !document.body.contains(img)) {
+        return false;
+    }
+    var rect = img.getBoundingClientRect();
+    return rect.width > 4 && rect.height > 4 &&
+        rect.bottom > 0 && rect.top < window.innerHeight &&
+        rect.right > 0 && rect.left < window.innerWidth;
+}
+
+// The transform that draws the viewer's picture (laid out at `at`) exactly
+// over `target` (the viewer image's transform-origin is its top-left corner)
+function transformOnto(at, target) {
+    return 'translate(' + (target.left - at.left) + 'px, ' + (target.top - at.top) + 'px) ' +
+        'scale(' + (target.width / at.width) + ', ' + (target.height / at.height) + ')';
+}
+
+// A slight shrink about the middle (for the fade in / out)
+function shrunkAboutMiddle(at, scale) {
+    return 'translate(' + (at.width * (1 - scale) / 2) + 'px, ' + (at.height * (1 - scale) / 2) + 'px) scale(' + scale + ')';
+}
+
+// While the painting is in the viewer, its picture on the page is hidden,
+// so there's only ever one of it on screen. Not on phones and tablets:
+// Safari there can take a few frames to draw the viewer, and a hidden
+// picture would leave a white gap meanwhile. The dark background covers
+// it instead (PhotoSwipe leaves the picture on the page alone too).
+function hideInPage(img) {
+    if (isTouchScreen()) {
+        return;
+    }
+    var el = $(img).closest('.img-container')[0] || img;
+    el.style.visibility = 'hidden';
+    viewer.hiddenInPage.push(el);
+}
+
+function showInPage() {
+    viewer.hiddenInPage.forEach(function (el) {
+        el.style.visibility = '';
+    });
+    viewer.hiddenInPage = [];
+}
+
+// delay: change it part-way through the fade, when the screen is about as
+// dark (or light) as the colour, rather than with a jump at the start
+function setThemeColor(color, delay) {
+    clearTimeout(viewer.themeTimer);
+    if (VT.noThemeColor) {
+        return;
+    }
+    if (delay) {
+        viewer.themeTimer = setTimeout(function () {
+            setThemeColor(color);
+        }, delay);
+        return;
+    }
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+        meta.setAttribute('content', color);
+    }
+}
+
+// The home slideshow holds still while a painting is open
+function pauseSlideshow(pause) {
+    var slideshow = $('#homePageCarousel');
+    if (slideshow.data('bs.carousel')) {
+        slideshow.carousel(pause ? 'pause' : 'cycle');
+    }
+}
+
+function animateOpening(source) {
+    if (VT.noAnim) {
+        // Test switch: everything is simply there, the dark background too
+        setThemeColor(VIEWER_THEME_COLOR);
+        updateViewerScrolling();
+        return;
+    }
+    var modal = document.getElementById('bigPicModal');
+    var img = document.getElementById('popUpImage');
+    var backdrop = document.querySelector('.modal-backdrop');
+    var ms = prefersReducedMotion() ? 0 : VIEWER_OPEN_MS;
+    var at = img.getBoundingClientRect();
+    if (!(at.width > 0 && at.height > 0)) {
+        source = null; // nothing to measure the painting by: just fade it up
+    }
+
+    // Where it starts: the room still light, the painting sitting exactly
+    // over the picture that was clicked. The picture on the page stays
+    // visible underneath until the viewer's copy is ready to be drawn, so
+    // there's never a frame with neither (phones can take a frame to draw it).
+    // The dark background starts all but invisible rather than at 0, which
+    // browsers skip drawing and then have to catch up on (as PhotoSwipe
+    // does), and the painting is readied for moving before it moves.
+    viewer.opening = true;
+    $(modal).addClass('is-opening');
+    if (backdrop) {
+        backdrop.style.transition = 'none';
+        backdrop.style.opacity = String(VIEWER_MIN_OPACITY);
+    }
+    if (source) {
+        if (!VT.noWillChange) {
+            img.style.willChange = 'transform';
+        }
+        img.style.transition = 'none';
+        img.style.transform = transformOnto(at, source.getBoundingClientRect());
+    }
+
+    var started = false;
+    var start = function () {
+        if (started || !viewer.opening || !viewer.open) {
+            return;
+        }
+        started = true;
+        clearTimeout(viewer.openTimer);
+        if (source) {
+            hideInPage(source);
+        }
+        void modal.offsetWidth; // let the browser take in the starting point
+
+        // ...and off it goes
+        if (backdrop) {
+            backdrop.style.transition = 'opacity ' + Math.round(ms * 0.8) + 'ms ease-out';
+            backdrop.style.opacity = '';
+        }
+        setThemeColor(VIEWER_THEME_COLOR, ms * 0.35);
+        $(modal).removeClass('is-opening').addClass('is-arriving');
+        if (source) {
+            img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_OPEN_EASE;
+            img.style.transform = '';
+            viewer.openTimer = setTimeout(finishOpening, ms + 40);
+        } else if (img.getAttribute('src')) {
+            fadeUpViewerImage();
+        } else {
+            // Nothing to show yet: the room dims now, the painting fades up
+            // as soon as it has loaded (showViewerImage)
+            viewer.openTimer = setTimeout(finishOpening, ms + 40);
+        }
+    };
+    // Start once the copy is decoded (it's normally ready at once: it's the
+    // same file the page is already showing) and the starting point has had
+    // at least 50ms on screen, but never wait more than 250ms: PhotoSwipe's
+    // timings
+    viewer.openTimer = setTimeout(start, 250);
+    var decoded = false;
+    var waited = false;
+    var go = function () {
+        if (decoded && waited) {
+            requestAnimationFrame(start);
+            setTimeout(start, 40); // (in case frames aren't being drawn)
+        }
+    };
+    setTimeout(function () {
+        waited = true;
+        go();
+    }, 50);
+    var whenDecoded = function () {
+        decoded = true;
+        go();
+    };
+    if (img.getAttribute('src') && img.decode) {
+        img.decode().then(whenDecoded, whenDecoded);
+    } else {
+        whenDecoded();
+    }
+}
+
+// The viewer only becomes a scrolling layer when the painting and its
+// caption don't fit on the screen (a very tall painting). On iPhones a
+// scrolling layer can skip drawing its contents for a few frames when it
+// appears, so it isn't one while opening or closing, or when it needn't be.
+function updateViewerScrolling() {
+    var modal = document.getElementById('bigPicModal');
+    $(modal).toggleClass('can-scroll', modal.scrollHeight > modal.clientHeight + 1);
+}
+
+// The painting appears where it is, rising gently into place
+function fadeUpViewerImage() {
+    var img = document.getElementById('popUpImage');
+    var ms = prefersReducedMotion() ? 0 : VIEWER_OPEN_MS;
+    var at = img.getBoundingClientRect();
+    viewer.opening = true;
+    img.style.transition = 'none';
+    img.style.opacity = '0';
+    img.style.transform = at.width ? shrunkAboutMiddle(at, 0.96) : '';
+    void img.offsetWidth;
+    img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_OPEN_EASE + ', opacity ' + Math.round(ms * 0.7) + 'ms ease';
+    img.style.opacity = '';
+    img.style.transform = '';
+    clearTimeout(viewer.openTimer);
+    viewer.openTimer = setTimeout(finishOpening, ms + 40);
+}
+
+function finishOpening() {
+    clearTimeout(viewer.openTimer);
+    if (!viewer.opening) {
+        return;
+    }
+    viewer.opening = false;
+    $('#bigPicModal').removeClass('is-opening is-arriving');
+    setThemeColor(VIEWER_THEME_COLOR);
+    var img = document.getElementById('popUpImage');
+    img.style.transition = '';
+    img.style.transform = '';
+    img.style.willChange = '';
+    if (!viewer.waitingForImage) {
+        img.style.opacity = '';
+    }
+    updateViewerScrolling();
+    if (viewer.afterOpening) {
+        var then = viewer.afterOpening;
+        viewer.afterOpening = null;
+        then();
+    }
+}
+
+// Stepping to another painting (or a swipe) part-way through the opening:
+// that movement takes over from wherever the opening had got to
+function stopOpening() {
+    clearTimeout(viewer.openTimer);
+    viewer.opening = false;
+    viewer.afterOpening = null;
+    $('#bigPicModal').removeClass('is-opening is-arriving');
+    document.getElementById('popUpImage').style.willChange = '';
+    var backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop && backdrop.style.opacity) {
+        backdrop.style.transition = 'opacity 250ms ease-out';
+        backdrop.style.opacity = '';
+    }
+    setThemeColor(VIEWER_THEME_COLOR);
+}
+
+// Stepping between paintings: the current one drifts away and fades, the
+// next drifts in from the other side
+var VIEWER_SLIDE_PX = 60;
+var VIEWER_LEAVE_MS = 180;
+var VIEWER_ARRIVE_MS = 320;
+
+function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// direction: -1 / 1 when stepping to the previous / next painting; leave it
+// out when opening the viewer.
+// opening: { placeholder }: the viewer is opening; placeholder is an
+// already-loaded picture of the same painting to show until the right-sized
+// copy is ready (without one, the painting fades up once it has loaded)
+function showViewerImage(direction, opening) {
+    var work = viewer.items[viewer.index];
+    var img = document.getElementById('popUpImage');
+    var src = viewerImageUrl(work);
+    // A shared painting link arrives with the full web copy already showing:
+    // keep it rather than download a second, smaller copy
+    if (img.getAttribute('src') === webImageUrl(work.location)) {
+        src = webImageUrl(work.location);
+    }
+    var token = ++viewer.loadToken;
+    var animate = !!direction && !prefersReducedMotion();
+    var placeholder = opening && opening.placeholder;
+    // The page's copy is often already sharp enough for the viewer (always,
+    // on phones, where the works are drawn wider than the viewer): keep it,
+    // so there's no swap at all
+    if (placeholder && work.width && work.height &&
+        opening.placeholderWidth >= Math.min(work.width, viewerImageWidth(work) * (window.devicePixelRatio || 1)) - 1) {
+        src = placeholder;
+    }
+    var leftAt = Date.now();
+
+    $('.modal-nav-arrows').toggle(viewer.items.length > 1);
+    if (!VT.noHistory) {
+        document.title = work.name + ' - Ambar Velasco';
+    }
+
+    function showDetails() {
+        $('#imageTitle').text(work.name);
+        $('#imageDescription').html(multiline(work.firstDescription));
+        $('#imageCounter').text(viewer.items.length > 1 ? (viewer.index + 1) + ' / ' + viewer.items.length : '');
+        img.alt = work.name;
+        img.setAttribute('data-original', originalImageUrl(work.location));
+        img.removeAttribute('data-fell-back');
+        // Its proportions, so it's drawn at the right size before it loads
+        if (work.width && work.height) {
+            img.style.setProperty('--w', work.width);
+            img.style.setProperty('--h', work.height);
+        } else {
+            img.style.removeProperty('--w');
+            img.style.removeProperty('--h');
+        }
+        // A work that can be bought links to its page in the shop
+        var shopPath = pageData.shopLinks && work.id ? pageData.shopLinks[work.id] : null;
+        $('#imageShop').prop('hidden', !shopPath).attr('href', shopPath || '#');
+        setUpDescription();
+        fitViewerToScreen();
+        updateViewerTools(work);
+    }
+
+    viewer.waitingForImage = false;
+    if (animate) {
+        // Send the current painting and its caption away; the details change
+        // once the next painting is ready to come in
+        img.style.transition = 'transform ' + VIEWER_LEAVE_MS + 'ms ease-in, opacity ' + VIEWER_LEAVE_MS + 'ms ease-in';
+        // (after a swipe, keep going from wherever the finger left it)
+        var dragged = Math.abs(parseFloat((img.style.transform.match(/translateX\((-?[\d.]+)px\)/) || [])[1]) || 0);
+        img.style.transform = 'translateX(' + (-direction * Math.max(VIEWER_SLIDE_PX, dragged + 40)) + 'px)';
+        img.style.opacity = '0';
+        $('#imageInfo').addClass('is-changing');
+    } else {
+        img.style.transition = '';
+        img.style.transform = '';
+        img.style.opacity = '';
+        $('#imageInfo').removeClass('is-changing');
+        showDetails();
+        if (placeholder) {
+            img.src = placeholder;
+        } else if (opening) {
+            viewer.waitingForImage = true;
+            img.style.opacity = '0';
+        }
+    }
+
+    // Keep the previous picture up until the next one is ready (no blank
+    // flash), and only show a spinner if it takes a moment
+    var spinnerTimer = placeholder ? null : setTimeout(function () {
+        if (token === viewer.loadToken) {
+            $('#spinner').show();
+            $(img).addClass('is-loading');
+        }
+    }, animate ? VIEWER_LEAVE_MS + 150 : 150);
+
+    function arrive(finalSrc) {
+        showDetails();
+        // Start just off to the side, invisible, then glide into place
+        img.style.transition = 'none';
+        img.style.transform = 'translateX(' + (direction * VIEWER_SLIDE_PX) + 'px)';
+        img.style.opacity = '0';
+        img.src = finalSrc;
+        var reveal = function () {
+            if (token !== viewer.loadToken) {
+                return;
+            }
+            void img.offsetWidth; // let the browser take in the starting position
+            img.style.transition = 'transform ' + VIEWER_ARRIVE_MS + 'ms var(--ease-out-soft), opacity ' + VIEWER_ARRIVE_MS + 'ms ease';
+            img.style.transform = '';
+            img.style.opacity = '';
+            $('#imageInfo').removeClass('is-changing');
+            updateViewerScrolling();
+        };
+        if (img.decode) {
+            img.decode().then(reveal, reveal);
+        } else {
+            reveal();
+        }
+    }
+
+    // Swap the stand-in for the sharper copy (same size, so nothing moves),
+    // once that copy is decoded and the opening has finished
+    function sharpen(finalSrc) {
+        var swap = function () {
+            if (token === viewer.loadToken && img.src !== finalSrc) {
+                img.src = finalSrc;
+            }
+        };
+        var whenDecoded = function () {
+            if (token !== viewer.loadToken) {
+                return;
+            }
+            if (viewer.opening) {
+                viewer.afterOpening = swap;
+            } else {
+                swap();
+            }
+        };
+        if (loader.decode) {
+            loader.decode().then(whenDecoded, whenDecoded);
+        } else {
+            whenDecoded();
+        }
+    }
+
+    // Opened with nothing to show: fade the painting up once it's decoded
+    function appear(finalSrc) {
+        var show = function () {
+            if (token !== viewer.loadToken) {
+                return;
+            }
+            viewer.waitingForImage = false;
+            img.src = finalSrc;
+            fadeUpViewerImage();
+        };
+        if (loader.decode) {
+            loader.decode().then(show, show);
+        } else {
+            show();
+        }
+    }
+
+    var loader = new Image();
+    loader.onload = loader.onerror = function (event) {
+        if (token !== viewer.loadToken) {
+            return;
+        }
+        clearTimeout(spinnerTimer);
+        $('#spinner').hide();
+        $(img).removeClass('is-loading');
+        var finalSrc = event.type === 'error' ? originalImageUrl(work.location) : src;
+        if (placeholder) {
+            sharpen(event.type === 'error' ? finalSrc : loader.src);
+            return;
+        }
+        if (opening) {
+            appear(finalSrc);
+            return;
+        }
+        if (!animate) {
+            img.src = finalSrc;
+            return;
+        }
+        // Let the old painting finish leaving before the new one arrives
+        setTimeout(function () {
+            if (token === viewer.loadToken) {
+                arrive(finalSrc);
+            }
+        }, Math.max(0, VIEWER_LEAVE_MS - (Date.now() - leftAt)));
+    };
+    loader.src = src;
+    // (the scale scene shows this same file, already downloaded)
+    viewer.loading = { work: work, src: src };
+
+    // Get the neighbours ready so the arrows feel instant
+    [-1, 1].forEach(function (step) {
+        var neighbour = viewer.items[(viewer.index + step + viewer.items.length) % viewer.items.length];
+        if (neighbour && neighbour !== work) {
+            new Image().src = viewerImageUrl(neighbour);
         }
     });
 }
 
-// Floating newsletter nudge shown on the landing view. Drifts gently around
-// the page, pauses on hover, can be dismissed for the rest of the session,
-// and opens the newsletter sign-up when clicked.
-function spawnNewsletterFloat() {
-    if (sessionStorage.getItem('newsletterFloatDismissed')) return;
-    if (document.getElementById('newsletterFloat')) return;
+function changeImage(step) {
+    if (!viewer.open || viewer.closing || viewer.items.length < 2) {
+        return;
+    }
+    if (viewer.opening) {
+        stopOpening();
+    }
+    showInPage();
+    exitZoom(false);
+    viewer.index = (viewer.index + step + viewer.items.length) % viewer.items.length;
+    var work = viewer.items[viewer.index];
+    if (viewerTools.scale) {
+        leaveScaleScene(step);
+    }
+    // Stepping through paintings updates the address without piling up history
+    history.replaceState($.extend({}, history.state, { path: work.path }), '', work.path);
+    showViewerImage(step);
+}
 
-    let float = $(`
-        <div id="newsletterFloat" class="newsletter-float" role="button" tabindex="0" aria-label="Sign up for the newsletter">
-          <div class="newsletter-float-inner">
-            <img src="imgMid/transparentHomeLeafFinal.png" alt="" class="newsletter-float-leaf">
-            <span class="newsletter-float-text">Newsletter</span>
-            <button type="button" class="newsletter-float-close" aria-label="Dismiss newsletter reminder">&times;</button>
-          </div>
-        </div>`);
+// options.fromHistory: the address bar has already moved (Back button), so
+// only the modal needs closing
+// options.instantly: no animation (another page is about to be drawn)
+function closeViewer(options) {
+    if (!viewer.open) {
+        return;
+    }
+    options = options || {};
+    viewer.closingFromHistory = !!options.fromHistory;
+    if (options.instantly) {
+        finishClosing();
+        return;
+    }
+    // Asks first (hide.bs.modal), which starts animateClosing()
+    viewerModal('hide');
+}
 
-    $('body').append(float);
+// The viewer and its dark background are built once, when the page loads,
+// and stay on the page invisibly (.is-idle); opening only makes them
+// visible. Nothing new is put on the page when a painting opens, so phones
+// start the motion sooner and draw it more smoothly. This used to be
+// Bootstrap's modal; it still sends the same show / hide / hidden events
+// (named *.bs.modal) that setupViewer listens to.
+var viewerBackdrop = null;
 
-    float.find('.newsletter-float-close').on('click', function(e) {
-        e.stopPropagation();
-        sessionStorage.setItem('newsletterFloatDismissed', '1');
-        float.fadeOut(250, function() { float.remove(); });
+function setupViewerLayer() {
+    var modal = document.getElementById('bigPicModal');
+    var preopened = modal.hasAttribute('data-preopened');
+    viewerBackdrop = $('<div class="modal-backdrop viewer-backdrop" aria-hidden="true">')
+        .toggleClass('show', preopened).appendTo('body')[0];
+    $(modal).toggleClass('is-idle', !preopened);
+    modal.inert = !preopened; // nothing in it can be tabbed to while idle
+    viewer.listenToTouches(preopened);
+    document.addEventListener('keydown', function (event) {
+        if (viewer.open && event.key === 'Escape') {
+            if (zoom.active) {
+                exitZoom(true);
+            } else if (viewerTools.scale) {
+                setScale(false);
+            } else {
+                closeViewer();
+            }
+        }
+    });
+}
+
+function viewerModal(command) {
+    var modal = $('#bigPicModal');
+    var asking = $.Event(command + '.bs.modal');
+    modal.trigger(asking);
+    if (asking.isDefaultPrevented()) {
+        return;
+    }
+    if (command === 'show') {
+        modal.attr({ 'aria-modal': 'true', role: 'dialog' }).removeAttr('aria-hidden');
+        modal[0].inert = false;
+        modal.removeClass('is-idle').addClass('show');
+        $(viewerBackdrop).addClass('show');
+        viewer.listenToTouches(true);
+        modal.trigger('shown.bs.modal');
+        return;
+    }
+    modal.removeClass('show').attr('aria-hidden', 'true').removeAttr('aria-modal');
+    // (still on the page, so let go of the focus it was given)
+    if (modal[0].contains(document.activeElement)) {
+        document.activeElement.blur();
+    }
+    modal.addClass('is-idle');
+    modal[0].inert = true;
+    $(viewerBackdrop).removeClass('show').css({ transition: 'none', opacity: '' });
+    viewer.listenToTouches(false);
+    modal.trigger('hidden.bs.modal');
+}
+
+function animateClosing() {
+    var modal = document.getElementById('bigPicModal');
+    var img = document.getElementById('popUpImage');
+    var backdrop = document.querySelector('.modal-backdrop');
+    var ms = prefersReducedMotion() || VT.noAnim ? 0 : VIEWER_CLOSE_MS;
+
+    resetViewerTools(); // the painting itself must be showing to shrink back
+    viewer.closing = true;
+    viewer.loadToken++; // nothing still loading may change the picture now
+    clearTimeout(viewer.openTimer);
+    viewer.opening = false;
+    viewer.afterOpening = null;
+    $('#spinner').hide();
+    $(img).removeClass('is-loading');
+    setThemeColor(PAGE_THEME_COLOR, ms * 0.5);
+    if (!ms) {
+        finishClosing();
+        return;
+    }
+
+    // Carry on from exactly how things look now (even part-way through
+    // opening, or stepping to the next painting)
+    var shown = getComputedStyle(img);
+    var transform = shown.transform;
+    var opacity = shown.opacity;
+    var backdropOpacity = backdrop ? getComputedStyle(backdrop).opacity : null;
+    $(modal).removeClass('is-opening is-arriving').addClass('is-closing');
+    img.style.transition = 'none';
+    img.style.transform = 'none';
+    var at = img.getBoundingClientRect();
+    img.style.transform = transform === 'none' ? '' : transform;
+    img.style.opacity = opacity;
+    if (backdrop) {
+        backdrop.style.transition = 'none';
+        backdrop.style.opacity = backdropOpacity;
+    }
+    var target = (at.width > 0 && at.height > 0 && img.getAttribute('src')) ? pageImageToShrinkInto() : null;
+    void modal.offsetWidth;
+
+    if (backdrop) {
+        backdrop.style.transition = 'opacity ' + ms + 'ms ease';
+        backdrop.style.opacity = '0';
+    }
+    if (target) {
+        img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_CLOSE_EASE + ', opacity ' + Math.round(ms * 0.5) + 'ms ease';
+        img.style.transform = transformOnto(at, target.getBoundingClientRect());
+        img.style.opacity = '1';
+        hideInPage(target);
+    } else {
+        img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_CLOSE_EASE + ', opacity ' + Math.round(ms * 0.8) + 'ms ease';
+        img.style.transform = at.width ? shrunkAboutMiddle(at, 0.96) : '';
+        img.style.opacity = '0';
+    }
+    viewer.closeTimer = setTimeout(finishClosing, ms + 30);
+}
+
+// Put the picture back on the page and take the viewer away, in the same
+// moment, so the hand-over can't be seen
+function finishClosing() {
+    clearTimeout(viewer.closeTimer);
+    clearTimeout(viewer.openTimer);
+    if (!viewer.open) {
+        return;
+    }
+    viewer.closing = false;
+    viewer.opening = false;
+    viewer.afterOpening = null;
+    viewer.waitingForImage = false;
+    resetViewerTools();
+    setThemeColor(PAGE_THEME_COLOR);
+    showInPage();
+    viewer.hidingNow = true;
+    viewerModal('hide'); // instant; hidden.bs.modal tidies up
+    viewer.hidingNow = false;
+    $('#bigPicModal').removeClass('is-opening is-arriving is-closing');
+    var img = document.getElementById('popUpImage');
+    img.style.transition = 'none';
+    img.style.transform = '';
+    img.style.opacity = '';
+}
+
+// Kept for anything that still calls it by its old name
+function makeBigPic(imageUrl) {
+    for (var i = 0; i < galleryItems.length; i++) {
+        if (webImageUrl(galleryItems[i].location) === imageUrl || originalImageUrl(galleryItems[i].location) === imageUrl) {
+            openViewer(galleryItems, i, {});
+            return;
+        }
+    }
+}
+
+function setupViewer() {
+    var modal = $('#bigPicModal');
+
+    var modalEl = modal[0];
+
+    // Keep keyboard focus inside the open viewer (Bootstrap's version of this
+    // would scroll the page; see openViewer)
+    document.addEventListener('focusin', function (event) {
+        if (viewer.open && !modalEl.contains(event.target)) {
+            modalEl.focus({ preventScroll: true });
+        }
     });
 
-    float.on('click keydown', function(e) {
-        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    // Hold the page behind the viewer exactly where it is.
+    // Computers: switch its scrolling off. That takes away the scrollbar (on
+    // computers that show one), which would let the works widen a little;
+    // keeping that much space empty holds them still.
+    // Phones and tablets: leave the page completely alone (switching its
+    // scrolling off makes Safari repaint it, blinking white); the touch
+    // handlers below stop it scrolling instead.
+    modal.on('show.bs.modal', function () {
+        scrollPosition = window.pageYOffset;
+        if (isTouchScreen()) {
+            return;
+        }
+        var scrollbar = window.innerWidth - document.documentElement.clientWidth;
+        $('html').addClass('no-scroll');
+        $('body').css('padding-right', scrollbar > 0 ? scrollbar + 'px' : '');
+    });
+
+    // A finger dragging on the viewer scrolls the viewer (a very tall
+    // painting) but never the page behind it, or the browser's bars
+    var lastTouchY = 0;
+    function onViewerTouchStart(e) {
+        if (e.touches.length === 1) {
+            lastTouchY = e.touches[0].clientY;
+        }
+    }
+    function onViewerTouchMove(e) {
+        if (e.touches.length !== 1 || !e.cancelable) {
+            return; // two fingers: let pinch-zoom work
+        }
+        var y = e.touches[0].clientY;
+        var down = y > lastTouchY;
+        lastTouchY = y;
+        var atTop = modalEl.scrollTop <= 0;
+        var atBottom = modalEl.scrollTop + modalEl.clientHeight >= modalEl.scrollHeight - 1;
+        if ((down && atTop) || (!down && atBottom)) {
+            e.preventDefault();
+        }
+    }
+
+    // Every way of closing (the close button, the dark background, Escape,
+    // swipe down, Back) comes through here: animate first, then hide
+    modal.on('hide.bs.modal', function (event) {
+        if (viewer.hidingNow) {
+            return;
+        }
+        event.preventDefault();
+        if (!viewer.closing) {
+            animateClosing();
+        }
+    });
+
+    modal.on('hidden.bs.modal', function () {
+        viewer.open = false;
+        viewer.source = null;
+        viewer.loadToken++;
+        $('#spinner').hide();
+        $('html').removeClass('no-scroll');
+        $('body').css('padding-right', '');
+        if (Math.abs(window.pageYOffset - scrollPosition) > 1) {
+            instantScrollTo(scrollPosition);
+        }
+        document.title = pageTitle;
+        pauseSlideshow(false);
+
+        if (viewer.closingFromHistory) {
+            viewer.closingFromHistory = false;
+            return;
+        }
+        // Closed by the visitor: take the address back to the page underneath.
+        // If opening added a history entry, step back over it so Back doesn't
+        // reopen the painting; for a shared link there's nothing to step back to.
+        if (history.state && history.state.viewer) {
+            history.back();
+        } else if (parseRoute(location.pathname).workId) {
+            history.replaceState({ path: viewer.basePath }, '', viewer.basePath);
+        }
+    });
+
+    // Click on the dark background closes; click on the picture steps through
+    modal.on('click', function (event) {
+        if (!$(event.target).closest('#popUpImage, .nav-arrow, .viewer-toolbar, .image-more, .image-shop, .scale-scene, .zoom-layer').length) {
+            closeViewer();
+        }
+    });
+
+    document.getElementById('popUpImage').addEventListener('click', function (event) {
+        if (isPinching || zoom.active) {
+            return;
+        }
+        var step = event.offsetX < this.clientWidth / 2 ? -1 : 1;
+        if (!isTouchScreen()) {
+            changeImage(step);
+            return;
+        }
+        // Phones and tablets: a second tap straight after zooms in there, so
+        // a single tap waits a moment before stepping to the next painting
+        if (zoom.tapTimer) {
+            clearTimeout(zoom.tapTimer);
+            zoom.tapTimer = null;
+            zoomInAt(event.clientX, event.clientY);
+            return;
+        }
+        zoom.tapTimer = setTimeout(function () {
+            zoom.tapTimer = null;
+            changeImage(step);
+        }, ZOOM_TAP_MS);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (!viewer.open) {
+            return;
+        }
+        if (event.key === 'ArrowLeft') {
+            changeImage(-1);
+        } else if (event.key === 'ArrowRight') {
+            changeImage(1);
+        }
+    });
+
+    $('#prevImage').on('click', function () { changeImage(-1); });
+    $('#nextImage').on('click', function () { changeImage(1); });
+
+    // Touch: swipe sideways to step through, swipe down to close (not while
+    // the painting is still flying in or out). The same on the See to scale
+    // scene, which takes the painting's place while it's showing.
+    var image = document.getElementById('popUpImage');
+    var scene = document.getElementById('scaleScene');
+    var tracking = false;
+    function onImageTouchStart(e) {
+        isPinching = e.touches.length > 1;
+        tracking = e.touches.length === 1 && !viewer.opening && !viewer.closing && !zoom.active;
+        if (tracking) {
+            this.style.transition = 'none';
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }
+    }
+
+    function onImageTouchMove(e) {
+        if (e.touches.length > 1) {
+            isPinching = true;
+        } else if (tracking && e.touches.length === 1 && !isPinching) {
+            var deltaX = Math.round((e.touches[0].clientX - startX) * 0.3);
+            var deltaY = e.touches[0].clientY - startY;
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                e.preventDefault();
+                this.style.transform = 'translateX(' + deltaX + 'px)';
+            }
+        }
+    }
+
+    function onImageTouchEnd(e) {
+        if (!tracking) {
+            return;
+        }
+        tracking = false;
+        this.style.transition = 'transform 0.3s ease';
+        if (isPinching || e.changedTouches.length !== 1) {
+            return;
+        }
+        var deltaX = e.changedTouches[0].clientX - startX;
+        var deltaY = e.changedTouches[0].clientY - startY;
+
+        if (Math.abs(deltaY) > window.innerHeight * 0.1 && deltaY > 0 && Math.abs(deltaX) < Math.abs(deltaY) / 2) {
+            closeViewer();
+        } else if (Math.abs(deltaX) > window.innerWidth * 0.1) {
+            changeImage(deltaX > 0 ? -1 : 1);
+        } else {
+            this.style.transform = '';
+        }
+    }
+
+    // (listens only while open: the viewer stays on the page when closed)
+    viewer.listenToTouches = function (on) {
+        var method = on ? 'addEventListener' : 'removeEventListener';
+        modalEl[method]('touchstart', onViewerTouchStart, { passive: true });
+        modalEl[method]('touchmove', onViewerTouchMove, { passive: false });
+        [image, scene].forEach(function (el) {
+            el[method]('touchstart', onImageTouchStart, false);
+            el[method]('touchmove', onImageTouchMove, false);
+            el[method]('touchend', onImageTouchEnd, false);
+        });
+    };
+    setupViewerTools();
+    setupViewerLayer();
+}
+
+// --------------------------------------------------------------------------
+// Viewer tools: zooming in (pinch, double-tap, scroll wheel or the Zoom in
+// button) and "See to scale" (the painting beside something everyone knows
+// the size of, from the dimensions in its description)
+// --------------------------------------------------------------------------
+
+var SCALE_PERSON_CM = 165;
+var SCALE_PERSON_WIDTH_CM = 50;
+var SCALE_HANG_CENTRE_CM = 150; // galleries hang a painting's middle at about eye level
+var SCALE_SMALL_CM = 45;        // up to this (longest side): shown on a table beside a mug
+var SCALE_MUG_CM = 9.5;         // the mug's height
+var SCALE_MUG_WIDTH_CM = 11.5;  // with its handle
+
+var viewerTools = {
+    scale: false
+};
+
+// Its size in cm from its description ("50 x 64 cm", "18 x 24\"", "A4"...),
+// as { w, h } matched to the picture's orientation, or null if there isn't one
+var PAPER_SIZES_CM = { 2: [42, 59.4], 3: [29.7, 42], 4: [21, 29.7], 5: [14.8, 21], 6: [10.5, 14.8] };
+
+function workSizeCm(work) {
+    var text = [work.firstDescription, work.secondDescription].join(' ');
+    var a, b;
+    var m = text.match(/(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(cm|mm|in(?:ches)?\b|["”″])?/i);
+    if (m) {
+        a = parseFloat(m[1].replace(',', '.'));
+        b = parseFloat(m[2].replace(',', '.'));
+        var unit = (m[3] || 'cm').toLowerCase();
+        var toCm = unit === 'mm' ? 0.1 : unit === 'cm' ? 1 : 2.54;
+        a *= toCm;
+        b *= toCm;
+    } else {
+        var paper = text.match(/\bA([2-6])\b/);
+        if (!paper) {
+            return null;
+        }
+        a = PAPER_SIZES_CM[paper[1]][0];
+        b = PAPER_SIZES_CM[paper[1]][1];
+    }
+    if (!(a >= 3 && b >= 3 && a <= 600 && b <= 600)) {
+        return null;
+    }
+    var landscape = work.width && work.height ? work.width > work.height : false;
+    var longSide = Math.max(a, b);
+    var shortSide = Math.min(a, b);
+    return landscape ? { w: longSide, h: shortSide } : { w: shortSide, h: longSide };
+}
+
+// The web copy was made smaller than the original, so there's a bigger
+// zoom copy to load
+function hasLargeOriginal(work) {
+    return work.width >= 1590 || work.height >= 2390;
+}
+
+function formatCm(cm) {
+    return (Math.round(cm * 10) / 10).toString();
+}
+
+function formatInches(cm) {
+    return (Math.round(cm / 2.54 * 10) / 10).toString();
+}
+
+// Called whenever the viewer shows a painting: which tools it can have
+function updateViewerTools(work) {
+    var size = workSizeCm(work);
+    $('#seeToScale').prop('hidden', !size);
+    if (viewerTools.scale) {
+        if (size) {
+            drawScaleScene(work, size);
+        } else {
+            setScale(false);
+        }
+    }
+}
+
+// Everything back to plain viewing at once (closing the viewer)
+function resetViewerTools() {
+    exitZoom(false);
+    setScale(false);
+}
+
+// ---- Zoom ----
+//
+// Zooming lifts a copy of the painting into a layer over the whole viewer,
+// exactly where the painting is, and scales and moves that. The viewer
+// underneath is left alone, so none of its opening, closing and stepping
+// animations are affected. The copy starts as the picture already showing
+// and swaps to the zoom copy (up to 4000px, baseImages/web/zoom/) once that
+// has loaded — never the original upload.
+
+var ZOOM_TAP_MS = 280;  // a second tap within this is a double-tap
+
+var zoom = {
+    active: false,
+    s: 1, x: 0, y: 0,   // scale, and where the picture's top-left corner is on screen
+    baseW: 0, baseH: 0, // its size at scale 1 (as the viewer shows it)
+    maxS: 2,
+    gesture: null,      // the drag or pinch in progress
+    lastTap: null,      // { t, x, y }: for double-taps while zoomed
+    tapTimer: null,     // a single tap on the painting, waiting to see if a second comes
+    exitTimer: null
+};
+
+function zoomCopyUrl(location) {
+    return '/baseImages/web/zoom/' + encodeURIComponent(location);
+}
+
+function zoomImage() {
+    return document.querySelector('#zoomLayer img');
+}
+
+function viewportSize() {
+    return { w: document.documentElement.clientWidth, h: window.innerHeight };
+}
+
+// Puts the zoom layer over the painting at scale 1. Returns false if there's
+// nothing to zoom into yet.
+function enterZoom() {
+    if (zoom.active) {
+        return true;
+    }
+    var work = viewer.items[viewer.index];
+    if (!work || !viewer.open || viewer.opening || viewer.closing) {
+        return false;
+    }
+    if (viewerTools.scale) {
+        setScale(false);
+    }
+    var img = document.getElementById('popUpImage');
+    var rect = img.getBoundingClientRect();
+    if (!rect.width || !img.getAttribute('src')) {
+        return false;
+    }
+    clearTimeout(zoom.exitTimer);
+    zoom.active = true;
+    zoom.gesture = null;
+    zoom.lastTap = null;
+    zoom.s = 1;
+    zoom.x = rect.left;
+    zoom.y = rect.top;
+    zoom.baseW = rect.width;
+    zoom.baseH = rect.height;
+    // How far it can go: until each pixel of the biggest copy is about a
+    // pixel on screen (guessed until that copy has arrived), and at least 2x
+    var bigWidth = hasLargeOriginal(work) ? work.width * 2.5 : work.width;
+    zoom.maxS = Math.max(2, bigWidth / rect.width);
+
+    var layerImg = zoomImage();
+    layerImg.style.width = rect.width + 'px';
+    layerImg.style.height = rect.height + 'px';
+    layerImg.src = img.currentSrc || img.src;
+    renderZoom(false);
+    $('#bigPicModal').removeClass('is-unzooming').addClass('is-zoomed');
+    $('#zoomLayer').attr('aria-hidden', 'false');
+    $('#zoomIn').attr({ 'aria-pressed': 'true', 'aria-label': 'Zoom out', title: 'Zoom out' });
+
+    var bigSrc = hasLargeOriginal(work) ? zoomCopyUrl(work.location) : webImageUrl(work.location);
+    if (layerImg.getAttribute('src') !== bigSrc) {
+        var big = new Image();
+        big.onload = function () {
+            var swap = function () {
+                if (zoom.active && viewer.items[viewer.index] === work) {
+                    layerImg.src = big.src;
+                    zoom.maxS = Math.max(2, big.naturalWidth / zoom.baseW);
+                }
+            };
+            if (big.decode) {
+                big.decode().then(swap, swap);
+            } else {
+                swap();
+            }
+        };
+        big.src = bigSrc;
+    }
+    return true;
+}
+
+// Back to the painting: it shrinks back into its place in the viewer
+function exitZoom(animate) {
+    clearTimeout(zoom.tapTimer);
+    zoom.tapTimer = null;
+    if (!zoom.active) {
+        return;
+    }
+    zoom.active = false;
+    zoom.gesture = null;
+    $('#zoomIn').attr({ 'aria-pressed': 'false', 'aria-label': 'Zoom in', title: 'Zoom in' });
+    $('#zoomLayer').removeClass('is-dragging');
+    var rect = document.getElementById('popUpImage').getBoundingClientRect();
+    if (animate && rect.width && !prefersReducedMotion()) {
+        zoom.s = rect.width / zoom.baseW;
+        zoom.x = rect.left;
+        zoom.y = rect.top;
+        renderZoom(true);
+        $('#bigPicModal').addClass('is-unzooming');
+        zoom.exitTimer = setTimeout(hideZoomLayer, 300);
+    } else {
+        hideZoomLayer();
+    }
+}
+
+function hideZoomLayer() {
+    clearTimeout(zoom.exitTimer);
+    $('#bigPicModal').removeClass('is-zoomed is-unzooming');
+    $('#zoomLayer').attr('aria-hidden', 'true');
+}
+
+function renderZoom(animate) {
+    var layerImg = zoomImage();
+    layerImg.style.transition = animate ? 'transform 0.3s var(--ease-out-soft)' : 'none';
+    layerImg.style.transform = 'translate(' + zoom.x + 'px, ' + zoom.y + 'px) scale(' + zoom.s + ')';
+}
+
+// Where the picture may sit: covering the screen where it's bigger than the
+// screen, and wholly on it where it's smaller
+function clampedZoomPosition(s, x, y) {
+    var view = viewportSize();
+    var w = zoom.baseW * s;
+    var h = zoom.baseH * s;
+    return {
+        x: w > view.w ? Math.min(0, Math.max(view.w - w, x)) : Math.min(view.w - w, Math.max(0, x)),
+        y: h > view.h ? Math.min(0, Math.max(view.h - h, y)) : Math.min(view.h - h, Math.max(0, y))
+    };
+}
+
+// Zooms to scale s, keeping the point (cx, cy) on screen where it is
+function zoomAt(s, cx, cy, animate) {
+    s = Math.max(1, Math.min(zoom.maxS, s));
+    var ratio = s / zoom.s;
+    var at = clampedZoomPosition(s, cx - (cx - zoom.x) * ratio, cy - (cy - zoom.y) * ratio);
+    zoom.s = s;
+    zoom.x = at.x;
+    zoom.y = at.y;
+    renderZoom(animate);
+}
+
+// Double-tap, the button, or + on the keyboard
+function zoomInAt(cx, cy) {
+    if (enterZoom()) {
+        zoomAt(Math.min(zoom.maxS, 2.5), cx, cy, true);
+    }
+}
+
+function zoomInAtMiddle() {
+    var rect = document.getElementById('popUpImage').getBoundingClientRect();
+    zoomInAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+// After a gesture: back within the limits, gently
+function settleZoom(cx, cy) {
+    if (zoom.s < 1.05) {
+        exitZoom(true);
+        return;
+    }
+    var view = viewportSize();
+    zoomAt(zoom.s, cx === undefined ? view.w / 2 : cx, cy === undefined ? view.h / 2 : cy, true);
+}
+
+// A drag past the edge moves only part of the way: it resists, then springs back
+function resist(value, min, max) {
+    if (value > max) {
+        return max + (value - max) * 0.35;
+    }
+    if (value < min) {
+        return min + (value - min) * 0.35;
+    }
+    return value;
+}
+
+// ---- Zoom: touch ----
+
+function touchDistance(a, b) {
+    return Math.sqrt(Math.pow(a.clientX - b.clientX, 2) + Math.pow(a.clientY - b.clientY, 2));
+}
+
+function startTouchGesture(touches) {
+    if (touches.length >= 2) {
+        var a = touches[0];
+        var b = touches[1];
+        zoom.gesture = {
+            type: 'pinch',
+            d0: Math.max(1, touchDistance(a, b)),
+            s0: zoom.s,
+            mx0: (a.clientX + b.clientX) / 2,
+            my0: (a.clientY + b.clientY) / 2,
+            x0: zoom.x,
+            y0: zoom.y
+        };
+        zoom.gesture.mx = zoom.gesture.mx0;
+        zoom.gesture.my = zoom.gesture.my0;
+    } else if (touches.length === 1) {
+        zoom.gesture = {
+            type: 'pan',
+            sx: touches[0].clientX,
+            sy: touches[0].clientY,
+            x0: zoom.x,
+            y0: zoom.y,
+            t0: Date.now(),
+            moved: false
+        };
+    }
+}
+
+function moveTouchGesture(touches) {
+    var g = zoom.gesture;
+    if (g.type === 'pinch' && touches.length >= 2) {
+        var a = touches[0];
+        var b = touches[1];
+        var s = g.s0 * touchDistance(a, b) / g.d0;
+        // Past the limits it still gives a little
+        if (s > zoom.maxS) {
+            s = zoom.maxS * Math.pow(s / zoom.maxS, 0.3);
+        } else if (s < 1) {
+            s = Math.max(0.5, 1 - (1 - s) * 0.5);
+        }
+        g.mx = (a.clientX + b.clientX) / 2;
+        g.my = (a.clientY + b.clientY) / 2;
+        zoom.x = g.mx - (g.mx0 - g.x0) * s / g.s0;
+        zoom.y = g.my - (g.my0 - g.y0) * s / g.s0;
+        zoom.s = s;
+        renderZoom(false);
+    } else if (g.type === 'pan' && touches.length === 1) {
+        var dx = touches[0].clientX - g.sx;
+        var dy = touches[0].clientY - g.sy;
+        if (Math.abs(dx) + Math.abs(dy) > 8) {
+            g.moved = true;
+        }
+        var view = viewportSize();
+        var w = zoom.baseW * zoom.s;
+        var h = zoom.baseH * zoom.s;
+        zoom.x = resist(g.x0 + dx, Math.min(0, view.w - w), Math.max(0, view.w - w));
+        zoom.y = resist(g.y0 + dy, Math.min(0, view.h - h), Math.max(0, view.h - h));
+        renderZoom(false);
+    }
+}
+
+function endTouchGesture(remaining) {
+    var g = zoom.gesture;
+    zoom.gesture = null;
+    if (!g || !zoom.active) {
+        return;
+    }
+    // One finger lifted from a pinch: carry on with the other
+    if (remaining.length) {
+        startTouchGesture(remaining);
+        return;
+    }
+    if (g.type === 'pan' && !g.moved && Date.now() - g.t0 < 300) {
+        // A tap. Two in a row zooms back out.
+        var last = zoom.lastTap;
+        if (last && Date.now() - last.t < ZOOM_TAP_MS + 100 && Math.abs(last.x - g.sx) + Math.abs(last.y - g.sy) < 40) {
+            zoom.lastTap = null;
+            exitZoom(true);
+            return;
+        }
+        zoom.lastTap = { t: Date.now(), x: g.sx, y: g.sy };
+    }
+    settleZoom(g.mx, g.my);
+}
+
+// ---- See to scale ----
+
+function setScale(on) {
+    on = !!on;
+    var work = viewer.items[viewer.index];
+    var size = on && work ? workSizeCm(work) : null;
+    if (on && !size) {
+        return;
+    }
+    if (on) {
+        exitZoom(false);
+    }
+    viewerTools.scale = on;
+    if (!on) {
+        scaleSlideToken++;
+        var scene = document.getElementById('scaleScene');
+        scene.removeAttribute('data-arriving-from');
+        scene.style.transition = '';
+        scene.style.transform = '';
+        scene.style.opacity = '';
+    }
+    $('#bigPicModal').toggleClass('is-scale', on);
+    $('#scaleScene').attr('aria-hidden', String(!on));
+    var label = on ? 'Back to the painting' : 'See to scale';
+    $('#seeToScale').attr({ 'aria-pressed': String(on), 'aria-label': label, title: label });
+    if (on) {
+        drawScaleScene(work, size);
+    }
+    updateViewerScrolling();
+}
+
+// The painting at its real size beside something everyone knows: hung on a
+// wall next to a 165 cm figure, or (a small work) standing on a table next
+// to a mug, close up. Everything in the scene is drawn at the same scale.
+function drawScaleScene(work, size) {
+    var scene = document.getElementById('scaleScene');
+    var sceneW = scene.clientWidth;
+    var sceneH = scene.clientHeight;
+    if (!sceneW || !sceneH) {
+        return;
+    }
+    var small = Math.max(size.w, size.h) <= SCALE_SMALL_CM;
+    // The picture keeps the photo's own proportions (so nothing is cropped),
+    // with its longest side the length given in the description
+    var box = { w: size.w, h: size.h };
+    if (work.width && work.height) {
+        var ratio = work.width / work.height;
+        box = ratio >= 1 ? { w: Math.max(size.w, size.h), h: Math.max(size.w, size.h) / ratio }
+                         : { w: Math.max(size.w, size.h) * ratio, h: Math.max(size.w, size.h) };
+    }
+    var floorPx = Math.round(sceneH * (small ? 0.2 : 0.1));
+    var refW, refH, artBottomCm, viewCm, gapCm, marginCm;
+    if (small) {
+        // On the table, leaning on the wall; enough wall shown above it that
+        // the work fills a good part of the view
+        refW = SCALE_MUG_WIDTH_CM;
+        refH = SCALE_MUG_CM;
+        artBottomCm = 0;
+        viewCm = Math.max(box.h * 1.45, 26);
+        gapCm = Math.max(4, box.w * 0.18);
+        marginCm = 6;
+    } else {
+        refW = SCALE_PERSON_WIDTH_CM;
+        refH = SCALE_PERSON_CM;
+        artBottomCm = Math.max(30, SCALE_HANG_CENTRE_CM - box.h / 2);
+        viewCm = Math.max(205, artBottomCm + box.h + 25);
+        gapCm = Math.max(35, Math.min(60, box.w * 0.4));
+        marginCm = 25;
+    }
+    var rowCm = marginCm + refW + gapCm + box.w + marginCm;
+    var cmPx = Math.min((sceneH - floorPx) / viewCm, sceneW / rowCm);
+    var left = (sceneW - rowCm * cmPx) / 2 + marginCm * cmPx;
+
+    $(scene).toggleClass('is-table', small);
+    $(scene).find('.scale-floor').css('height', floorPx + 'px');
+    $(scene).find(small ? '.scale-mug' : '.scale-person').css({
+        left: left + 'px',
+        bottom: floorPx + 'px',
+        width: (refW * cmPx) + 'px',
+        height: (refH * cmPx) + 'px'
+    });
+
+    var artW = box.w * cmPx;
+    var artH = box.h * cmPx;
+    var art = $(scene).find('.scale-art').css({
+        left: (left + (refW + gapCm) * cmPx) + 'px',
+        bottom: (floorPx + artBottomCm * cmPx) + 'px',
+        width: artW + 'px',
+        height: artH + 'px',
+        '--tape-w': Math.max(18, Math.min(48, artW * 0.32)) + 'px'
+    });
+    // The same copy the viewer has just loaded for this painting, so it's
+    // already downloaded and the scene can show it at once
+    var img = art.find('img')[0];
+    img.removeAttribute('srcset');
+    img.removeAttribute('sizes');
+    var src = viewer.loading && viewer.loading.work === work ? viewer.loading.src : webImageUrl(work.location);
+    if (img.getAttribute('src') !== src) {
+        img.src = src;
+    }
+
+    $(scene).find('.scale-label').text(
+        formatCm(size.w) + ' × ' + formatCm(size.h) + ' cm  ·  ' +
+        formatInches(size.w) + ' × ' + formatInches(size.h) + ' in   —   ' +
+        (small ? 'beside a coffee mug 9.5 cm (3¾″) tall' : 'beside a figure 165 cm (5′5″) tall')
+    );
+    arriveScaleScene();
+}
+
+// Stepping to another painting while the scale scene is showing: the scene
+// carries on in the direction of the swipe and fades, then the next one
+// slides in from the other side, as the paintings themselves do. It only
+// comes in once its picture is ready to draw, so the old painting never
+// shows in the new scene.
+var SCALE_SLIDE_PX = 40;
+var SCALE_LEAVE_MS = 170;
+var SCALE_ARRIVE_MS = 300;
+var scaleSlideToken = 0;
+
+function leaveScaleScene(step) {
+    var scene = document.getElementById('scaleScene');
+    scaleSlideToken++;
+    scene.setAttribute('data-arriving-from', String(step));
+    if (prefersReducedMotion()) {
+        scene.style.transition = 'none';
+        scene.style.opacity = '0';
+        return;
+    }
+    // (after a swipe, keep going from wherever the finger left it)
+    var dragged = Math.abs(parseFloat((scene.style.transform.match(/translateX\((-?[\d.]+)px\)/) || [])[1]) || 0);
+    scene.style.transition = 'transform ' + SCALE_LEAVE_MS + 'ms ease-in, opacity ' + SCALE_LEAVE_MS + 'ms ease-in';
+    scene.style.transform = 'translateX(' + (-step * Math.max(SCALE_SLIDE_PX, dragged + SCALE_SLIDE_PX)) + 'px)';
+    scene.style.opacity = '0';
+}
+
+function arriveScaleScene() {
+    var scene = document.getElementById('scaleScene');
+    var from = scene.getAttribute('data-arriving-from');
+    if (!from) {
+        return;
+    }
+    scene.removeAttribute('data-arriving-from');
+    var token = ++scaleSlideToken;
+    var img = scene.querySelector('.scale-art img');
+    var started = false;
+
+    // Waiting just off to the side, invisible
+    scene.style.transition = 'none';
+    scene.style.transform = prefersReducedMotion() ? '' : 'translateX(' + (Number(from) * SCALE_SLIDE_PX) + 'px)';
+    scene.style.opacity = '0';
+
+    var slideIn = function () {
+        if (started || token !== scaleSlideToken || !viewerTools.scale) {
+            return;
+        }
+        started = true;
+        // Still downloading (a slow connection): the scene comes in, and its
+        // picture fades up once it's here, rather than show the last one
+        if (!img.complete || !img.naturalWidth) {
+            img.style.opacity = '0';
+            img.addEventListener('load', function () {
+                img.style.transition = 'opacity 0.25s ease';
+                img.style.opacity = '';
+            }, { once: true });
+        }
+        void scene.offsetWidth; // let the browser take in the starting point
+        scene.style.transition = 'transform ' + SCALE_ARRIVE_MS + 'ms var(--ease-out-soft), opacity ' + SCALE_ARRIVE_MS + 'ms ease';
+        scene.style.transform = '';
+        scene.style.opacity = '';
+    };
+    // Normally ready at once; never wait more than half a second
+    setTimeout(slideIn, 500);
+    if (img.complete && img.naturalWidth && !img.decode) {
+        slideIn();
+    } else if (img.decode) {
+        img.decode().then(function () {
+            requestAnimationFrame(slideIn);
+        }, slideIn);
+    } else {
+        img.onload = img.onerror = slideIn;
+    }
+}
+
+function setupViewerTools() {
+    var image = document.getElementById('popUpImage');
+    var layer = document.getElementById('zoomLayer');
+
+    $('#zoomIn').on('click', function () {
+        if (zoom.active) {
+            exitZoom(true);
+        } else {
+            zoomInAtMiddle();
+        }
+    });
+    $('#zoomOut').on('click', function () {
+        exitZoom(true);
+    });
+    $('#seeToScale').on('click', function () {
+        setScale(!viewerTools.scale);
+    });
+    $('.scale-back').on('click', function () {
+        setScale(false);
+    });
+    $('#imageMore').on('click', function () {
+        var open = !$('#imageInfo').hasClass('is-expanded');
+        $('#imageInfo').toggleClass('is-expanded', open);
+        $(this).text(open ? 'less' : 'more');
+        fitViewerToScreen();
+        if (viewerTools.scale) {
+            var shown = viewer.items[viewer.index];
+            drawScaleScene(shown, workSizeCm(shown));
+        }
+        updateViewerScrolling();
+    });
+
+    // The zoom layer's own hints, for a mouse or a finger
+    $('#zoomHint').text(isTouchScreen()
+        ? 'Pinch to zoom · double-tap to go back'
+        : 'Drag to look around · scroll to zoom · click to go back');
+
+    // Scroll wheel / trackpad: zooms toward the pointer. Over the painting
+    // it only starts zooming on a scroll up from the top: scrolling down
+    // still scrolls a tall painting's caption into view, and back up to
+    // the top, and only then zooms (a trackpad pinch always zooms).
+    function onWheel(event) {
+        if (!zoom.active) {
+            if (event.deltaY >= 0 || (!event.ctrlKey && document.getElementById('bigPicModal').scrollTop > 0)) {
+                return;
+            }
+            if (!enterZoom()) {
+                return;
+            }
+        }
+        event.preventDefault();
+        var delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
+        zoomAt(zoom.s * Math.exp(-delta * (event.ctrlKey ? 0.01 : 0.002)), event.clientX, event.clientY, false);
+        if (zoom.s <= 1.001) {
+            exitZoom(false);
+        }
+    }
+    image.addEventListener('wheel', onWheel, { passive: false });
+    layer.addEventListener('wheel', onWheel, { passive: false });
+
+    // Mouse: drag to look around; a click without dragging zooms back out
+    layer.addEventListener('mousedown', function (event) {
+        if (event.button !== 0 || $(event.target).closest('.zoom-bar').length) {
+            return;
+        }
+        event.preventDefault();
+        zoom.gesture = { type: 'drag', sx: event.clientX, sy: event.clientY, x0: zoom.x, y0: zoom.y, moved: false };
+        $(layer).addClass('is-dragging');
+    });
+    window.addEventListener('mousemove', function (event) {
+        var g = zoom.gesture;
+        if (!g || g.type !== 'drag') {
+            return;
+        }
+        var dx = event.clientX - g.sx;
+        var dy = event.clientY - g.sy;
+        if (Math.abs(dx) + Math.abs(dy) > 4) {
+            g.moved = true;
+        }
+        var at = clampedZoomPosition(zoom.s, g.x0 + dx, g.y0 + dy);
+        zoom.x = at.x;
+        zoom.y = at.y;
+        renderZoom(false);
+    });
+    window.addEventListener('mouseup', function () {
+        var g = zoom.gesture;
+        if (!g || g.type !== 'drag') {
+            return;
+        }
+        zoom.gesture = null;
+        $(layer).removeClass('is-dragging');
+        if (!g.moved) {
+            exitZoom(true);
+        }
+    });
+
+    // Touch: two fingers on the painting start zooming (instead of zooming
+    // the whole page); once zoomed, one finger drags and two pinch
+    image.addEventListener('touchstart', function (event) {
+        if (!zoom.active && event.touches.length === 2 && event.cancelable && enterZoom()) {
+            event.preventDefault();
+            startTouchGesture(event.touches);
+        }
+    }, { passive: false });
+    layer.addEventListener('touchstart', function (event) {
+        if ($(event.target).closest('.zoom-bar').length) {
+            return;
+        }
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        startTouchGesture(event.touches);
+    }, { passive: false });
+    document.addEventListener('touchmove', function (event) {
+        if (zoom.active && zoom.gesture) {
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+            moveTouchGesture(event.touches);
+        }
+    }, { passive: false });
+    function onTouchEnd(event) {
+        if (zoom.active && zoom.gesture) {
+            endTouchGesture(event.touches);
+        }
+    }
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+    // Safari's own pinch-to-zoom of the page, while a painting is open
+    document.addEventListener('gesturestart', function (event) {
+        if (viewer.open) {
+            event.preventDefault();
+        }
+    });
+
+    // Keyboard: + and - zoom
+    document.addEventListener('keydown', function (event) {
+        if (!viewer.open) {
+            return;
+        }
+        if (event.key === '+' || event.key === '=') {
+            if (zoom.active) {
+                var view = viewportSize();
+                zoomAt(zoom.s * 1.5, view.w / 2, view.h / 2, true);
+            } else {
+                zoomInAtMiddle();
+            }
+        } else if (event.key === '-' && zoom.active) {
+            if (zoom.s / 1.5 <= 1.05) {
+                exitZoom(true);
+            } else {
+                var middle = viewportSize();
+                zoomAt(zoom.s / 1.5, middle.w / 2, middle.h / 2, true);
+            }
+        }
+    });
+
+    $(window).on('resize', function () {
+        exitZoom(false);
+        if (viewer.open) {
+            fitViewerToScreen();
+            updateViewerScrolling();
+        }
+        // Redraw the scale scene for the new screen size
+        if (viewerTools.scale && viewer.open) {
+            var work = viewer.items[viewer.index];
+            drawScaleScene(work, workSizeCm(work));
+        }
+    });
+}
+
+// --------------------------------------------------------------------------
+// Home slideshow
+// --------------------------------------------------------------------------
+
+function renderHome() {
+    setView('home');
+    var content = $('#imagesAndContent').css('padding-top', '');
+    var request = fetchPublicWorks('carousel');
+    var keepServerDrawn = pageIsServerDrawn;
+    if (!isLoaded(request)) {
+        content.html('<div class="initial-loading"><div class="loading-spinner"></div></div>');
+    }
+
+    return whenLoaded(request, function (works) {
+        if (currentView !== 'home') {
+            return;
+        }
+        if (keepServerDrawn) {
+            galleryItems = works;
+            if (works.length > 1) {
+                $('#homePageCarousel').carousel({ interval: 3000, ride: 'carousel' });
+            }
+        } else {
+            createCarousel(works);
+        }
+        viewReady = true;
+    }, function () {
+        if (currentView === 'home') {
+            content.html(errorHtml('Sorry, there was a problem loading the page. Please try again later.'));
+        }
+    });
+}
+
+function createCarousel(works) {
+    var content = $('#imagesAndContent').empty();
+    var carousel = $('<div>').attr('id', 'homePageCarousel').addClass('carousel slide')
+        .addClass(isMobile ? 'homePageCarouselMobile' : 'homePageCarousel');
+    var inner = $('<div>').addClass('carousel-inner');
+
+    works.forEach(function (work, index) {
+        var link = $('<a>').addClass('carousel-link').attr({ href: work.path, 'data-index': index, 'aria-label': work.name })
+            .append(workImage(work, { sizes: GALLERY_SIZES, lazy: index > 0, priority: index === 0, className: 'd-block carousel-pic' }));
+        inner.append($('<div>').addClass('carousel-item' + (index === 0 ? ' active' : '')).append(link));
+    });
+    carousel.append(inner);
+
+    // Arrows only make sense with more than one picture
+    if (works.length > 1) {
+        carousel.append(
+            '<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">' +
+            '<span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="sr-only">Previous</span></a>' +
+            '<a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">' +
+            '<span class="carousel-control-next-icon" aria-hidden="true"></span><span class="sr-only">Next</span></a>'
+        );
+    }
+
+    content.append(carousel);
+    galleryItems = works;
+
+    if (works.length > 1) {
+        carousel.carousel({ interval: 3000, ride: 'carousel' });
+    }
+}
+
+// The slideshow doesn't move on underneath an open painting (so closing
+// can shrink it back into its slide)
+$(document).on('slide.bs.carousel', '#homePageCarousel', function (event) {
+    if (viewer.open) {
+        event.preventDefault();
+    }
+});
+
+$(document).on('click', '.carousel-link', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+    }
+    event.preventDefault();
+    openViewer(galleryItems, Number(this.getAttribute('data-index')), { from: this });
+});
+
+// --------------------------------------------------------------------------
+// About
+// --------------------------------------------------------------------------
+
+function fetchAboutMe() {
+    if (!cachedRequests.about && pageData.about) {
+        cachedRequests.about = $.Deferred().resolve(pageData.about).promise();
+    }
+    if (!cachedRequests.about) {
+        // Asked for by its version, so the browser can keep the reply until
+        // the text or photo changes (see aboutMeCache.php)
+        var version = pageData.aboutVersion ? '?v=' + encodeURIComponent(pageData.aboutVersion) : '';
+        cachedRequests.about = $.ajax({ url: '/actions/aboutMeAPI.php' + version, dataType: 'json' });
+        cachedRequests.about.fail(function () {
+            delete cachedRequests.about;
+        });
+    }
+    return cachedRequests.about;
+}
+
+// Turn plain email addresses in the About text into clickable links
+function linkEmailAddresses(root) {
+    var pattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    var textNodes = [];
+    while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach(function (node) {
+        var text = node.nodeValue;
+        pattern.lastIndex = 0;
+        if (!pattern.test(text) || $(node.parentNode).closest('a').length) {
+            return;
+        }
+        pattern.lastIndex = 0;
+        var fragment = document.createDocumentFragment();
+        var last = 0;
+        var match;
+        while ((match = pattern.exec(text))) {
+            fragment.appendChild(document.createTextNode(text.slice(last, match.index)));
+            var link = document.createElement('a');
+            link.href = 'mailto:' + match[0];
+            link.className = 'email-link';
+            link.textContent = match[0];
+            fragment.appendChild(link);
+            last = match.index + match[0].length;
+        }
+        fragment.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(fragment, node);
+    });
+}
+
+function renderAbout(keepScroll) {
+    var request = fetchAboutMe();
+    var keepServerDrawn = false;
+    if (!keepScroll) {
+        setView('about');
+        // index.php draws the side-by-side layout
+        keepServerDrawn = pageIsServerDrawn && window.innerWidth > 1206;
+        var content = $('#imagesAndContent').css('padding-top', '50px');
+        if (!isLoaded(request)) {
+            content.html(loadingHtml(''));
+        }
+    }
+
+    return whenLoaded(request, function (aboutMe) {
+        if (currentView !== 'about') {
+            return;
+        }
+        if (keepServerDrawn) {
+            aboutLayout = 'side';
+            viewReady = true;
+            return;
+        }
+        var description = multiline(aboutMe.description);
+        var picture = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
+        if (!/^(https?:)?\//.test(picture)) {
+            picture = '/' + picture;
+        }
+
+        aboutLayout = window.innerWidth <= 1206 ? 'stacked' : 'side';
+        var content = document.getElementById('imagesAndContent');
+        var image = '<div class="ambPicDiv"><img id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="sync"></div>';
+        content.innerHTML = aboutLayout === 'stacked'
+            ? '<div class="infoflexMobile">' + image + '<p>' + description + '</p></div>'
+            : '<div class="infoflex"><div class="size1" id="aboutMeInfo"><p>' + description + '</p></div><div class="size2">' + image + '</div></div>';
+        document.getElementById('ambarPersoPic').src = picture;
+
+        linkEmailAddresses(content);
+        viewReady = true;
+    }, function () {
+        if (currentView === 'about') {
+            $('#imagesAndContent').html(errorHtml("Sorry, we couldn't load the About Me information. Please try again later."));
+        }
+    });
+}
+
+// --------------------------------------------------------------------------
+// Current project (image / description flip cards)
+// --------------------------------------------------------------------------
+
+function renderCurrentProject() {
+    setView('current-project');
+    var content = $('#imagesAndContent').css('padding-top', '50px');
+    var request = fetchPublicWorks('currentProject');
+    if (!isLoaded(request)) {
+        content.html(loadingHtml('Loading...'));
+    }
+
+    // Always drawn here (even when index.php drew it) so the flip cards work
+    return whenLoaded(request, function (projects) {
+        if (currentView !== 'current-project') {
+            return;
+        }
+        content.empty();
+        var items = [];
+
+        projects.forEach(function (project) {
+            var section = $('<div>').addClass('project').attr('id', projectSectionId(project.title)).css('text-align', 'center');
+            section.append(
+                $('<div>').append(
+                    $('<h2>').text(project.title).css('margin-bottom', '30px'),
+                    $('<p>').html(multiline(project.description)).css({ color: '#71797E', 'margin-bottom': '60px' })
+                )
+            );
+            var grid = $('<div>').addClass('projectWorks');
+            project.works.forEach(function (work) {
+                grid.append(createCurrentProjectCard(work, items.length));
+                items.push(work);
+            });
+            section.append(grid);
+            content.append(section);
+        });
+
+        galleryItems = items;
+        viewReady = true;
+    }, function () {
+        if (currentView === 'current-project') {
+            content.html(errorHtml("Sorry, we couldn't load the current project. Please try again later."));
+        }
+    });
+}
+
+function createCurrentProjectCard(work, index) {
+    var buttons = $('<div>').addClass('buttonContainer').append($('<span>').text('Image'), $('<span>').text('Description'));
+    if (isMobile) {
+        buttons.css('paddingBottom', '15px');
+    }
+
+    var image = workImage(work, { lazy: index > 0, className: 'currentProjectImage' });
+    image.removeAttribute('width');
+    image.removeAttribute('height');
+    var imageContainer = $('<div>').addClass('img-container').append(image);
+
+    var description = $('<div>').addClass('description_text').html(multiline(work.long_description)).css({
+        position: 'relative',
+        maxWidth: '80%',
+        margin: 'auto',
+        cursor: 'default',
+        overflowY: 'auto',
+        zIndex: zIndexCounter++,
+        paddingLeft: '20px',
+        paddingRight: '20px',
+        paddingTop: isMobile ? '5px' : '20px'
+    }).hide();
+
+    // Match the description panel to the picture's size once it has loaded
+    $(image).on('load', function () {
+        var height = imageContainer.height() + (isMobile ? 0 : 20);
+        description.css({ 'max-height': height + 'px', 'min-height': height + 'px', width: imageContainer.width() + 'px' });
+    });
+
+    imageContainer.on('click', function () {
+        openViewer(galleryItems, index, { from: image });
+    });
+
+    buttons.on('click', function () {
+        if (description.is(':hidden')) {
+            imageContainer.fadeToggle().promise().done(function () { description.fadeToggle(); });
+        } else {
+            description.fadeToggle().promise().done(function () { imageContainer.fadeToggle(); });
+        }
+    });
+
+    var holder = $('<div>').addClass('projectImgTxtContainer')
+        .css({ display: 'flex', flexDirection: 'column', overflow: 'hidden' })
+        .append(imageContainer, description);
+
+    return $('<div>').addClass('card').css({ border: '0px', 'text-align': 'center', 'margin-bottom': '60px' })
+        .append(buttons, holder);
+}
+
+// --------------------------------------------------------------------------
+// Page not found
+// --------------------------------------------------------------------------
+
+function renderNotFound() {
+    setView('notfound');
+    $('#imagesAndContent').css('padding-top', '50px').html(
+        '<div class="not-found">' +
+        '<h2>Page not found</h2>' +
+        '<p>Sorry, there\'s nothing at this address.</p>' +
+        '<p><a href="/select-works" class="not-found-link">See the works</a></p>' +
+        '</div>'
+    );
+    viewReady = true;
+    return $.Deferred().resolve().promise();
+}
+
+$(document).on('click', '.not-found-link', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+    }
+    event.preventDefault();
+    goTo('/select-works');
+});
+
+// --------------------------------------------------------------------------
+// Floating newsletter nudge. Drifts gently around the page, pauses on hover,
+// opens the newsletter sign-up when clicked, and stays on every page until
+// the visitor dismisses it with its x (for the rest of their visit).
+// --------------------------------------------------------------------------
+
+function spawnNewsletterFloat() {
+    if (VT.noBlur) {
+        return; // test switch
+    }
+    try {
+        if (sessionStorage.getItem('newsletterFloatDismissed')) {
+            return;
+        }
+    } catch (e) { /* storage blocked: just show it */ }
+    if (document.getElementById('newsletterFloat')) {
+        return;
+    }
+
+    var float = $(
+        '<div id="newsletterFloat" class="newsletter-float" role="button" tabindex="0" aria-label="Sign up for the newsletter">' +
+        '  <div class="newsletter-float-inner">' +
+        '    <img src="/miscIcons/newsletterLeaf.png" alt="" class="newsletter-float-leaf" width="30" height="26">' +
+        '    <span class="newsletter-float-text">Newsletter</span>' +
+        '    <button type="button" class="newsletter-float-close" aria-label="Dismiss newsletter reminder">&times;</button>' +
+        '  </div>' +
+        '</div>'
+    );
+    $('body').append(float);
+
+    float.find('.newsletter-float-close').on('click', function (e) {
+        e.stopPropagation();
+        try {
+            sessionStorage.setItem('newsletterFloatDismissed', '1');
+        } catch (err) { /* storage blocked: hide for this page only */ }
+        float.fadeOut(250, function () { float.remove(); });
+    });
+
+    float.on('click keydown', function (e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
         e.preventDefault();
-        if (window.innerWidth <= 992 && !$('#navLinksBox').hasClass('active')) {
+        if (window.innerWidth <= BREAKPOINT && !$('#navLinksBox').hasClass('active')) {
             $('#hamburgerMenu').trigger('click'); // open the drawer so the form is visible
         }
         if (typeof ensureNewsletterOpen === 'function') {
@@ -722,500 +2666,255 @@ function spawnNewsletterFloat() {
     });
 }
 
-function createCarousel(informations) {
-    images.length = 0;
+// --------------------------------------------------------------------------
+// Names the menu links (stored in the database) call
+// --------------------------------------------------------------------------
 
-    // Create the carousel structure
-    let carouselHtml = `<div id="homePageCarousel" class="carousel slide homePageCarousel" data-ride="carousel">
-        <div class="carousel-inner" id="insertImagesHere" class="insertImagesHere">`;
-
-    let active = 'active';
-
-    // Add images to carousel
-    informations.forEach(function(information) {
-        let imageURL = "baseImages/" + information.location;
-        let thumbnailURL = "thumbnails/" + information.location;
-        let title = information.name;
-        let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
-
-        let imageInfo = {
-            url: imageURL,
-            title: title,
-            description: description
-        };
-
-        let thisImage = `<div id="${information.name}" class="carousel-item ${active}" >
-            <img class="d-block carousel-pic" src="${thumbnailURL}" alt="${title}" decoding="async" onclick="makeBigPic('${imageURL}')">
-            </div>`;
-
-        carouselHtml += thisImage;
-        active = '';
-        images.push(imageInfo);
-    });
-
-    // Add carousel controls
-    carouselHtml += `<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="sr-only">Previous</span>
-        </a>
-        <a class="carousel-control-next" href="#homePageCarousel" role="button" data-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="sr-only">Next</span>
-        </a>
-        </div>`;
-
-    document.getElementById('imagesAndContent').innerHTML = carouselHtml;
-
-    $('#homePageCarousel').carousel({
-        interval: 3000
-    });
-
-    if (isMobile) {
-        $('#homePageCarousel').removeClass('homePageCarousel').addClass('homePageCarouselMobile');
-    }
+function getProjectsAndWorks() {
+    return goTo('/select-works');
 }
 
-function makeBigPic(clickedImageUrl) {
-    const spinner = document.getElementById('spinner');
-    if (spinner) spinner.style.display = 'block';
-
-    // Find the index of the clicked image in our images array
-    currentImageIndex = images.findIndex(image => image.url === clickedImageUrl);
-    let currentImage = images[currentImageIndex];
-    const imgElement = document.getElementById('popUpImage');
-
-    // Clear current image while loading
-    imgElement.src = '';
-
-    // Show modal first with loading spinner
-    $('#bigPicModal').modal('show');
-
-    // Force scroll to top immediately
-    $('#bigPicModal .modal-body').scrollTop(0);
-
-    // Then set the new image source
-    imgElement.src = currentImage.url;
-
-    // Handle image loading
-    imgElement.onload = function() {
-        if (spinner) spinner.style.display = 'none';
-        document.getElementById('imageTitle').textContent = currentImage.title;
-        document.getElementById('imageDescription').innerHTML = currentImage.description;
-    };
-
-    // Handle load errors
-    imgElement.onerror = function() {
-        if (spinner) spinner.style.display = 'none';
-        console.error('Failed to load image:', currentImage.url);
-        document.getElementById('imageTitle').textContent = 'Image failed to load';
-        document.getElementById('imageDescription').innerHTML = 'Sorry, there was a problem loading this image.';
-    };
-}
-
-function changeImage(step) {
-    currentImageIndex += step;
-
-    if (currentImageIndex >= images.length) {
-        currentImageIndex = 0;
-    } else if (currentImageIndex < 0) {
-        currentImageIndex = images.length - 1;
-    }
-
-    const imgElement = document.getElementById('popUpImage');
-    const spinner = document.getElementById('spinner');
-    document.getElementById('imageTitle').innerHTML = '';
-    document.getElementById('imageDescription').innerHTML = '';
-
-    // Show the loading spinner
-    if (spinner) spinner.style.display = 'block';
-
-    // Clear previous image and text
-    imgElement.style.transform = '';
-    imgElement.src = '';  // Clear the source to trigger loading state
-
-    // Set the new image source
-    const newImageSrc = images[currentImageIndex].url;
-    imgElement.src = newImageSrc;
-
-    // Wait for the image to load
-    imgElement.onload = function() {
-        // Hide the loading spinner
-        if (spinner) spinner.style.display = 'none';
-
-        // Update the text once the image has loaded
-        document.getElementById('imageTitle').innerHTML = images[currentImageIndex].title;
-        document.getElementById('imageDescription').innerHTML = images[currentImageIndex].description;
-    };
-
-    // Handle load errors
-    imgElement.onerror = function() {
-        if (spinner) spinner.style.display = 'none';
-        console.error('Failed to load image:', newImageSrc);
-        document.getElementById('imageTitle').textContent = 'Image failed to load';
-        document.getElementById('imageDescription').innerHTML = 'Sorry, there was a problem loading this image.';
-    };
-}
-
-function fetchCurrentAboutMe() {
-    return $.ajax({
-        url: '../actions/aboutMeAPI.php',
-        type: 'GET',
-        dataType: 'json',
-    });
-}
-
-async function openInfo() {
-    $('#imagesAndContent').css('padding-top', '50px');
-
-    try {
-        const aboutMe = await fetchCurrentAboutMe();
-        let description = aboutMe.description ? aboutMe.description.replace(/\n/g, "<br>") : '';
-        let imageLocation = aboutMe.pictureLocation || 'baseImages/bubbers.jpg';
-
-        // Use window.innerWidth instead of user-agent detection for responsive layout
-        if (window.innerWidth <= 1206) {
-            document.getElementById('imagesAndContent').innerHTML = `
-          <div class="infoflexMobile">
-            <div class="ambPicDiv">
-              <img src="${imageLocation}" id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async">
-            </div>
-            <p>${description}</p>
-          </div>
-          `;
-        } else {
-            document.getElementById('imagesAndContent').innerHTML = `
-          <div class="infoflex">
-            <div class="size1" id="aboutMeInfo">
-              <p>${description}</p>
-            </div>
-            <div class="size2">
-              <div class="ambPicDiv">
-                <img src="${imageLocation}" id="ambarPersoPic" alt="Portrait of Ambar Velasco" decoding="async">
-              </div>
-            </div>
-          </div>
-          `;
-        }
-
-        // Close mobile menu if open
-        if (window.innerWidth <= 992) {
-            $('#hamburgerMenu').removeClass('active');
-            $('#navLinksBox').removeClass('active');
-            $('.nav-overlay').removeClass('active');
-            $('#sideBySide').removeClass('menu-open');
-        }
-
-        history.pushState({page: 'about'}, 'About - Ambar Velasco', '/about');
-        document.title = 'About - Ambar Velasco';
-    } catch (error) {
-        console.error('Error loading about information:', error);
-        $('#imagesAndContent').html(`
-            <div class="error-message">
-                <p>Sorry, we couldn't load the About Me information. Please try again later.</p>
-            </div>
-        `);
-    }
+function openInfo() {
+    return goTo('/about');
 }
 
 function openCurrentProject() {
-    $('#imagesAndContent').css('padding-top', '50px');
-
-    $.ajax({
-        url: "../actions/projectsAPI.php",
-        type: "GET",
-        data: {'activity': 'currentProject'},
-        dataType: "json",
-        success: function(data) {
-            makeCurrentProjectCards(data);
-        },
-        error: function() {
-            console.log("An error occurred.");
-            $('#imagesAndContent').html(`
-                <div class="error-message">
-                    <p>Sorry, we couldn't load the current project. Please try again later.</p>
-                </div>
-            `);
-        },
-    });
-
-    selectWorksAreShown = false;
-}
-
-function createCurrentProjectElement(project) {
-    let worksOfProjectDiv = $('<div>').addClass('projectWorks');
-    let titleAndDescriptionDiv = $('<div>');
-    let title = project.title;
-    let description = project.description ? project.description.replace(/\n/g, '<br>') : '';
-    let insertTitle = $('<h2>').text(title).css('margin-bottom', '30px');
-    let insertDescription = $('<p>').html(description).css({
-        'color': '#71797E',
-        'margin-bottom': '60px'
-    });
-
-    titleAndDescriptionDiv.append(insertTitle, insertDescription);
-
-    let projectDiv = $('<div>').addClass('project').attr({
-        'alt': title,
-        'id': 'projectSection' + title.trim()
-    }).css({'border': '0px', 'text-align': 'center'});
-
-    projectDiv.append(titleAndDescriptionDiv).append(worksOfProjectDiv);
-
-    return projectDiv;
-}
-
-async function createCurrentProjectWorkCardElement(information) {
-    let imageURL = "baseImages/" + information.location;
-    let title = information.name;
-    let description = information.firstDescription ? information.firstDescription.replace(/\n/g, '<br>') : '';
-    let long_description = '';
-    if (information.long_description) {
-        long_description = information.long_description.replace(/\n/g, '<br>');
-    }
-
-    let imageInfo = {
-        url: imageURL,
-        title: title,
-        description: description,
-        long_description: long_description
-    };
-
-    try {
-        const {width: imageWidth, height: imageHeight} = await loadCorrectWidthAndHeightPerImage(imageURL);
-
-        let insertTitle = $('<p>').html('<b><i>' + title + '</i></b>');
-        let imageButton = $('<span>').text('Image');
-        let textButton = $('<span>').text('Description');
-        let buttonContainer = $('<div>').addClass('buttonContainer').append(imageButton, textButton);
-
-        if (isMobile) {
-            buttonContainer.css('paddingBottom', '15px');
-        }
-
-        let imageContainer = $('<div>').addClass('img-container ' + imageIsRows)
-            .append($('<img>').addClass("currentProjectImage")
-                .attr('src', imageURL)
-                .attr('alt', 'Image of ' + title)
-                .attr('Title', title)
-                .attr('Description', description));
-
-        let insertDescription = $('<div>').html(long_description).addClass('description_text').css({
-            position: 'relative',
-            maxWidth: '80%',
-            margin: 'auto',
-            cursor: 'default',
-            overflowY: 'auto',
-            zIndex: zIndexCounter,
-            paddingLeft: '20px',
-            paddingRight: '20px'
-        }).hide();
-
-        zIndexCounter++;
-
-        let contentHolder = $('<div>').attr({'id': 'projectSection' + information.id.trim()})
-            .addClass('projectImgTxtContainer')
-            .css({
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-            })
-            .append(imageContainer, insertDescription);
-
-        let card = $('<div>').addClass('card').attr('alt', title).css({
-            'border': '0px',
-            'text-align': 'center',
-            'margin-bottom': '60px',
-        }).append(buttonContainer).append(contentHolder);
-
-        imageContainer.click(() => makeBigPic(imageURL));
-        images.push(imageInfo);
-
-        buttonContainer.click((event) => {
-            if (insertDescription.is(":hidden")) {
-                imageContainer.fadeToggle().promise().done(() => {
-                    insertDescription.fadeToggle();
-                });
-            } else {
-                insertDescription.fadeToggle().promise().done(() => {
-                    imageContainer.fadeToggle();
-                });
-            }
-        });
-
-        return card;
-    } catch (error) {
-        console.error(error);
-        return null;
-    }
-}
-
-function loadCorrectWidthAndHeightPerImage(imageURL) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = imageURL;
-
-        img.onload = function() {
-            let screenWidth = $(window).width();
-            let screenHeight = $(window).height();
-            let newWidth = img.width;
-            let newHeight = img.height;
-            let maxWidth = (screenWidth * .655) - 29;
-            let minWidth = screenWidth * .50;
-            let maxHeight = screenHeight * .65;
-
-            if (newWidth < minWidth) {
-                const ratio = minWidth / newWidth;
-                newWidth = minWidth;
-                newHeight = newHeight * ratio;
-                resolve({width: newWidth, height: newHeight});
-            }
-
-            if (newWidth > maxWidth) {
-                const ratio = maxWidth / newWidth;
-                newWidth = maxWidth;
-                newHeight = newHeight * ratio;
-            }
-
-            if (newHeight > maxHeight) {
-                const ratio = maxHeight / newHeight;
-                newHeight = maxHeight;
-                newWidth = newWidth * ratio;
-            }
-
-            resolve({width: newWidth, height: newHeight});
-        };
-
-        img.onerror = function() {
-            reject('Error loading image: ' + imageURL);
-        };
-    });
-}
-
-async function makeCurrentProjectCards(projects) {
-    $('#imagesAndContent').empty();
-    images.length = 0;
-
-    let projectPromises = projects.map(async project => {
-        let workIds = await fetchWorkIdsForProject(project.id);
-        let allWorksForProject = await getWorksInfoFromIdsArray(workIds);
-        return { project, allWorksForProject }; // Return project info with its works
-    });
-
-    try {
-        let results = await Promise.all(projectPromises);
-
-        for (const { project, allWorksForProject } of results) {
-            let mainProj = createCurrentProjectElement(project);
-            $('#imagesAndContent').append(mainProj);
-
-            for (const information of allWorksForProject) {
-                let card = await createCurrentProjectWorkCardElement(information);
-                if (card) {
-                    mainProj.find('.projectWorks').first().append(card);
-                }
-            }
-        }
-
-        history.pushState({ page: 'current-project' }, 'Current Project', '/current-project');
-        document.title = 'Current Project - Ambar Velasco';
-        adjustDescriptionHeightsAndWidths();
-    } catch (error) {
-        console.error('Error:', error);
-        $('#imagesAndContent').html(`
-            <div class="error-message">
-                <p>Sorry, we couldn't load the current project. Please try again later.</p>
-            </div>
-        `);
-    }
-}
-
-function adjustDescriptionHeightsAndWidths() {
-    $('.img-container').each(function() {
-        // Find the next .description_text element
-        let descriptionText = $(this).next('.description_text');
-        let descriptionContent = descriptionText[0];
-
-        if (descriptionText.length) {
-            // Get the height of the img-container
-            let containerHeight = $(this).height();
-            let containerWidth = $(this).width();
-
-            if (!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))) {
-                containerHeight += 20;
-            }
-
-            descriptionText.show();
-            let contentHeight = descriptionContent.scrollHeight;
-            descriptionText.hide();
-
-            // Adjust the height of the description_text element
-            descriptionText.css("max-height", containerHeight + "px");
-            descriptionText.css("min-height", containerHeight + "px");
-            descriptionText.css("width", containerWidth + "px");
-
-            if (!isMobile) {
-                descriptionText.css('padding-top', '20px');
-            } else {
-                descriptionText.css('padding-top', '5px');
-            }
-        }
-    });
+    return goTo('/current-project');
 }
 
 function loadShop() {
-    yearData = { activity: 'active' };
-    $.ajax({
-        url: "../actions/shopAPI.php",
-        type: "GET",
-        data: yearData,
-        dataType: "json",
-        success: function(data) {
-            $('#imagesAndContent').empty();
-            $('#imagesAndContent').css('padding-top', '50px');
+    return goTo('/shop');
+}
 
-            $('<div>', {
-                class: 'shop-top-space'
-            }).prependTo('#imagesAndContent');
-
-            data.forEach(function(item) {
-                $('#imagesAndContent').append(createShopItem(item));
-            });
-
-            history.pushState({page: 'shop'}, 'Shop', '/shop');
-            document.title = 'Shop - Ambar Velasco';
-        },
-        error: function() {
-            console.log("An error occurred.");
-            $('#imagesAndContent').html(`
-                <div class="error-message">
-                    <p>Sorry, we couldn't load the shop items. Please try again later.</p>
-                </div>
-            `);
+// Menu link to one project: show the works and scroll to that project
+function loadProjectSection(sectionId) {
+    ensureDropdownOpen('selectProjectCategories');
+    if (currentView === 'works' && viewReady) {
+        if (location.pathname !== '/select-works') {
+            history.replaceState({ path: '/select-works' }, '', '/select-works');
         }
-    });
+        scrollToSection(sectionId, true);
+        return;
+    }
+    goTo('/select-works', { section: sectionId });
 }
 
-function createShopItem(item) {
-    // The shop API returns a Shopify buy-button embed (buttonCode) per item;
-    // the embed renders the product image, price and purchase button itself.
-    let shopItem = $('<div>').addClass('shopItem');
-    let buyButtonDiv = $('<div>').addClass('buy-button-embed').html(item.buttonCode);
-
-    shopItem.append(buyButtonDiv);
-
-    return shopItem;
-}
-
-// Make functions available globally
-window.makeBigPic = makeBigPic;
 window.getProjectsAndWorks = getProjectsAndWorks;
 window.openInfo = openInfo;
 window.openCurrentProject = openCurrentProject;
 window.loadShop = loadShop;
 window.loadProjectSection = loadProjectSection;
-window.ensureDropdownOpen = function(sublinksId) {
-    var sublinks = $("#" + sublinksId);
-    if (!sublinks.is(":visible")) {
+window.makeBigPic = makeBigPic;
+window.fetchPublicWorks = fetchPublicWorks;
+window.projectSectionId = projectSectionId;
+window.ensureDropdownOpen = function (sublinksId) {
+    var sublinks = $('#' + sublinksId);
+    if (!sublinks.is(':visible')) {
         sublinks.show();
     }
 };
+
+// --------------------------------------------------------------------------
+// TEMPORARY test switch (see VIEWER_TESTS at the top): the pieces that run
+// only when ?vt= is in the address
+// --------------------------------------------------------------------------
+
+// Shows which test is on, and sets up the ones that change the whole page
+function setupViewerTests() {
+    if (!VT.id && !VT.menu) {
+        return;
+    }
+    $('<div class="vt-label" aria-hidden="true">').text(VT.menu ? 'TESTS' : 'TEST ' + VT.id).appendTo('#modifyZIndex');
+    $('html').toggleClass('vt-no-blur', !!VT.noBlur).toggleClass('vt-no-will-change', !!VT.noWillChange);
+    if (VT.syncDecode) {
+        $('img[decoding="async"]').attr('decoding', 'sync');
+    }
+}
+
+// ?vt=menu: the list of tests, each a link that loads the works page fresh
+function drawTestMenu() {
+    var list = $('<ol>');
+    VIEWER_TESTS.forEach(function (test) {
+        list.append($('<li>').append(
+            $('<a>').attr('href', '/select-works?vt=' + test.id).append(
+                $('<b>').text(test.id),
+                $('<span>').text(test.name),
+                $('<small>').text(test.about)
+            )
+        ));
+    });
+    $('#imagesAndContent').empty().append($('<div class="vt-menu">').append(
+        $('<h2>').text('iPhone flash tests'),
+        $('<p>').text('For each test: open it, scroll well down (ten paintings or more), tap a painting and watch ' +
+            'the first moment. Try three spots, each further down the page. Then press Back to return here.'),
+        list
+    ));
+}
+
+// A tap on a painting: true when the test takes over from opening it
+function testInsteadOfOpening(card) {
+    if (VT.probe) {
+        runFlashProbe(VT.probe);
+        return true;
+    }
+    if (VT.predecode) {
+        decodePicturesOnScreen().then(function () {
+            openViewer(galleryItems, Number(card.getAttribute('data-index')), { from: card });
+        });
+        return true;
+    }
+    return false;
+}
+
+// Decodes the pictures on (and just around) the screen. Resolves once they
+// are, or after half a second at most.
+function decodePicturesOnScreen() {
+    var waits = [];
+    var height = window.innerHeight;
+    $('#imagesAndContent img').each(function () {
+        var rect = this.getBoundingClientRect();
+        if (this.decode && this.complete && this.naturalWidth && rect.bottom > -height / 2 && rect.top < height * 1.5) {
+            waits.push(this.decode().catch(function () {}));
+        }
+    });
+    return Promise.race([
+        Promise.all(waits),
+        new Promise(function (resolve) {
+            setTimeout(resolve, 500);
+        })
+    ]);
+}
+
+// The probes: one change on its own, then put back
+var probeRunning = false;
+
+function runFlashProbe(kind) {
+    if (probeRunning) {
+        return;
+    }
+    probeRunning = true;
+    var finished = function () {
+        probeRunning = false;
+    };
+
+    if (kind === 'redraw') {
+        // The page's own background changes colour, so all of it is drawn
+        // again, with no new layers
+        document.body.style.backgroundColor = '#f6d9e6';
+        setTimeout(function () {
+            document.body.style.backgroundColor = '';
+            finished();
+        }, 1200);
+    } else if (kind === 'layer') {
+        // A new layer of its own, over the margin, away from the paintings
+        var dot = $('<div class="vt-dot" aria-hidden="true">').appendTo('body');
+        setTimeout(function () {
+            dot.remove();
+            finished();
+        }, 1200);
+    } else if (kind === 'backdrop') {
+        // The viewer's dark background, exactly as opening starts it
+        var dim = $('<div class="modal-backdrop vt-dim" aria-hidden="true">')
+            .css('opacity', String(VIEWER_MIN_OPACITY)).appendTo('body');
+        setTimeout(function () {
+            requestAnimationFrame(function () {
+                dim.css({ transition: 'opacity 336ms ease-out', opacity: '0.6' });
+            });
+        }, 60);
+        setTimeout(function () {
+            dim.css({ transition: 'opacity 250ms ease', opacity: '0' });
+            setTimeout(function () {
+                dim.remove();
+                finished();
+            }, 260);
+        }, 1300);
+    }
+}
+
+
+// --------------------------------------------------------------------------
+// Start-up
+// --------------------------------------------------------------------------
+
+$(function () {
+    setupViewerTests();
+    setupResponsiveLayout();
+    setupViewer();
+
+    // Mobile menu
+    function setMenuOpen(open) {
+        $('#hamburgerMenu').toggleClass('active', open).attr({
+            'aria-expanded': open ? 'true' : 'false',
+            'aria-label': open ? 'Close menu' : 'Open menu'
+        });
+        $('#navLinksBox').toggleClass('active', open);
+        $('.nav-overlay').toggleClass('active', open);
+        $('#sideBySide').toggleClass('menu-open', open);
+    }
+
+    $('#hamburgerMenu').on('click', function (e) {
+        e.stopPropagation();
+        setMenuOpen(!$(this).hasClass('active'));
+    });
+
+    $('.nav-overlay').on('click', function () {
+        setMenuOpen(false);
+    });
+
+    // On phones, menu links close the drawer — except the ones that open a
+    // sub-menu (Works) or the newsletter form inside it
+    $(document).on('click', '#navLinksBox a', function (e) {
+        if (window.innerWidth > BREAKPOINT) {
+            return;
+        }
+        var text = $(this).text();
+        if (text === 'Works' || text === 'Newsletter') {
+            e.stopPropagation();
+        } else if (!$(this).closest('#selectProjectCategories, #newsletterSignUp').length) {
+            setMenuOpen(false);
+        }
+    });
+
+    $(document).on('click', '#newsletterSignUp, #newsletterEmail, #newsletterSubmit', function (e) {
+        if (window.innerWidth <= BREAKPOINT) {
+            e.stopPropagation();
+        }
+    });
+
+    // The logo goes home without reloading the page
+    $('#blockForHeader').on('click', 'a[href="/"]', function (event) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+        }
+        event.preventDefault();
+        if (window.innerWidth <= BREAKPOINT) {
+            setMenuOpen(false);
+        }
+        goTo('/');
+    });
+
+    // First page of the visit
+    var route = parseRoute(location.pathname);
+    var view = document.body.getAttribute('data-status') === '404' ? 'notfound' : resolveView(route);
+    var section = location.hash && location.hash.indexOf('#section-') === 0 ? location.hash.slice(1) : null;
+
+    if (view === 'works' && route.view === 'home') {
+        // (keeping the test switch's ?vt= if there is one)
+        history.replaceState({ path: '/select-works' }, '', '/select-works' + (VT.id || VT.menu ? location.search : ''));
+    } else {
+        history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
+    }
+
+    renderView(view, route).then(function () {
+        if (VT.menu) {
+            drawTestMenu();
+        } else if (view === 'works' && route.workId) {
+            openSharedWork(route.workId, {});
+        } else if (section) {
+            scrollToSection(section, false);
+        }
+    });
+
+    spawnNewsletterFloat();
+    startShop(); // shop.js: the basket button
+});

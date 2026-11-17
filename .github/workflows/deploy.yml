@@ -80,6 +80,7 @@ jobs:
             --exclude='.gitattributes' \
             --exclude='.idea/' \
             --exclude='ambOldSite/' \
+            --exclude='/scripts/' \
             --exclude='CLAUDE.md' \
             --exclude='tools/' \
             --exclude='.env' \

@@ -1,6 +1,6 @@
 <?php
-session_start();
-if ($_SESSION["ambar"] != "connected") {
+include_once __DIR__ . '/../database/session.php';
+if (($_SESSION["ambar"] ?? null) != "connected") {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;
 }
@@ -40,6 +40,15 @@ function getNewNewsletterCount($conn) {
 
 // Get the count of new newsletter subscriptions
 $newNewsletterCount = getNewNewsletterCount($conn);
+
+// Shop orders that are paid and waiting to be sent
+$ordersToSend = 0;
+try {
+    $shopCount = $conn->query("SELECT COUNT(*) FROM shopOrders WHERE status = 'paid'");
+    $ordersToSend = $shopCount ? (int) $shopCount->fetchColumn() : 0;
+} catch (Throwable $e) {
+    $ordersToSend = 0; // the shop's tables aren't there yet
+}
 ?>
 
 <!DOCTYPE html>
@@ -51,7 +60,7 @@ $newNewsletterCount = getNewNewsletterCount($conn);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
     <meta charset="utf-8">
-    <link rel="icon" type="image/x-icon" href="../imgMid/transpLeafStack.ico">
+    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Main Admin Page</title>
 </head>
 <body>
@@ -103,12 +112,15 @@ $newNewsletterCount = getNewNewsletterCount($conn);
 
         <div class="col-md-6 col-lg-4 mb-4">
             <a href="shopAdmin.php" class="text-decoration-none">
-                <div class="admin-card">
+                <div class="admin-card position-relative">
+                    <?php if ($ordersToSend > 0): ?>
+                        <span class="badge-notification"><?php echo $ordersToSend; ?></span>
+                    <?php endif; ?>
                     <div class="admin-card-icon">
                         <i class="fas fa-shopping-cart"></i>
                     </div>
                     <div class="admin-card-title">Manage Shop</div>
-                    <div class="admin-card-description">Add, edit, and remove products from your online store.</div>
+                    <div class="admin-card-description">Orders to send, the items for sale, delivery prices.</div>
                 </div>
             </a>
         </div>
@@ -152,5 +164,6 @@ $newNewsletterCount = getNewNewsletterCount($conn);
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/adminSession.js"></script>
 </body>
 </html>

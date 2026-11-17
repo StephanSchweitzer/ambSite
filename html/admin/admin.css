@@ -337,4 +337,28 @@ body {
     .btn-logout {
         width: 100%;
     }
+
+    .logout-container {
+        padding: 0 1rem 1rem;
+    }
+
+    .admin-container {
+        padding: 1rem;
+    }
+
+    /* Cards are a fixed fraction of the screen on desktop, which is far too
+       narrow on a phone; let them fill the column instead. */
+    .card,
+    .maxMinWidth15vw {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .display-1 {
+        font-size: 2.5rem;
+    }
+
+    .display-4 {
+        font-size: 2rem;
+    }
 }

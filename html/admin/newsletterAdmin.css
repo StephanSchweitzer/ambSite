@@ -460,3 +460,72 @@
         margin-bottom: 10px;
     }
 }
+
+/* Main content area (was inline styles on the page) */
+.newsletter-body {
+    max-width: 85vw;
+    margin: 0 auto;
+}
+
+.newsletter-content {
+    color: white;
+    padding: 20px;
+}
+
+/* Phones: drop the stacked side padding so the content gets the width */
+@media (max-width: 767.98px) {
+    .newsletter-body {
+        max-width: none;
+    }
+
+    .newsletter-content {
+        padding: 0;
+    }
+
+    .new-subscribers-container {
+        padding: 12px;
+    }
+
+    .new-subscriber-card {
+        padding: 10px;
+    }
+
+    .email-icon {
+        flex-shrink: 0;
+        margin-right: 10px;
+    }
+
+    .subscriber-details {
+        min-width: 0;
+    }
+
+    .table td {
+        padding-left: 38%;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    .table td:before {
+        width: 32%;
+    }
+
+    .table td[colspan] {
+        padding-left: 15px;
+        text-align: center;
+    }
+
+    .stat-card {
+        margin-bottom: 10px;
+    }
+
+    #exportEmailList,
+    #exportCSV {
+        display: block;
+        width: 100%;
+        margin: 0 0 8px 0 !important;
+    }
+
+    .modal-footer {
+        flex-wrap: wrap;
+    }
+}
