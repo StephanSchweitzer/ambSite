@@ -487,14 +487,32 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   never the evidence); and an order is only cancelled — its stock put back —
   once Stripe confirms the session is expired, so nothing can be paid for
   after going back on sale. `stockHeld` flipping 1→0 guards against putting
-  stock back twice.
+  stock back twice. Putting stock back never takes an original
+  (`isUnique`) above 1.
+- **Held stock is "Reserved", not "Sold".** `shopHeldStock()` sums the
+  items of orders with `stockHeld = 1`; `shopGetProducts()` gives each
+  variant `held` and the product `reserved` (nothing left, but only because
+  of a hold). The shop says "Reserved" (amber), the admin "Being bought",
+  and while an original is held the admin can't change whether it's for
+  sale — the server ignores a stock change for a held original too, which
+  is what stops one being sold twice.
+- **One visitor, two open checkouts** (`SHOP_OPEN_CHECKOUTS`, by `ipHash`),
+  besides 12 starts an hour: each holds its items for 31 minutes, so
+  without it one visitor could keep the whole shop reserved. The visitor's
+  own earlier checkout is given up first (`replaces`), on Stripe's hosted
+  page too (its token is now returned and kept).
+- **Bank payments** (`processing`) are re-checked with Stripe each time the
+  shop admin loads (`shopCheckProcessingOrders()`), in case the webhook's
+  message was lost.
 - **Promo codes** take money off the items, never delivery, one per order.
   `shopCheckPromo()` / `shopPromoDiscount()` decide (the basket's
   `promoDiscount()` in `shop.js` is only a preview of the same sum). The
   saving reaches Stripe as a one-off `amount_off` coupon made for that
   session, so Stripe's total can't differ from ours. A use is counted when
   checkout starts and given back if it's never paid, under the same
-  `stockHeld` guard as the stock.
+  `stockHeld` guard as the stock. Ten wrong codes an hour per visitor, then
+  codes aren't even looked up (`SHOP_WRONG_CODES_PER_HOUR`, via
+  `actions/rateLimit.php`), so codes can't be found by guessing.
 - **Markup lives only in PHP.** `shopPageFunctions.php` draws `/shop` and
   item pages for `index.php`; moving between shop pages fetches the same HTML
   (`shopAPI.php?view=page`). `shop.js` adds behaviour through delegated
@@ -568,6 +586,10 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
 - jQuery comes from CDNs: 3.7.0 (Google) on the public page, 3.5.1/3.6.0
   (code.jquery.com) on admin pages. Bootstrap 4.5.2 via CDN.
   On the public page all scripts load with `defer`, in order.
+  **Every CDN `<script>` carries `integrity` + `crossorigin="anonymous"`**
+  (sha384 of the exact file). Changing a version means a new hash:
+  `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
+  Stripe.js is the exception: Stripe changes it, so it never gets one.
 - The menu links come from the `navLinks` table; their `onclick` column holds
   `;`-separated names that `navLinksFunctions.js` maps to functions
   (`getProjectsAndWorks`, `openInfo`, `toggleSublinks`, ...). Those names now
@@ -637,8 +659,21 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   4-card one), under project titles and behind menu links on hover is
   CSS only, from the SVGs in `miscIcons/tape/` (`--tape-*` on `:root`).
   They're drawn stand-ins; Ambar's own scanned tape can replace the files.
-- Security headers (nosniff, Referrer-Policy, X-Frame-Options, HSTS) are set
-  in `html/.htaccess`.
+- Security headers (nosniff, Referrer-Policy, X-Frame-Options, HSTS and a
+  narrow CSP: `object-src 'none'; base-uri 'self'; frame-ancestors 'self'`)
+  are set in `html/.htaccess`.
+- **Saves from other websites are refused** in `database/session.php`
+  (`ambRefuseOtherSites()`): any non-GET whose `Origin` isn't this host gets
+  403 before the session starts. A second lock beside SameSite=Lax. Requests
+  with no Origin (curl, Stripe's webhook, which doesn't include session.php
+  anyway) pass.
+- **`actions/rateLimit.php`**: `ambRateLimited($bucket, $max)` /
+  `ambRateCount($bucket)`, per hashed IP, in files under
+  `sys_get_temp_dir()/amb-rate-limit` (no table needed). Used for wrong
+  promo codes and newsletter sign-ups (5 an hour; the reply is the same
+  whether or not the address was already on the list).
+- The deploy trusts the server's host key from the `SSH_KNOWN_HOSTS` secret
+  when it is set, else fetches it each run with a warning.
 
 ## Conventions
 
