@@ -9,7 +9,7 @@
 //   POST {action: 'basket',   items, code}     the basket priced as of right now
 //   POST {action: 'checkout', items, country, code, replaces}   start paying ->
 //        {clientSecret, publishableKey, token} to pay on the basket page, or
-//        {url} of Stripe's own page. `replaces` is an earlier payment this
+//        {url, token} of Stripe's own page. `replaces` is an earlier payment this
 //        visitor left unfinished: it's given up first, so its stock is free.
 //   POST {action: 'abandon',  token}     went back without paying: free the stock
 //
@@ -107,7 +107,9 @@ try {
                     shopReply(array('clientSecret' => $started['clientSecret'], 'publishableKey' => stripePublishableKey(),
                         'token' => $started['token']));
                 }
-                shopReply(array('url' => $started['url']));
+                // (the token too, so the basket can give this one up if they
+                // come back without paying)
+                shopReply(array('url' => $started['url'], 'token' => $started['token']));
             } catch (ShopProblem $problem) {
                 shopReply(array('message' => $problem->getMessage(), 'lines' => $problem->lines, 'promo' => $problem->promo), 409);
             }

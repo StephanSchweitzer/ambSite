@@ -290,6 +290,9 @@
         if (product.status !== 'live') {
             return '<span class="sa-pill">Hidden</span>';
         }
+        if (product.reserved) {
+            return '<span class="sa-pill is-reserved" title="Someone is paying for it right now. If they don\'t finish, it goes back on sale by itself within half an hour.">Being bought</span>';
+        }
         if (product.soldOut) {
             return '<span class="sa-pill is-sold">' + (product.isUnique ? 'Sold' : 'Sold out') + '</span>';
         }
@@ -304,7 +307,7 @@
         if (product.status !== 'live') {
             return 'hidden';
         }
-        return product.soldOut ? 'sold' : 'live';
+        return product.soldOut && !product.reserved ? 'sold' : 'live';
     }
 
     // canMove: the up / down arrows (only when the whole shop is listed, in
@@ -427,7 +430,7 @@
             images: product ? product.images.map(function (image) { return image.location; }) : [],
             options: product && product.variants.length
                 ? product.variants.map(function (v) {
-                    return { key: nextKey++, id: v.id, label: v.label, price: priceText(v.priceCents), stock: v.stock === null ? '' : String(v.stock), stockWas: v.stock };
+                    return { key: nextKey++, id: v.id, label: v.label, price: priceText(v.priceCents), stock: v.stock === null ? '' : String(v.stock), stockWas: v.stock, held: v.held || 0 };
                 })
                 : [{ key: nextKey++, id: 0, label: '', price: '', stock: '', stockWas: null }]
         };
@@ -471,8 +474,13 @@
             '<div class="sa-field" id="uniqueBlock"><div class="sa-row">' +
             '<div><label class="sa-label" for="fPrice">Price</label>' + moneyField('price', first.price, 'id="fPrice"') + '</div>' +
             '<div><label class="sa-label" for="fAvailable">Is it still for sale?</label>' +
-            '<select id="fAvailable"><option value="1">Yes, it\'s available</option><option value="0"' + (first.stockWas === 0 ? ' selected' : '') + '>No, it has sold</option></select></div>' +
-            '</div></div>' +
+            (first.held
+                // (the server leaves it alone while it's being bought, too)
+                ? '<select id="fAvailable" disabled><option value="">Someone is buying it right now</option></select></div>' +
+                  '</div><span class="sa-hint">Someone is paying for it at this moment. If they finish, it becomes &ldquo;Sold&rdquo;; ' +
+                  'if they don\'t, it goes back on sale by itself within half an hour. You can change this once that has happened.</span></div>'
+                : '<select id="fAvailable"><option value="1">Yes, it\'s available</option><option value="0"' + (first.stockWas === 0 ? ' selected' : '') + '>No, it has sold</option></select></div>' +
+                  '</div></div>') +
 
             '<div class="sa-field" id="optionsBlock"><span class="sa-label">Prices</span>' +
             '<span class="sa-hint">One row is enough. Add more if it comes in several sizes or kinds, each with its own price. ' +
@@ -620,7 +628,10 @@
         var unique = $('#fUnique').prop('checked');
         var first = editing.options[0];
         var variants = unique
-            ? [{ id: first.id, label: '', price: $.trim($('#fPrice').val()), stock: $('#fAvailable').val() === '1' ? '1' : '0', stockWas: first.stockWas }]
+            ? [{ id: first.id, label: '', price: $.trim($('#fPrice').val()),
+                // (while it's being bought, what it has stays: the server keeps it too)
+                stock: first.held ? String(first.stockWas === null ? '' : first.stockWas) : ($('#fAvailable').val() === '1' ? '1' : '0'),
+                stockWas: first.stockWas }]
             : editing.options.map(function (option) {
                 return { id: option.id, label: option.label, price: option.price, stock: option.stock, stockWas: option.stockWas };
             });

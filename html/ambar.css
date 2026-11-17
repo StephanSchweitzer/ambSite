@@ -1820,6 +1820,21 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   background: #cf3b2e;
 }
 
+/* ...amber while someone is paying for it (it may come back on sale) */
+.shop-sold.is-reserved {
+  color: #8a6a00;
+}
+
+.shop-sold.is-reserved:before {
+  background: #d9a400;
+}
+
+.shop-reserved-note {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
 /* ---------- Everything for sale ---------- */
 .shop-grid {
   display: grid;

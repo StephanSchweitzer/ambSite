@@ -166,6 +166,7 @@ try {
             }
             try {
                 shopReleaseStaleOrders($conn);
+                shopCheckProcessingOrders($conn);
             } catch (Throwable $e) {
                 error_log('shopAdminAPI: ' . $e->getMessage());
             }
@@ -394,6 +395,10 @@ try {
             $current = $conn->prepare('SELECT id FROM shopVariants WHERE productId = ? AND active = 1');
             $current->execute(array($id));
             $existing = array_map('intval', $current->fetchAll(PDO::FETCH_COLUMN));
+            // An original someone is paying for right now keeps the stock it
+            // has: marking it available would put it on sale a second time,
+            // and marking it sold would come undone if they don't finish
+            $heldNow = $isUnique ? shopHeldStock($conn, $existing) : array();
             $kept = array();
             foreach ($variants as $index => $variant) {
                 if ($variant['id'] && in_array($variant['id'], $existing, true)) {
@@ -403,7 +408,9 @@ try {
                     // Stock moves by the difference between what the page
                     // showed and what was typed, so a sale that happened
                     // while the page was open isn't undone by saving
-                    if ($variant['stock'] === null) {
+                    if (!empty($heldNow[$variant['id']])) {
+                        // (left as it is: see $heldNow)
+                    } elseif ($variant['stock'] === null) {
                         $conn->prepare('UPDATE shopVariants SET stock = NULL WHERE id = ?')->execute(array($variant['id']));
                     } elseif ($variant['stockWas'] === null) {
                         $conn->prepare('UPDATE shopVariants SET stock = ? WHERE id = ?')->execute(array($variant['stock'], $variant['id']));

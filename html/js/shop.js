@@ -978,7 +978,9 @@ $(document).on('click', '.basket-pay', function () {
     stripeReady.then(null, function () { /* told below, once the payment exists */ });
     shopPost({ action: 'checkout', items: readBasket(), country: country, code: code, replaces: replaces }).then(function (answer) {
         if (answer.url) {
-            writeCheckoutToken(''); // (any earlier one was given up)
+            // (any earlier one was given up; this one is given up in turn if
+            // they come back here without paying, e.g. with Back)
+            writeCheckoutToken(answer.token || '');
             location.href = answer.url; // Stripe's page
             return;
         }

@@ -159,6 +159,16 @@ function shopRenderPanel($itemHtml = '')
         . '<div class="shop-panel-body">' . $itemHtml . '</div></aside></div>';
 }
 
+// "Sold" (an original), "Sold out" (the rest), or "Reserved" while the last
+// of it is set aside for someone paying right now
+function shopSoldWord($product)
+{
+    if (!empty($product['reserved'])) {
+        return 'Reserved';
+    }
+    return $product['isUnique'] ? 'Sold' : 'Sold out';
+}
+
 function shopRenderCard($product, $index)
 {
     $picture = $product['images']
@@ -166,7 +176,7 @@ function shopRenderCard($product, $index)
         : '<div class="shop-no-picture" aria-hidden="true"></div>';
 
     if ($product['soldOut']) {
-        $price = '<span class="shop-sold">' . ($product['isUnique'] ? 'Sold' : 'Sold out') . '</span>';
+        $price = '<span class="shop-sold' . (!empty($product['reserved']) ? ' is-reserved' : '') . '">' . shopSoldWord($product) . '</span>';
     } else {
         $price = '<span class="shop-card-price">' . ambHtml($product['priceText']) . '</span>';
     }
@@ -285,7 +295,11 @@ function shopRenderBuying($product, $settings)
     $html = '<p class="shop-item-price" data-shop-price>' . ambHtml(count($variants) > 1 && $product['soldOut'] ? $product['priceText'] : $chosen['price']) . '</p>';
 
     if ($product['soldOut']) {
-        return $html . '<p class="shop-sold shop-sold-large">' . ($product['isUnique'] ? 'Sold' : 'Sold out') . '</p>';
+        if (!empty($product['reserved'])) {
+            return $html . '<p class="shop-sold shop-sold-large is-reserved">Reserved</p>'
+                . '<p class="shop-reserved-note">Someone is buying this right now. If they don&rsquo;t finish, it will be back within half an hour.</p>';
+        }
+        return $html . '<p class="shop-sold shop-sold-large">' . shopSoldWord($product) . '</p>';
     }
     if ($settings['paused'] === '1') {
         return $html . '<p class="shop-status">The shop is temporarily closed.</p>';

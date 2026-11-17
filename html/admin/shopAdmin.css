@@ -278,7 +278,7 @@ textarea { min-height: 110px; resize: vertical; }
 .sa-pill.is-live, .sa-pill.is-shipped { background: #e3f3e7; color: #1f7a3a; }
 .sa-pill.is-paid { background: #fde6ef; color: #b93a71; }
 .sa-pill.is-sold, .sa-pill.is-refunded { background: #f7e3e0; color: var(--red); }
-.sa-pill.is-processing, .sa-pill.is-test { background: #fdf3d0; color: #8a6a00; }
+.sa-pill.is-processing, .sa-pill.is-test, .sa-pill.is-reserved { background: #fdf3d0; color: #8a6a00; }
 
 /* ---------- Items ---------- */
 .sa-item {

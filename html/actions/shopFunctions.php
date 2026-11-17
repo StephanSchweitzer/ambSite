@@ -343,7 +343,9 @@ function shopGetProducts($conn, $options = array())
 
     $stmt = $conn->prepare("SELECT * FROM shopVariants WHERE productId IN ($in) AND active = 1 ORDER BY sortOrder ASC, id ASC");
     $stmt->execute($ids);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $variantRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $held = shopHeldStock($conn, array_map(function ($row) { return (int) $row['id']; }, $variantRows));
+    foreach ($variantRows as $row) {
         $stock = $row['stock'] === null ? null : max(0, (int) $row['stock']);
         $products[(int) $row['productId']]['variants'][] = array(
             'id' => (int) $row['id'],
@@ -353,17 +355,25 @@ function shopGetProducts($conn, $options = array())
             'stock' => $stock,
             // how many one customer can put in their basket right now
             'available' => $stock === null ? SHOP_MAX_QUANTITY : min($stock, SHOP_MAX_QUANTITY),
+            // how many are set aside for someone paying right now
+            'held' => isset($held[(int) $row['id']]) ? $held[(int) $row['id']] : 0,
         );
     }
 
     foreach ($products as &$product) {
         $prices = array();
         $anyLeft = false;
+        $anyHeld = false;
         foreach ($product['variants'] as $variant) {
             $prices[] = $variant['priceCents'];
             $anyLeft = $anyLeft || $variant['available'] > 0;
+            $anyHeld = $anyHeld || $variant['held'] > 0;
         }
         $product['soldOut'] = !$anyLeft;
+        // Nothing left to buy, but only because someone is paying for it
+        // right now: shown as "Reserved", not "Sold", since it comes back on
+        // sale by itself if they don't finish
+        $product['reserved'] = !$anyLeft && $anyHeld;
         $product['fromCents'] = $prices ? min($prices) : null;
         // "€35", or "from €35" when the sizes cost different amounts
         $product['priceText'] = !$prices ? ''
@@ -372,6 +382,27 @@ function shopGetProducts($conn, $options = array())
     unset($product);
 
     return array_values($products);
+}
+
+// How many of each variant are set aside for checkouts still under way
+// (an order whose stock is held: being paid for, or a bank payment on its
+// way): array(variantId => quantity)
+function shopHeldStock($conn, $variantIds)
+{
+    $held = array();
+    if (!$variantIds) {
+        return $held;
+    }
+    $in = implode(',', array_fill(0, count($variantIds), '?'));
+    $stmt = $conn->prepare("SELECT i.variantId, SUM(i.quantity) AS quantity
+                            FROM shopOrderItems i JOIN shopOrders o ON o.id = i.orderId
+                            WHERE o.stockHeld = 1 AND i.variantId IN ($in)
+                            GROUP BY i.variantId");
+    $stmt->execute(array_values($variantIds));
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $held[(int) $row['variantId']] = (int) $row['quantity'];
+    }
+    return $held;
 }
 
 // One product on sale, or null
