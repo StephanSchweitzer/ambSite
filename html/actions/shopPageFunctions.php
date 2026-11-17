@@ -86,24 +86,27 @@ function shopRenderHeader($title, $intro = '')
 {
     return '<header class="project-header shop-header"><h2 class="project-title">' . ambHtml($title) . '</h2>'
         . (trim((string) $intro) !== '' ? '<p class="project-description">' . shopText($intro) . '</p>' : '')
-        . '</header>' . shopRenderTestBanner();
+        . '</header>';
 }
 
-// While the shop runs on Stripe's test keys (shopTestMode), a notice under
-// every shop page's title. shop.js copies it from index.php's
-// <template id="shopTestBanner"> for the pages it draws (basket, checkout,
-// thank you), so the wording lives only here.
-function shopRenderTestBanner()
+// While the shop runs on Stripe's test keys (shopTestMode): a slim bar that
+// floats at the top of the screen on every shop page, so the shop itself
+// still looks as it will. index.php draws it once, hidden unless the page is
+// a shop page; shop.js shows and hides it as visitors move around
+// (showShopTestBar). "More" opens the details.
+function shopRenderTestBar($shown)
 {
     if (!shopTestMode()) {
         return '';
     }
-    return '<aside class="shop-test-banner" role="note" aria-label="This shop is a test">'
-        . '<p class="shop-test-banner-title">This shop is a test &mdash; nothing here is for sale yet</p>'
-        . '<p>We&rsquo;re still designing it. The prices are made up, no orders will be sent, and no money can be taken.</p>'
-        . '<p><strong>Please don&rsquo;t enter your real card details.</strong> To try buying something, use the test card '
-        . '<span class="shop-test-card">4242&nbsp;4242&nbsp;4242&nbsp;4242</span> with any future date and any three digits.</p>'
-        . '</aside>';
+    return '<aside id="shopTestBar" class="shop-test-bar" role="note" aria-label="This shop is a test"' . ($shown ? '' : ' hidden') . '>'
+        . '<details><summary><span class="shop-test-tag">Test<span class="shop-test-wide"> shop</span></span>'
+        . '<span class="shop-test-line shop-test-wide">Prices aren&rsquo;t real. Please don&rsquo;t use a real card.</span>'
+        . '<span class="shop-test-line shop-test-narrow">Prices aren&rsquo;t real &middot; no real cards</span>'
+        . '<span class="shop-test-more" aria-hidden="true"></span></summary>'
+        . '<div class="shop-test-details"><p>We&rsquo;re still designing the shop: nothing here is for sale yet, no orders will be sent and no money can be taken.</p>'
+        . '<p>To try buying something, use the test card <span class="shop-test-card">4242&nbsp;4242&nbsp;4242&nbsp;4242</span>'
+        . ' with any future date and any three digits.</p></div></details></aside>';
 }
 
 // The short version, beside each "Add to basket" and "Pay" button

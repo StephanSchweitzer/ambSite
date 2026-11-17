@@ -459,10 +459,11 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   (header explains; `RESEND_API_BASE` points at it).
 
 - **Test mode** (`shopTestMode()`: true until `STRIPE_SECRET_KEY` is
-  `sk_live_`/`rk_live_`): every shop page shows "this shop is a test, don't
-  use a real card" under its title (`shopRenderTestBanner()`; `shop.js`
-  copies it from index.php's `<template id="shopTestBanner">` for the pages
-  it draws), a short note sits under "Add to basket" and "Pay"
+  `sk_live_`/`rk_live_`): a slim "Test shop" bar floats at the top of the
+  screen on shop pages (`shopRenderTestBar()`, drawn once by index.php
+  outside `<main>`; `showShopTestBar()` from `setView()` hides it
+  elsewhere; "More" opens the details and test card; z-index 1020, under the
+  item panel), a short note sits under "Add to basket" and "Pay"
   (`shopTestNote`), shop pages are `noindex` and left out of the sitemap.
   It all disappears with live keys; no code change needed.
 - **The menu's Shop link** (the `navLinks` row whose `onclick` has

@@ -451,8 +451,8 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <!-- Navigation Overlay for Mobile -->
     <div class="nav-overlay"></div>
 </div>
+<?= shopRenderTestBar(strpos($view, 'shop') === 0) ?>
 <?php if (shopTestMode()): ?>
-<template id="shopTestBanner"><?= shopRenderTestBanner() ?></template>
 <template id="shopTestNote"><?= shopRenderTestNote() ?></template>
 <?php endif; ?>
 <?php if ($pageData): ?>

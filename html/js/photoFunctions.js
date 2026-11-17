@@ -510,6 +510,7 @@ function setView(view) {
     document.title = pageTitle;
     $('#imagesAndContent').attr('data-view', view);
     drawBasketPill(); // shop.js: the basket button isn't shown on the basket page itself
+    showShopTestBar(view); // shop.js: "Test shop" bar, on shop pages while Stripe is in test mode
 }
 
 // For a page whose title depends on what it shows (a shop item's name)

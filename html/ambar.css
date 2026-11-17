@@ -1608,57 +1608,132 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   display: none;
 }
 
-/* While the shop runs on Stripe's test keys: "this shop is a test", under
-   every shop page's title (shopRenderTestBanner), and a short line beside
-   each "Add to basket" and "Pay" button (shopRenderTestNote) */
-.shop-test-banner {
-  max-width: 640px;
-  margin: -1.2rem auto 2.6rem;
-  padding: 16px 20px 14px;
-  border: 1px solid #ecd27a;
-  border-left: 5px solid var(--amb-yellow);
-  border-radius: 4px;
-  background: #fff8df;
-  color: var(--color-ink);
-  font-size: 0.95rem;
-  font-weight: var(--font-weight-normal);
-  line-height: 1.5;
-  text-align: left;
+/* While the shop runs on Stripe's test keys: a slim "Test shop" bar floating
+   at the top of the screen on shop pages (shopRenderTestBar; "More" opens the
+   details), and a short line beside each "Add to basket" and "Pay" button
+   (shopRenderTestNote). Over the header and basket button, under the item
+   panel (1030) and the viewer. On computers it's centred over the content
+   sheet (which starts at 24vw), clear of the basket button on the right. */
+.shop-test-bar {
+  position: fixed;
+  top: 16px;
+  left: 24vw;
+  right: 170px;
+  z-index: 1020;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
 }
 
-.shop-test-banner p {
+.shop-test-bar[hidden] {
+  display: none;
+}
+
+.shop-test-bar details {
+  max-width: 100%;
+  pointer-events: auto;
+  border: 1px solid #ecd27a;
+  border-radius: 18px;
+  background: rgba(255, 248, 223, 0.97);
+  box-shadow: 0 4px 16px rgba(29, 29, 27, 0.12);
+  color: var(--color-ink);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.shop-test-bar details[open] {
+  border-radius: 12px;
+}
+
+.shop-test-bar summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 8px 5px 5px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.shop-test-bar summary::-webkit-details-marker {
+  display: none;
+}
+
+.shop-test-tag {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: var(--color-ink);
+  color: #fff8df;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.shop-test-line {
+  font-weight: var(--font-weight-normal);
+}
+
+.shop-test-more {
+  flex: none;
+  padding-left: 2px;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--color-text-secondary);
+}
+
+.shop-test-more::after {
+  content: 'More';
+}
+
+.shop-test-bar details[open] .shop-test-more::after {
+  content: 'Close';
+}
+
+.shop-test-details {
+  max-width: 440px;
+  padding: 2px 14px 10px;
+}
+
+.shop-test-details p {
   margin: 0 0 6px;
 }
 
-.shop-test-banner p:last-child {
+.shop-test-details p:last-child {
   margin-bottom: 0;
-}
-
-.shop-test-banner .shop-test-banner-title {
-  margin-bottom: 8px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.shop-test-banner-title::before {
-  content: 'TEST';
-  display: inline-block;
-  margin-right: 10px;
-  padding: 2px 7px;
-  border-radius: 3px;
-  background: var(--color-ink);
-  color: #fff8df;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  vertical-align: 2px;
 }
 
 .shop-test-card {
   white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9em;
+  font-size: 0.92em;
   font-weight: 700;
+}
+
+.shop-test-narrow {
+  display: none;
+}
+
+/* Phones and tablets: just under the white header bar, across the page */
+@media (max-width: 991px) {
+  .shop-test-bar {
+    top: 90px;
+    left: 12px;
+    right: 12px;
+  }
+}
+
+/* Phones: the short wording, so the bar stays one line */
+@media (max-width: 600px) {
+  .shop-test-wide {
+    display: none;
+  }
+
+  .shop-test-narrow {
+    display: inline;
+  }
 }
 
 .shop-test-note {
@@ -1671,13 +1746,6 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   line-height: 1.4;
 }
 
-@media (max-width: 767px) {
-  .shop-test-banner {
-    margin: -0.8rem 0 2rem;
-    padding: 14px 16px 12px;
-    font-size: 0.9rem;
-  }
-}
 
 /* A gallery's red dot: sold */
 .shop-sold {

@@ -45,16 +45,24 @@ function shopPost(data) {
 }
 
 function shopHeader(title) {
-    return '<header class="project-header shop-header"><h2 class="project-title">' + shopEscape(title) + '</h2></header>' +
-        shopTemplate('shopTestBanner');
+    return '<header class="project-header shop-header"><h2 class="project-title">' + shopEscape(title) + '</h2></header>';
 }
 
 // The "this shop is a test" wording, written once by the server
-// (shopRenderTestBanner / shopRenderTestNote in shopPageFunctions.php) and
-// left in the page only while the shop is in test mode; '' otherwise
+// (shopRenderTestNote in shopPageFunctions.php) and left in the page only
+// while the shop is in test mode; '' otherwise
 function shopTemplate(id) {
     var template = document.getElementById(id);
     return template ? template.innerHTML : '';
+}
+
+// The floating "Test shop" bar (shopRenderTestBar), on shop pages only.
+// Called from setView(); the bar is only in the page while in test mode.
+function showShopTestBar(view) {
+    var bar = document.getElementById('shopTestBar');
+    if (bar) {
+        bar.hidden = String(view).indexOf('shop') !== 0;
+    }
 }
 
 // --------------------------------------------------------------------------
