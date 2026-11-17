@@ -63,7 +63,31 @@ function shopSettingDefaults()
         'deliveryNote' => '',   // shown on every item ("Sent rolled in a tube...")
         'paused' => '0',        // '1': everything stays on show, nothing can be bought
         'inMenu' => '1',        // '1': "Shop" is in the site's menu (ambGetNavLinks)
-    ), shopEmailDefaults());    // the emails' wording (shopEmailFunctions.php)
+    ), shopCommissionDefaults(), shopEmailDefaults());    // the emails' wording (shopEmailFunctions.php)
+}
+
+// The note inviting commissions (shopRenderCommission): under everything for
+// sale, and a line on each sold original. Off until Ambar switches it on and
+// gives the address requests should go to; the wording is hers to change.
+function shopCommissionDefaults()
+{
+    return array(
+        'commissionOn' => '0',
+        'commissionEmail' => '',
+        'commissionTitle' => 'Commissions',
+        'commissionText' => "Alongside the works here, I also make original pieces to commission. "
+            . "If there is a person, a place or a moment you would like to keep, write to me and tell me a little about it. "
+            . "I would love to begin that conversation with you.",
+        // On a sold original. Empty: no line there.
+        'commissionSoldText' => "This one has found its home. If you would like something in its spirit, I also make works to commission.",
+    );
+}
+
+// The address commission requests go to, or '' while the note is switched off
+function shopCommissionEmail($settings)
+{
+    $email = trim((string) ($settings['commissionEmail'] ?? ''));
+    return ($settings['commissionOn'] ?? '0') === '1' && shopEmailIsAddress($email) ? $email : '';
 }
 
 // True until the shop has real-money Stripe keys. While it is, every shop page

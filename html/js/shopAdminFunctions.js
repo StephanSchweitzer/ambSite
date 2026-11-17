@@ -1157,6 +1157,24 @@
             '<span class="sa-hint">The money your prices are in. Changing it does not convert the prices you\'ve already typed.</span>' +
             '<select id="sCurrency">' + currencies + '</select></div>' +
 
+            '<section class="sa-email"><h3>Commissions</h3>' +
+            '<p class="sa-hint">A short note under everything for sale, inviting people to write to you about a commission, ' +
+            'with a line on each sold original too. Untick it whenever you&rsquo;re not taking commissions.</p>' +
+            '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="sCommissionOn"' + (s.commissionOn === '1' ? ' checked' : '') + '>' +
+            '<span><strong>Show the note about commissions</strong></span></label></div>' +
+            '<div class="sa-field"><label for="sCommissionEmail">Email address for commission requests</label>' +
+            '<span class="sa-hint">Shown on the shop, so visitors can write to you. It can be different from your shop email.</span>' +
+            '<input type="email" id="sCommissionEmail" maxlength="255" value="' + esc(s.commissionEmail) + '" placeholder="you@example.com"></div>' +
+            '<div class="sa-field"><label for="sCommissionTitle">Title</label>' +
+            '<input type="text" id="sCommissionTitle" maxlength="100" value="' + esc(s.commissionTitle) + '"></div>' +
+            '<div class="sa-field"><label for="sCommissionText">The note</label>' +
+            '<span class="sa-hint">Under the title, at the bottom of the shop. A link to write to you comes after it.</span>' +
+            '<textarea id="sCommissionText" maxlength="1000">' + esc(s.commissionText) + '</textarea></div>' +
+            '<div class="sa-field"><label for="sCommissionSold">On a sold original</label>' +
+            '<span class="sa-hint">Shown under &ldquo;Sold&rdquo;. Leave it empty to show nothing there.</span>' +
+            '<textarea id="sCommissionSold" class="sa-short" maxlength="500">' + esc(s.commissionSoldText) + '</textarea></div>' +
+            '</section>' +
+
             '<div class="sa-save-bar"><button type="submit" class="sa-button">Save settings</button></div></form>');
     }
 
@@ -1169,7 +1187,12 @@
             inMenu: $('#sInMenu').prop('checked'),
             intro: $('#sIntro').val(),
             deliveryNote: $('#sDelivery').val(),
-            currency: $('#sCurrency').val()
+            currency: $('#sCurrency').val(),
+            commissionOn: $('#sCommissionOn').prop('checked'),
+            commissionEmail: $('#sCommissionEmail').val(),
+            commissionTitle: $('#sCommissionTitle').val(),
+            commissionText: $('#sCommissionText').val(),
+            commissionSoldText: $('#sCommissionSold').val()
         }).done(function () {
             toast('Settings saved');
             loadState(drawSettings);

@@ -131,14 +131,53 @@ function shopRenderIndex($products, $settings, $zones, $itemHtml = '')
     }
     if (!$products) {
         return $html . '<div class="shop-empty"><p>Nothing is for sale right now.</p>'
-            . '<p><a href="/select-works" class="shop-text-link">See the works</a></p></div></div>';
+            . '<p><a href="/select-works" class="shop-text-link">See the works</a></p></div>'
+            . shopRenderCommission($settings) . '</div>';
     }
 
     $html .= '<div class="shop-grid">';
     foreach ($products as $index => $product) {
         $html .= shopRenderCard($product, $index);
     }
-    return $html . '</div></div>' . shopRenderPanel($itemHtml);
+    return $html . '</div>' . shopRenderCommission($settings) . '</div>' . shopRenderPanel($itemHtml);
+}
+
+// A link that opens the visitor's email, addressed to $email, the subject
+// filled in so Ambar can spot commission requests
+function shopCommissionHref($email, $subject)
+{
+    $at = strrpos($email, '@');
+    return 'mailto:' . rawurlencode(substr($email, 0, $at)) . '@' . substr($email, $at + 1)
+        . '?subject=' . rawurlencode($subject);
+}
+
+// The note inviting commissions, closing the shop (shopCommissionDefaults).
+// Nothing while it's switched off.
+function shopRenderCommission($settings)
+{
+    $email = shopCommissionEmail($settings);
+    if ($email === '') {
+        return '';
+    }
+    return '<section class="shop-commission" aria-labelledby="shopCommissionTitle">'
+        . '<h2 class="shop-commission-title" id="shopCommissionTitle">' . ambHtml($settings['commissionTitle']) . '</h2>'
+        . '<p class="shop-commission-text">' . shopText($settings['commissionText']) . '</p>'
+        . '<p class="shop-commission-contact"><a class="shop-text-link" href="' . ambHtml(shopCommissionHref($email, 'Commission request')) . '">'
+        . 'Write to me about a commission</a>'
+        . '<span class="shop-commission-address">' . ambHtml($email) . '</span></p>'
+        . '</section>';
+}
+
+// The line under "Sold" on an original that has found a buyer
+function shopRenderCommissionLine($product, $settings)
+{
+    $email = shopCommissionEmail($settings);
+    if ($email === '' || trim($settings['commissionSoldText']) === '') {
+        return '';
+    }
+    return '<p class="shop-commission-line">' . shopText($settings['commissionSoldText']) . ' '
+        . '<a class="shop-text-link" href="' . ambHtml(shopCommissionHref($email, 'Commission request, after "' . $product['name'] . '"')) . '">'
+        . 'Write to me</a></p>';
 }
 
 // The panel an item opens in: from the right on computers, up from the
@@ -299,7 +338,8 @@ function shopRenderBuying($product, $settings)
             return $html . '<p class="shop-sold shop-sold-large is-reserved">Reserved</p>'
                 . '<p class="shop-reserved-note">Someone is buying this right now. If they don&rsquo;t finish, it will be back within half an hour.</p>';
         }
-        return $html . '<p class="shop-sold shop-sold-large">' . shopSoldWord($product) . '</p>';
+        return $html . '<p class="shop-sold shop-sold-large">' . shopSoldWord($product) . '</p>'
+            . ($product['isUnique'] ? shopRenderCommissionLine($product, $settings) : '');
     }
     if ($settings['paused'] === '1') {
         return $html . '<p class="shop-status">The shop is temporarily closed.</p>';

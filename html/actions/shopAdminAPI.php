@@ -602,6 +602,26 @@ try {
         shopSaveSetting($conn, 'deliveryNote', cleanText($input['deliveryNote'] ?? '', 1000));
         shopSaveSetting($conn, 'paused', !empty($input['paused']) ? '1' : '0');
         shopSaveSetting($conn, 'inMenu', !empty($input['inMenu']) ? '1' : '0');
+
+        // The commissions note (only when the page sent it, so an older copy
+        // of the admin page can't wipe it)
+        if (array_key_exists('commissionEmail', $input)) {
+            $email = cleanText($input['commissionEmail'], 255);
+            if ($email !== '' && !shopEmailIsAddress($email)) {
+                adminFail('The email address for commissions doesn\'t look quite right. Please check it.');
+            }
+            if (!empty($input['commissionOn']) && $email === '') {
+                adminFail('To show the note about commissions, please fill in the email address requests should go to.');
+            }
+            $defaults = shopCommissionDefaults();
+            $title = cleanText($input['commissionTitle'] ?? '', 100);
+            $text = cleanText($input['commissionText'] ?? '', 1000);
+            shopSaveSetting($conn, 'commissionOn', !empty($input['commissionOn']) ? '1' : '0');
+            shopSaveSetting($conn, 'commissionEmail', $email);
+            shopSaveSetting($conn, 'commissionTitle', $title !== '' ? $title : $defaults['commissionTitle']);
+            shopSaveSetting($conn, 'commissionText', $text !== '' ? $text : $defaults['commissionText']);
+            shopSaveSetting($conn, 'commissionSoldText', cleanText($input['commissionSoldText'] ?? '', 500));
+        }
         adminReply(array('success' => true, 'settings' => shopSettings($conn, true)));
     }
 

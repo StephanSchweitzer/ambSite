@@ -1654,6 +1654,69 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   margin: 0 auto 18px;
 }
 
+/* The note inviting commissions, closing the shop (shopRenderCommission):
+   a smaller title with its own strip of tape, then a few quiet lines */
+.shop-commission {
+  max-width: 36rem;
+  margin: 7rem auto 2rem;
+  padding: 0 20px;
+}
+
+.shop-empty + .shop-commission {
+  margin-top: 0;
+}
+
+.shop-commission-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+
+.shop-commission-title:after {
+  content: '';
+  display: block;
+  width: 84px;
+  aspect-ratio: 160 / 44;
+  background: var(--tape-pink) center / 100% 100% no-repeat;
+  margin: 0.6rem auto 1.3rem;
+  transform: rotate(1.5deg);
+}
+
+.shop-commission-text {
+  margin: 0 0 1.4rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-light);
+}
+
+.shop-commission-contact {
+  margin: 0;
+}
+
+.shop-commission-address {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+/* Under "Sold" on an original (shopRenderCommissionLine) */
+.shop-commission-line {
+  max-width: 42ch;
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.shop-commission-line a {
+  white-space: nowrap;
+}
+
 /* A quiet notice: the shop is paused, something sold out... */
 .shop-status {
   max-width: 520px;
