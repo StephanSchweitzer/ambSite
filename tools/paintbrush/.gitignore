@@ -1,0 +1,26 @@
+# Real machine-specific config — lives at ~/.paintbrush.env, but ignore any
+# stray copy that lands in the repo so it can never be committed by accident.
+.paintbrush.env
+*.paintbrush.env
+paintbrush.env
+
+# Never commit MySQL client config (it can hold a password).
+.my.cnf
+
+# Database dump artifacts — these contain real production data.
+*.sql
+*.sql.gz
+*.dump
+dumps/
+
+# Logs
+*.log
+
+# Built launcher bundle — regenerate it with build_app.sh instead.
+Paintbrush.app/
+
+# Machine-local editor/tool settings
+.claude/settings.local.json
+
+# macOS
+.DS_Store
