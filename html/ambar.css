@@ -1841,14 +1841,6 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   border-color: var(--color-ink);
 }
 
-.shop-zoom-hint {
-  margin: 14px 0 0;
-  font-size: 0.8rem;
-  font-weight: var(--font-weight-light);
-  color: var(--color-faint);
-  text-align: center;
-}
-
 /* The words stay beside a tall picture as the page scrolls */
 .shop-item-info {
   position: sticky;
@@ -2466,10 +2458,6 @@ a.shop-button {
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-text-secondary);
-}
-
-.checkout-field label span {
-  color: var(--color-faint);
 }
 
 .checkout-field input {

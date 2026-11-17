@@ -167,7 +167,7 @@ function renderShopPage(view, path) {
         }
         clearTimeout(spinner);
         if (currentView === view && shownPath === path) {
-            content.html(errorHtml("Sorry, the shop couldn't be loaded. Please try again in a moment."));
+            content.html(errorHtml("Sorry, the shop couldn't be loaded. Please try again."));
         }
         drawn.reject();
     });
@@ -359,7 +359,7 @@ function drawBasketPage(content) {
         basketView = null;
         content.html('<div class="shop shop-basket">' + shopHeader('Basket') +
             '<div class="shop-empty"><p>Your basket is empty.</p>' +
-            '<p><a href="/shop" class="shop-text-link" data-shop-nav>Have a look at the shop</a></p></div></div>');
+            '<p><a href="/shop" class="shop-text-link" data-shop-nav>Continue shopping</a></p></div></div>');
         viewReady = true;
         return $.Deferred().resolve().promise();
     }
@@ -381,10 +381,10 @@ function drawBasketPage(content) {
             // (with its size, when it has one: another size may still be there)
             var called = line.name ? '“' + line.name + '”' + (line.label ? ' (' + line.label + ')' : '') : '';
             if (line.problem === 'gone') {
-                notes.push((called || 'Something in your basket') + ' is no longer available, so it has been taken out.');
+                notes.push((called || 'Something in your basket') + ' is no longer available and has been removed from your basket.');
                 setBasketQuantity(line.variant, 0);
             } else if (line.problem === 'stock') {
-                notes.push('Only ' + line.available + ' of ' + called + ' ' + (line.available === 1 ? 'is' : 'are') + ' left, so the number has been changed.');
+                notes.push('Only ' + line.available + ' of ' + called + ' ' + (line.available === 1 ? 'is' : 'are') + ' left. The quantity has been updated.');
                 line.quantity = line.available;
                 setBasketQuantity(line.variant, line.available);
             }
@@ -404,7 +404,7 @@ function drawBasketPage(content) {
     }, function () {
         if (currentView === 'shop-basket') {
             content.html('<div class="shop shop-basket">' + shopHeader('Basket') +
-                errorHtml("Sorry, your basket couldn't be loaded. Please try again in a moment.") + '</div>');
+                errorHtml("Sorry, your basket couldn't be loaded. Please try again.") + '</div>');
         }
         drawn.reject();
     });
@@ -432,7 +432,7 @@ function paintBasket(content) {
         content.html('<div class="shop shop-basket">' + shopHeader('Basket') +
             data.notes.map(function (note) { return '<p class="shop-status">' + shopEscape(note) + '</p>'; }).join('') +
             '<div class="shop-empty"><p>Your basket is empty.</p>' +
-            '<p><a href="/shop" class="shop-text-link" data-shop-nav>Have a look at the shop</a></p></div></div>');
+            '<p><a href="/shop" class="shop-text-link" data-shop-nav>Continue shopping</a></p></div></div>');
         return;
     }
 
@@ -474,30 +474,28 @@ function paintBasket(content) {
 
     var pay;
     if (data.paused) {
-        pay = '<p class="shop-status">The shop is taking a short break, so orders can\'t be placed just now. Your basket will keep.</p>';
+        pay = '<p class="shop-status">The shop is temporarily closed. Your basket has been saved.</p>';
     } else if (!data.canPay || !codes.length) {
-        pay = '<p class="shop-status">The shop isn\'t taking orders just yet. Your basket will keep, so please come back soon.</p>';
+        pay = '<p class="shop-status">Checkout is not available yet. Your basket has been saved.</p>';
     } else if (data.payOnPage) {
-        pay = '<button type="button" class="shop-button basket-pay">Continue to payment</button>' +
-            '<p class="basket-note">Next you give your address and pay, here on this page.</p>';
+        pay = '<button type="button" class="shop-button basket-pay">Checkout</button>';
         loadStripeJs().then(null, function () { /* tried again when paying */ });
     } else {
-        pay = '<button type="button" class="shop-button basket-pay">Pay securely</button>' +
-            '<p class="basket-note">You\'ll finish on Stripe\'s secure payment page, where you give your address and pay by card.</p>';
+        pay = '<button type="button" class="shop-button basket-pay">Checkout</button>';
     }
 
     content.html('<div class="shop shop-basket">' + shopHeader('Basket') +
         data.notes.map(function (note) { return '<p class="shop-status">' + shopEscape(note) + '</p>'; }).join('') +
         '<div class="basket-layout"><ul class="basket-lines">' + lines + '</ul>' +
         '<div class="basket-summary">' +
-        (codes.length ? '<label for="basketCountry">Where should it be sent?</label><select id="basketCountry">' + options + '</select>' : '') +
+        (codes.length ? '<label for="basketCountry">Delivery country</label><select id="basketCountry">' + options + '</select>' : '') +
         '<div class="basket-code">' + promoBlock + '</div>' +
         '<dl class="basket-totals"><dt>Items</dt><dd id="basketItems"></dd>' +
         (data.promo ? '<dt>Promo code</dt><dd id="basketDiscount"></dd>' : '') +
         '<dt>Delivery</dt><dd id="basketDelivery"></dd>' +
         '<dt class="is-total">Total</dt><dd class="is-total" id="basketTotal"></dd></dl>' +
         '<p class="shop-status basket-problem" role="alert" hidden></p>' + pay +
-        '<p class="basket-more"><a href="/shop" class="shop-text-link" data-shop-nav>Keep looking</a></p>' +
+        '<p class="basket-more"><a href="/shop" class="shop-text-link" data-shop-nav>Continue shopping</a></p>' +
         '</div></div></div>');
     updateBasketTotals();
 }
@@ -586,13 +584,13 @@ $(document).on('click', '.basket-pay', function () {
     var problem = $('.basket-problem').prop('hidden', true);
     var country = $('#basketCountry').val();
     if (!country) {
-        problem.text('Please choose the country your order should be sent to.').prop('hidden', false);
+        problem.text('Please choose a delivery country.').prop('hidden', false);
         $('#basketCountry').focus();
         return;
     }
     var onPage = basketView.payOnPage;
     var label = button.text();
-    button.prop('disabled', true).text(onPage ? 'Getting the payment ready…' : 'Opening the payment page…');
+    button.prop('disabled', true).text(onPage ? 'Loading…' : 'Redirecting…');
     var code = basketView.promo ? basketView.promo.code : '';
     var replaces = readCheckoutToken();
     // (Stripe.js is fetched alongside, when paying here)
@@ -622,7 +620,7 @@ $(document).on('click', '.basket-pay', function () {
             // last use went): show the basket without it, and say why
             writeBasketCode('');
             drawBasketPage($('#imagesAndContent')).then(function () {
-                $('.basket-problem').text(answer.message + ' The total above no longer includes it.').prop('hidden', false);
+                $('.basket-problem').text(answer.message + ' It has been removed.').prop('hidden', false);
             });
             return;
         }
@@ -630,7 +628,7 @@ $(document).on('click', '.basket-pay', function () {
             writeCheckoutToken(''); // (the server gave that one up before saying no)
         }
         button.prop('disabled', false).text(label);
-        problem.text(answer.message || 'Sorry, the payment page couldn\'t be opened. Nothing has been charged. Please try again.').prop('hidden', false);
+        problem.text(answer.message || 'Sorry, checkout couldn\'t be started. You have not been charged. Please try again.').prop('hidden', false);
     });
 });
 
@@ -789,7 +787,7 @@ function checkoutLines(data) {
             (line.image ? '<img src="' + shopEscape(thumbnailUrl(line.image)) + '" alt="" decoding="sync">' : '') + '</span>' +
             '<div class="basket-line-text"><span class="basket-line-name">' + shopEscape(line.name) + '</span>' +
             (line.label ? '<span class="basket-line-option">' + shopEscape(line.label) + '</span>' : '') +
-            (line.quantity > 1 ? '<span class="basket-line-option">' + line.quantity + ' of them</span>' : '') + '</div>' +
+            (line.quantity > 1 ? '<span class="basket-line-option">Qty ' + line.quantity + '</span>' : '') + '</div>' +
             '<div class="basket-line-price">' + shopEscape(formatMoney(line.priceCents * line.quantity, data.symbol)) + '</div></li>';
     }).join('');
 }
@@ -820,24 +818,24 @@ function startCheckout(answer, country, noStripeJs) {
         (discount ? '<dt>Promo code ' + shopEscape(data.promo.code) + '</dt><dd>−' + shopEscape(formatMoney(discount, data.symbol)) + '</dd>' : '') +
         '<dt>Delivery to ' + shopEscape(place ? place.name : country) + '</dt><dd>' + (delivery === 0 ? 'Free' : shopEscape(formatMoney(delivery, data.symbol))) + '</dd>' +
         '<dt class="is-total">Total</dt><dd class="is-total">' + shopEscape(formatMoney(items - discount + delivery, data.symbol)) + '</dd></dl>' +
-        '<p class="basket-more"><button type="button" class="checkout-back">Change the basket</button></p></div>' +
+        '<p class="basket-more"><button type="button" class="checkout-back">Edit basket</button></p></div>' +
         '<form class="basket-summary checkout-form" novalidate>' +
         '<h3 class="checkout-heading">Your details</h3>' +
         '<div class="checkout-field"><label for="checkoutEmail">Email</label>' +
         '<input type="email" id="checkoutEmail" autocomplete="email" inputmode="email" spellcheck="false" maxlength="200" required></div>' +
-        '<div class="checkout-field"><label for="checkoutPhone">Phone <span>(for the courier)</span></label>' +
+        '<div class="checkout-field"><label for="checkoutPhone">Phone</label>' +
         '<input type="tel" id="checkoutPhone" autocomplete="tel" maxlength="40" required></div>' +
         '<h3 class="checkout-heading">Delivery address</h3><div id="checkoutAddress" class="checkout-stripe"></div>' +
         '<h3 class="checkout-heading">Payment</h3><div id="checkoutPayment" class="checkout-stripe"><div class="loading-spinner"></div></div>' +
         '<p class="shop-status basket-problem" role="alert" hidden></p>' +
         '<button type="submit" class="shop-button checkout-pay" disabled>Pay</button>' +
-        '<p class="basket-note">Card details go straight to Stripe, who handle the payment for this shop. They never reach this site.</p>' +
+        '<p class="basket-note">Payments are processed securely by Stripe.</p>' +
         '</form></div></div>');
     window.scrollTo(0, 0);
 
     var fail = function (message) {
         if (!state.ended) {
-            stopCheckout(state, message || 'Sorry, the payment form couldn\'t be loaded. Nothing has been charged. Please go back to the basket and try again.');
+            stopCheckout(state, message || 'Sorry, the payment form couldn\'t be loaded. You have not been charged. Please try again.');
         }
     };
     if (noStripeJs || !window.Stripe) {
@@ -908,8 +906,7 @@ function checkoutChanged(state, session) {
         });
     }
     if (session.status && session.status.type === 'expired') {
-        stopCheckout(state, 'This payment was left open too long, so it has been closed and nothing has been charged. ' +
-            'Please go back to the basket to start again.');
+        stopCheckout(state, 'Your checkout session has expired. You have not been charged.');
     }
 }
 
@@ -947,11 +944,11 @@ $(document).on('submit', '.checkout-form', function (event) {
     var email = $.trim($('#checkoutEmail').val());
     var phone = $.trim($('#checkoutPhone').val());
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        say('Please give the email address your receipt should go to.', '#checkoutEmail');
+        say('Please enter your email address.', '#checkoutEmail');
         return;
     }
     if (phone.replace(/\D/g, '').length < 6) {
-        say('Please give a phone number, in case the courier needs to reach you.', '#checkoutPhone');
+        say('Please enter your phone number.', '#checkoutPhone');
         return;
     }
 
@@ -973,7 +970,7 @@ $(document).on('submit', '.checkout-form', function (event) {
         state.paying = false;
         button.prop('disabled', false).text(label);
         $('.checkout-back').prop('disabled', false);
-        say((error && error.message) || 'Sorry, the payment didn\'t go through, and nothing has been charged. Please check the details and try again.');
+        say((error && error.message) || 'Sorry, the payment didn\'t go through. You have not been charged. Please check your details and try again.');
     });
 });
 
@@ -1018,8 +1015,7 @@ function drawThanksPage(content) {
                 setTimeout(check, 3000);
                 return;
             }
-            $('#thanksBody').html('<p>We couldn\'t find that order.</p>' +
-                '<p>If you have just paid, your receipt is on its way by email and there\'s nothing more to do.</p>');
+            $('#thanksBody').html('<p>Order not found.</p>');
         });
     };
     check();
@@ -1029,15 +1025,13 @@ function drawThanksPage(content) {
 function paintThanks(order, token) {
     var body = $('#thanksBody');
     if (order.status === 'cancelled') {
-        body.html('<p>This payment didn\'t go through, and nothing has been charged.</p>' +
-            '<p><a href="/shop/basket" class="shop-text-link" data-shop-nav>Back to your basket</a></p>');
+        body.html('<p>Payment unsuccessful. You have not been charged.</p>' +
+            '<p><a href="/shop/basket" class="shop-text-link" data-shop-nav>Return to basket</a></p>');
         return;
     }
     if (order.status === 'pending') {
-        body.html('<p>Your payment hasn\'t been confirmed yet. That can take a minute or two.</p>' +
-            '<p>If you paid, a receipt is on its way to you by email and there\'s nothing more to do.</p>' +
-            '<p>If the payment didn\'t go through, nothing has been charged, and your basket is waiting: ' +
-            '<a href="/shop/basket" class="shop-text-link" data-shop-nav>back to your basket</a>.</p>');
+        body.html('<p>Your payment is being confirmed. You will receive a confirmation email shortly.</p>' +
+            '<p><a href="/shop/basket" class="shop-text-link" data-shop-nav>Return to basket</a></p>');
         return;
     }
 
@@ -1061,23 +1055,23 @@ function paintThanks(order, token) {
             (line.image ? '<img src="' + shopEscape(thumbnailUrl(line.image)) + '" alt="" decoding="sync">' : '') + '</span>' +
             '<div class="basket-line-text"><span class="basket-line-name">' + shopEscape(line.name) + '</span>' +
             (line.label ? '<span class="basket-line-option">' + shopEscape(line.label) + '</span>' : '') +
-            (line.quantity > 1 ? '<span class="basket-line-option">' + line.quantity + ' of them</span>' : '') + '</div>' +
+            (line.quantity > 1 ? '<span class="basket-line-option">Qty ' + line.quantity + '</span>' : '') + '</div>' +
             '<div class="basket-line-price">' + shopEscape(line.total) + '</div></li>';
     }).join('');
 
     $('#thanksBody').removeClass('shop-empty').addClass('thanks-body').html(
         '<p class="thanks-lead">' + (order.status === 'processing'
-            ? 'Your order is in. Your bank is still sending the payment, which can take a few days; it will be on its way as soon as that arrives.'
-            : 'Your order is confirmed, and I\'ll get it ready to send.') + '</p>' +
+            ? 'Thank you for your order. It will be dispatched once your payment clears.'
+            : 'Thank you for your order.') + '</p>' +
         '<p class="thanks-number">Order ' + shopEscape(order.number) + '</p>' +
         '<ul class="basket-lines">' + lines + '</ul>' +
         '<dl class="basket-totals"><dt>Items</dt><dd>' + shopEscape(order.subtotal) + '</dd>' +
         (order.discount ? '<dt>Promo code ' + shopEscape(order.promoCode) + '</dt><dd>\u2212' + shopEscape(order.discount) + '</dd>' : '') +
         '<dt>Delivery</dt><dd>' + shopEscape(order.shipping) + '</dd>' +
         '<dt class="is-total">Total</dt><dd class="is-total">' + shopEscape(order.total) + '</dd></dl>' +
-        (order.sendTo.length ? '<p class="thanks-address"><span>Going to</span>' + order.sendTo.map(shopEscape).join('<br>') + '</p>' : '') +
-        (order.email ? '<p class="basket-note">A receipt is on its way to ' + shopEscape(order.email) + '.</p>' : '') +
-        '<p class="basket-more"><a href="/select-works" class="not-found-link">See the works</a></p>');
+        (order.sendTo.length ? '<p class="thanks-address"><span>Shipping to</span>' + order.sendTo.map(shopEscape).join('<br>') + '</p>' : '') +
+        (order.email ? '<p class="basket-note">A confirmation has been sent to ' + shopEscape(order.email) + '.</p>' : '') +
+        '<p class="basket-more"><a href="/shop" class="not-found-link" data-shop-nav>Continue shopping</a></p>');
 }
 
 // --------------------------------------------------------------------------

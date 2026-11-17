@@ -162,10 +162,10 @@ function shopCheckPromo($conn, $code, $subtotal)
     $stmt->execute(array($code));
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$row || (int) $row['active'] !== 1) {
-        return array('problem' => "Sorry, that code isn't one we know.");
+        return array('problem' => "Sorry, that code isn't valid.");
     }
     if ($row['endsAt'] !== null && gmdate('Y-m-d') > $row['endsAt']) {
-        return array('problem' => 'Sorry, that code has ended.');
+        return array('problem' => 'Sorry, that code has expired.');
     }
     if ($row['maxUses'] !== null && (int) $row['usedCount'] >= (int) $row['maxUses']) {
         return array('problem' => 'Sorry, that code has been used up.');
@@ -279,7 +279,7 @@ function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
             }
         }
         if ($problems) {
-            throw new ShopProblem('Someone else has just bought something in your basket. Please check it and try again.', $problems);
+            throw new ShopProblem('An item in your basket has just sold out. Please check your basket and try again.', $problems);
         }
 
         // One use of the promo code is set aside the same way, so a code

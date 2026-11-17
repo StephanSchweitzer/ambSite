@@ -92,11 +92,11 @@ function shopRenderIndex($products, $settings, $zones)
     $html = '<div class="shop">' . shopRenderHeader('Shop', $settings['intro']);
 
     if ($settings['paused'] === '1' && $products) {
-        $html .= '<p class="shop-status">The shop is taking a short break. Everything is still here to look at, and will be back on sale soon.</p>';
+        $html .= '<p class="shop-status">The shop is temporarily closed.</p>';
     }
     if (!$products) {
-        return $html . '<div class="shop-empty"><p>Nothing is for sale just now.</p>'
-            . '<p>New pieces are on their way. In the meantime, <a href="/select-works" class="shop-text-link">have a look at the works</a>.</p></div></div>';
+        return $html . '<div class="shop-empty"><p>Nothing is for sale right now.</p>'
+            . '<p><a href="/select-works" class="shop-text-link">See the works</a></p></div></div>';
     }
 
     $html .= '<div class="shop-grid">';
@@ -167,7 +167,6 @@ function shopRenderProduct($product, $settings, $zones)
             }
             $html .= '</div>';
         }
-        $html .= '<p class="shop-zoom-hint">Open the picture to look closer and zoom in.</p>';
     } else {
         $html .= '<div class="shop-no-picture" aria-hidden="true"></div>';
     }
@@ -187,7 +186,7 @@ function shopRenderProduct($product, $settings, $zones)
 
     $notes = array();
     if ($product['isUnique']) {
-        $notes[] = 'One of a kind: there is only this one.';
+        $notes[] = 'Original, one of a kind';
     }
     if (trim($settings['deliveryNote']) !== '') {
         $notes[] = shopText($settings['deliveryNote']);
@@ -196,8 +195,8 @@ function shopRenderProduct($product, $settings, $zones)
         $key = $product['shippingClass'] === 'large' ? 'priceLargeCents' : 'priceStandardCents';
         $cheapest = min(array_map(function ($zone) use ($key) { return $zone[$key]; }, $zones));
         $notes[] = ($cheapest > 0 ? 'Delivery from ' . ambHtml(shopMoney($cheapest, $settings['currency'])) : 'Delivery')
-            . ', worked out in the basket for where you are.';
-        $notes[] = 'Paid securely by card, through Stripe.';
+            . ', calculated at checkout';
+        $notes[] = 'Secure payment by Stripe';
     }
     if ($notes) {
         $html .= '<ul class="shop-item-notes"><li>' . implode('</li><li>', $notes) . '</li></ul>';
@@ -230,7 +229,7 @@ function shopRenderBuying($product, $settings)
         return $html . '<p class="shop-sold shop-sold-large">' . ($product['isUnique'] ? 'Sold' : 'Sold out') . '</p>';
     }
     if ($settings['paused'] === '1') {
-        return $html . '<p class="shop-status">The shop is taking a short break, so this can\'t be bought just now. Please come back soon.</p>';
+        return $html . '<p class="shop-status">The shop is temporarily closed.</p>';
     }
 
     $html .= '<form class="shop-buy" data-shop-buy>';
@@ -260,7 +259,7 @@ function shopRenderBuying($product, $settings)
 
     $most = max(array_map(function ($variant) { return $variant['available']; }, $variants));
     if ($most > 1) {
-        $html .= '<div class="shop-quantity"' . ($chosen['available'] > 1 ? '' : ' hidden') . '><span class="shop-quantity-label">How many</span>'
+        $html .= '<div class="shop-quantity"' . ($chosen['available'] > 1 ? '' : ' hidden') . '><span class="shop-quantity-label">Quantity</span>'
             . '<span class="shop-stepper"><button type="button" class="shop-step" data-step="-1" aria-label="One fewer">&minus;</button>'
             . '<output class="shop-quantity-value" aria-live="polite">1</output>'
             . '<button type="button" class="shop-step" data-step="1" aria-label="One more">+</button></span></div>';
@@ -269,7 +268,7 @@ function shopRenderBuying($product, $settings)
     $left = !$product['isUnique'] && $chosen['stock'] !== null && $chosen['stock'] <= 3 ? $chosen['stock'] : null;
     $html .= '<p class="shop-left" data-shop-left' . ($left === null ? ' hidden' : '') . '>' . ($left === null ? '' : 'Only ' . $left . ' left') . '</p>'
         . '<button type="submit" class="shop-button">Add to basket</button>'
-        . '<p class="shop-added" role="status" hidden>It\'s in your basket. <a href="/shop/basket" class="shop-text-link" data-shop-nav>See your basket</a></p>'
+        . '<p class="shop-added" role="status" hidden>Added to basket. <a href="/shop/basket" class="shop-text-link" data-shop-nav>View basket</a></p>'
         . '</form>';
     return $html;
 }
