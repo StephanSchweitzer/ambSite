@@ -144,7 +144,7 @@ say so visibly rather than doing it silently. Refresh with the data steps only
 second browser window and a second Claude Code session, which is confusing.
 
 ```bash
-cd ~/ambSite/tools/paintbrush && set -a && . .paintbrush.env && set +a && \
+cd ~/ambSite/scripts/paintbrush && set -a && . .paintbrush.env && set +a && \
   ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 "$SSH_TARGET" | mysql "$LOCAL_DB" && \
   for d in $IMAGE_DIRS; do \
     rsync -rt --partial -e "ssh -i $IMAGE_SYNC_KEY -o BatchMode=yes" \
@@ -171,12 +171,12 @@ and do not restart hers. Check with:
 lsof -nP -iTCP:8000 -sTCP:LISTEN
 ```
 
-The launcher lives in this repo at `tools/paintbrush/`. It is local dev
-tooling: `tools/` is excluded from the deploy rsync and `paths-ignore`d on the
-push trigger, so changing the launcher neither reaches production nor fires a
-deploy. The local practice database is `ambar_site_local`, and it is a scratch
-copy that is wiped and rebuilt on every launch — never treat it as a source of
-truth.
+The launcher lives in this repo at `scripts/paintbrush/`, alongside the other
+laptop-side admin tools. `/scripts/` is excluded from the deploy rsync and
+`paths-ignore: ['scripts/**']` keeps it off the push trigger, so changing the
+launcher neither reaches production nor fires a deploy. The local practice
+database is `ambar_site_local`, and it is a scratch copy that is wiped and
+rebuilt on every launch — never treat it as a source of truth.
 
 ## The one thing the app asks you
 
@@ -275,12 +275,11 @@ site.
 Pushing to `main` triggers `.github/workflows/deploy.yml`: a `php -l` lint gate
 across all PHP files, then `rsync --delete` to the droplet. The rsync excludes
 `.env`, `CLAUDE.md`, `.github/`, `ambOldSite/`, `/scripts/` (admin tools that
-run on a laptop, e.g. `scripts/mac/mac-match-prod.sh`, which brings a Mac's
-Homebrew PHP/MySQL up to the server's versions), `tools/` (local dev tooling —
-the Paintbrush launcher lives at `tools/paintbrush/`), keys, and every image
-directory (`html/img/`, `imgMid/`, `thumbnails/`, `baseImages/`, `sslStuff/`) —
-so local images, local tooling and local config can never overwrite
-production. `--delete` means an
+run on a laptop: the Paintbrush launcher at `scripts/paintbrush/`, and
+`scripts/mac/mac-match-prod.sh`, which brings a Mac's Homebrew PHP/MySQL up to
+the server's versions), keys, and every image directory (`html/img/`,
+`imgMid/`, `thumbnails/`, `baseImages/`, `sslStuff/`) — so local images, local
+tooling and local config can never overwrite production. `--delete` means an
 empty `DEPLOY_PATH` would be destructive; the workflow guards against that.
 
 ## What git owns, and what production owns

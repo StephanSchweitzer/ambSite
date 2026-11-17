@@ -8,12 +8,15 @@ name: Deploy to production
 on:
   push:
     branches: [main]
-    # Local dev tooling under tools/ is excluded from the deploy rsync below,
-    # so a change to it can never alter production. Without this, editing the
-    # Paintbrush launcher would fire a full deploy that re-mirrors identical
-    # files — noise that makes the deploy log useless for spotting real ones.
+    # Everything under scripts/ is laptop-side admin tooling — the Paintbrush
+    # launcher and mac-match-prod.sh — and is excluded from the deploy rsync
+    # below, so a change to it can never alter production. Without this, an
+    # edit there fires a full deploy that re-mirrors identical files: noise
+    # that makes the deploy log useless for spotting real ones. Note this
+    # closes a gap — mac-match-prod.sh was unguarded and did fire one on
+    # every edit.
     paths-ignore:
-      - 'tools/**'
+      - 'scripts/**'
   # Lets you trigger a deploy by hand from the Actions tab (useful for the
   # first run, or to re-deploy without a new commit).
   workflow_dispatch:
@@ -82,7 +85,6 @@ jobs:
             --exclude='ambOldSite/' \
             --exclude='/scripts/' \
             --exclude='CLAUDE.md' \
-            --exclude='tools/' \
             --exclude='.env' \
             --exclude='.env.example' \
             --exclude='html/img/' \
