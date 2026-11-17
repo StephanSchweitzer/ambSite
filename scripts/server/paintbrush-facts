@@ -1,90 +1,23 @@
 #!/bin/sh
+# paintbrush-facts — prints what this server runs, for the practice site on the
+# Mac to match. Pinned to one SSH key as a forced command, so that key can do
+# nothing else. Setup: scripts/paintbrush/README.md.
 #
-# paintbrush-facts — read-only fact sheet about the live server.
-#
-# Installed on the SERVER (not the Mac) and pinned to one SSH key as a forced
-# command, so that key can learn what the server runs and nothing else:
-#
-#   sudo cp paintbrush-facts /usr/local/bin/paintbrush-facts
-#   sudo chmod 755 /usr/local/bin/paintbrush-facts
-#
-# then in the key's own ~/.ssh/authorized_keys, one line:
-#
-#   command="/usr/local/bin/paintbrush-facts",restrict ssh-ed25519 AAAA... paintbrush read-only stack facts
-#
-# `restrict` disables pty, agent/port/X11 forwarding. With the forced command
-# the key cannot run anything else: whatever the client asks for arrives in
-# SSH_ORIGINAL_COMMAND, which this script ignores completely.
-#
-# WHY THIS EXISTS
-#   The practice copy of the site on the Mac has to run the same PHP and MySQL
-#   as production, and hold the same set of settings, or it is testing
-#   something subtly different from the real thing. This is how the Mac finds
-#   out what to match, without anyone keeping a version number up to date by
-#   hand in two places.
-#
-# WHAT IT MAY PRINT, AND WHAT IT MAY NOT
-#   Versions and setting NAMES. Never a setting's VALUE. The .env on this
-#   server holds the live Stripe secret key, the Stripe webhook secret, the
-#   Resend key and the database password; the whole point of printing only the
-#   left-hand side of each line is that those values cannot leave the server
-#   even though this script can read the file.
-#
-#   So: if you extend this, print facts, never secrets. Anything added here is
-#   readable by whoever holds that key, on a laptop.
-#
-# Output is one `name=value` per line, so the reader can parse it with grep.
-# Every lookup is guarded: a missing tool prints `unknown` rather than failing,
-# because a half-answer is more useful than an error.
-
+# PRINTS FACTS, NEVER SECRETS. It can read a .env holding the live Stripe
+# secret, the webhook secret, the Resend key and the database password, and
+# prints only the left-hand side of each line. Whatever this prints ends up on
+# a laptop, so keep it that way.
 set -u
-
 ENV_FILE="${PAINTBRUSH_ENV_FILE:-/var/www/ambarvelasco.com/.env}"
-
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# --- PHP -------------------------------------------------------------------
-if have php; then
-    php -r 'echo "php=", PHP_VERSION, "\n";' 2>/dev/null || echo "php=unknown"
-    # Extension names only. This is what catches a practice site whose PHP is
-    # the right version but was built without gd, so image uploads behave
-    # differently from production.
-    php -r 'echo "php_extensions=", implode(",", get_loaded_extensions()), "\n";' 2>/dev/null
-else
-    echo "php=none"
-fi
+have php && php -r 'echo "php=", PHP_VERSION, "\n";
+    echo "php_extensions=", implode(",", get_loaded_extensions()), "\n";' || echo "php=none"
+have mysqld && echo "mysqld=$(mysqld --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)" || echo "mysqld=none"
+have apache2 && echo "apache=$(apache2 -v | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+[ -r /etc/os-release ] && echo "os=$(. /etc/os-release && printf '%s %s' "$NAME" "$VERSION_ID")"
 
-# --- MySQL -----------------------------------------------------------------
-# mysqld is the server, mysql is the client, and they can differ. The server
-# version is the one that matters for behaviour, and asking the binary needs
-# no credentials.
-if have mysqld; then
-    echo "mysqld=$(mysqld --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-else
-    echo "mysqld=none"
-fi
-
-if have mysql; then
-    echo "mysql_client=$(mysql --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-else
-    echo "mysql_client=none"
-fi
-
-# --- Web server and OS -----------------------------------------------------
-for httpd in apache2 httpd; do
-    if have "$httpd"; then
-        echo "apache=$("$httpd" -v 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-        break
-    fi
-done
-
-if [ -r /etc/os-release ]; then
-    # shellcheck disable=SC1091
-    echo "os=$(. /etc/os-release && printf '%s %s' "${NAME:-?}" "${VERSION_ID:-?}")"
-fi
-
-# --- The names of the production settings ----------------------------------
-# Left-hand side only. Comments and blank lines are skipped by the pattern.
+# Setting NAMES only.
 if [ -r "$ENV_FILE" ]; then
     sed -nE 's/^[[:space:]]*([A-Za-z_][A-Za-z_0-9]*)[[:space:]]*=.*/env_key=\1/p' "$ENV_FILE" | sort -u
 else
