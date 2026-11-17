@@ -112,7 +112,7 @@ say so visibly rather than doing it silently. Refresh with the data steps only
 second browser window and a second Claude Code session, which is confusing.
 
 ```bash
-cd ~/local_ambsite_startup_app && set -a && . .paintbrush.env && set +a && \
+cd ~/ambSite/tools/paintbrush && set -a && . .paintbrush.env && set +a && \
   ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=20 "$SSH_TARGET" | mysql "$LOCAL_DB" && \
   for d in $IMAGE_DIRS; do \
     rsync -rt --partial -e "ssh -i $IMAGE_SYNC_KEY -o BatchMode=yes" \
@@ -139,9 +139,12 @@ and do not restart hers. Check with:
 lsof -nP -iTCP:8000 -sTCP:LISTEN
 ```
 
-The launcher lives at `~/local_ambsite_startup_app/` (its own git repo). The
-local practice database is `ambar_site_local`, and it is a scratch copy that is
-wiped and rebuilt on every launch — never treat it as a source of truth.
+The launcher lives in this repo at `tools/paintbrush/`. It is local dev
+tooling: `tools/` is excluded from the deploy rsync and `paths-ignore`d on the
+push trigger, so changing the launcher neither reaches production nor fires a
+deploy. The local practice database is `ambar_site_local`, and it is a scratch
+copy that is wiped and rebuilt on every launch — never treat it as a source of
+truth.
 
 ## The one thing the app asks you
 
@@ -239,10 +242,11 @@ site.
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`: a `php -l` lint gate
 across all PHP files, then `rsync --delete` to the droplet. The rsync excludes
-`.env`, `CLAUDE.md`, `.github/`, `ambOldSite/`, keys, and every image directory
-(`html/img/`, `imgMid/`, `thumbnails/`, `baseImages/`, `sslStuff/`) — so local
-images and local config can never overwrite production. `--delete` means an
-empty `DEPLOY_PATH` would be destructive; the workflow guards against that.
+`.env`, `CLAUDE.md`, `.github/`, `ambOldSite/`, `tools/`, keys, and every image
+directory (`html/img/`, `imgMid/`, `thumbnails/`, `baseImages/`, `sslStuff/`) —
+so local images, local tooling and local config can never overwrite
+production. `--delete` means an empty `DEPLOY_PATH` would be destructive; the
+workflow guards against that.
 
 ## What git owns, and what production owns
 

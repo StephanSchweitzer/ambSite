@@ -8,6 +8,12 @@ name: Deploy to production
 on:
   push:
     branches: [main]
+    # Local dev tooling under tools/ is excluded from the deploy rsync below,
+    # so a change to it can never alter production. Without this, editing the
+    # Paintbrush launcher would fire a full deploy that re-mirrors identical
+    # files — noise that makes the deploy log useless for spotting real ones.
+    paths-ignore:
+      - 'tools/**'
   # Lets you trigger a deploy by hand from the Actions tab (useful for the
   # first run, or to re-deploy without a new commit).
   workflow_dispatch:
@@ -75,6 +81,7 @@ jobs:
             --exclude='.idea/' \
             --exclude='ambOldSite/' \
             --exclude='CLAUDE.md' \
+            --exclude='tools/' \
             --exclude='.env' \
             --exclude='.env.example' \
             --exclude='html/img/' \
