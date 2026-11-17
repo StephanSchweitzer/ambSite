@@ -145,10 +145,20 @@ function viewerImageWidth(work) {
     var ratio = work.width / work.height;
     var mobile = window.innerWidth <= BREAKPOINT;
     var room = viewer.room || window.innerHeight * (mobile ? 0.9 : 0.82);
+    var across = window.innerWidth - 2 * viewerArrowRoom();
     if (mobile) {
-        return Math.min(window.innerWidth * 0.9, room * ratio);
+        return Math.min(across, room * ratio);
     }
-    return Math.min(window.innerWidth * 0.9, room * ratio, work.width);
+    return Math.min(across, room * ratio, work.width);
+}
+
+// The space kept free at each side of the screen for the prev / next arrows
+// (--arrow-room in ambar.css; on phones they go beneath the painting)
+function viewerArrowRoom() {
+    var w = window.innerWidth;
+    if (w <= 576) return w * 0.05;
+    if (w <= 768) return 54;
+    return w <= BREAKPOINT ? 60 : 72;
 }
 
 // The viewer always fits on the screen, with nothing to scroll to: the
@@ -172,6 +182,13 @@ function fitViewerToScreen() {
     modal.style.setProperty('--viewer-top', top + 'px');
     modal.style.setProperty('--viewer-bottom', VIEWER_BOTTOM_PX + 'px');
     modal.style.setProperty('--room', viewer.room + 'px');
+    // The painting's width, so the arrows can sit just outside it
+    var work = viewer.items && viewer.items[viewer.index];
+    if (work && work.width && work.height) {
+        modal.style.setProperty('--painting-w', Math.round(viewerImageWidth(work)) + 'px');
+    } else {
+        modal.style.removeProperty('--painting-w');
+    }
 }
 
 // A long description shows its first lines, with "more" to open it up

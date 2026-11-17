@@ -614,6 +614,13 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   lines with a "more" button (`setUpDescription()`). Zoom and See to scale
   are icon buttons in `.viewer-toolbar` beside the close button — don't put
   controls under the caption, people won't scroll to find them.
+- **The prev/next arrows always sit outside the painting.** The painting
+  is never wider than the screen minus `--arrow-room` a side (mirrored by
+  `viewerArrowRoom()` in `viewerImageWidth()`), and `fitViewerToScreen()`
+  sets `--painting-w` so `.modal-nav-arrows` is the painting plus
+  `--arrow-reach` each side. Under 577px they go beneath the painting,
+  either side of the title, so phone paintings stay full width. In See to
+  scale they go back to the wall's edges.
 - **Zoom** (viewer tools section of `photoFunctions.js`): `enterZoom()`
   lifts a copy of the painting into `#zoomLayer` over the whole viewer and
   scales/moves that, so the viewer's own open/close/step animations are

@@ -857,10 +857,36 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
    once the buttons above and the caption below have theirs, so the whole
    viewer fits on the screen (fitViewerToScreen in photoFunctions.js, which
    sets it). viewerImageWidth() there does the same sums. */
+/* --arrow-room is the space kept free at each side of the screen for the
+   prev / next arrows, so they always sit beside the painting, never on it
+   (on phones they go beneath it instead, see .modal-nav-arrows) */
+#bigPicModal {
+  --arrow-room: 72px;   /* screen edge + arrow + gap to the painting */
+  --arrow-reach: 58px;  /* arrow + gap to the painting */
+}
+
+@media (max-width: 992px) {
+  #bigPicModal {
+    --arrow-room: 60px;
+    --arrow-reach: 52px;
+  }
+}
+
+@media (max-width: 768px) {
+  #bigPicModal {
+    --arrow-room: 54px;   /* the arrows are smaller here */
+    --arrow-reach: 46px;
+  }
+}
+
+@media (max-width: 576px) {
+  #bigPicModal { --arrow-room: 5vw; }
+}
+
 .popUpImage {
   max-height: var(--room, 74vh);
-  max-width: 90vw;
-  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)), calc(var(--w) * 1px));
+  max-width: calc(100vw - 2 * var(--arrow-room));
+  width: min(calc(100vw - 2 * var(--arrow-room)), calc(var(--room, 74vh) * var(--w) / var(--h)), calc(var(--w) * 1px));
   aspect-ratio: var(--w) / var(--h);
   height: auto;
   border-radius: 3px;
@@ -869,8 +895,8 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 .popUpImageMobile {
   max-height: var(--room, 74vh);
-  max-width: 90vw;
-  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)));
+  max-width: calc(100vw - 2 * var(--arrow-room));
+  width: min(calc(100vw - 2 * var(--arrow-room)), calc(var(--room, 74vh) * var(--w) / var(--h)));
   aspect-ratio: var(--w) / var(--h);
   height: auto;
   border-radius: 3px;
@@ -1057,18 +1083,42 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   transform: rotate(90deg);
 }
 
-/* Prev / next arrows */
+/* Prev / next arrows: just outside the painting's left and right edges.
+   --painting-w is the painting's drawn width (fitViewerToScreen sets it), and
+   the painting is never wider than the screen minus --arrow-room a side, so
+   the arrows always have room beside it */
 .modal-nav-arrows {
   position: absolute;
-  width: 100%;
+  width: calc(var(--painting-w, 100%) + 2 * var(--arrow-reach));
   height: 100%;
   top: 0;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   pointer-events: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0;
+  transition: width 0.3s ease;
+}
+
+/* Phones: no room beside the painting without shrinking it, so the arrows
+   sit beneath it, either side of the title */
+@media (max-width: 576px) {
+  .modal-nav-arrows {
+    top: 100%;
+    height: auto;
+    width: 100%;
+    left: 0;
+    transform: none;
+    margin-top: 18px;
+    align-items: flex-start;
+  }
+
+  #bigPicModal .imageInfo {
+    padding-left: 46px;
+    padding-right: 46px;
+  }
 }
 
 .nav-arrow {
@@ -1227,6 +1277,14 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 #bigPicModal.is-scale .nav-arrow path { stroke: var(--color-ink); }
+
+/* ...and along the edges of the wall, not beside the (hidden) painting */
+@media (min-width: 577px) {
+  #bigPicModal.is-scale .modal-nav-arrows {
+    width: 100%;
+    padding: 0 20px;
+  }
+}
 
 @keyframes scaleSceneIn {
   from { opacity: 0; transform: scale(0.98); }
