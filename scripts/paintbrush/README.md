@@ -190,6 +190,65 @@ The sync is intentionally **non-fatal**: if it fails, the launcher warns, keeps
 the images already present, and carries on opening the site. It also runs
 without `--delete`, so a misconfigured remote path can never wipe local images.
 
+## Fact sheet: optional server-side setup
+
+The practice site has to run the same PHP and MySQL as production and hold the
+same set of settings, or it is quietly testing something else. Keeping those
+numbers written down in two places means they drift, so the Mac asks the server
+instead.
+
+**This needs a third SSH key**, restricted the same way as the other two. Until
+it exists, `scripts/mac/check-against-prod.sh` says so and exits; nothing else
+is affected.
+
+**1. On the Mac** — create the keypair:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/paintbrush_facts -N "" -C "paintbrush read-only stack facts"
+```
+
+**2. On the server** — install the fact sheet:
+
+```bash
+sudo cp paintbrush-facts /usr/local/bin/paintbrush-facts && sudo chmod 755 /usr/local/bin/paintbrush-facts
+```
+
+The script is kept in the repo at `scripts/server/paintbrush-facts` and copied
+across by hand. `/scripts/` is excluded from the deploy, so it is never
+installed automatically.
+
+**3. On the server** — add the *public* key to `~/.ssh/authorized_keys`, pinned
+to it:
+
+```
+command="/usr/local/bin/paintbrush-facts",restrict ssh-ed25519 AAAA...paintbrush_facts
+```
+
+**4. On the Mac** — point `FACTS_KEY` at the private key in `.paintbrush.env`.
+`FACTS_TARGET` defaults to `SSH_TARGET`.
+
+Then:
+
+```bash
+bash scripts/mac/check-against-prod.sh
+```
+
+### Why this can hold no secrets
+
+The forced command runs as its own user, so it *can* read production's `.env` —
+which holds the live Stripe secret key, the webhook secret, the Resend key and
+the database password. It prints only the left-hand side of each line, so a
+setting's name can reach the Mac and its value cannot. The script is the
+boundary, not the file permissions: anything added to it is readable by whoever
+holds that key, on a laptop. Print facts, never secrets.
+
+The checker can be exercised without the server — and the fact sheet's wording
+checked before trusting it — by feeding it a saved copy:
+
+```bash
+PAINTBRUSH_FACTS_FILE=/tmp/facts bash scripts/mac/check-against-prod.sh
+```
+
 ## Notes
 
 - The local database is **overwritten on every run**. Point `LOCAL_DB` at a
