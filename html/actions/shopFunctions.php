@@ -76,10 +76,9 @@ function shopCommissionDefaults()
         'commissionEmail' => '',
         'commissionTitle' => 'Commissions',
         'commissionText' => "Alongside the works here, I also make original pieces to commission. "
-            . "If there is a person, a place or a moment you would like to keep, write to me and tell me a little about it. "
-            . "I would love to begin that conversation with you.",
-        // On a sold original. Empty: no line there.
-        'commissionSoldText' => "This one has found its home. If you would like something in its spirit, I also make works to commission.",
+            . "If you have any ideas, send me an email and I'm more than happy to discuss it with you.",
+        // On a sold original, followed by a "Write to me" link. Empty: no line there.
+        'commissionSoldText' => "This piece was sold! If you would like something else similar, I also make works to commission. If that interests you:",
     );
 }
 
