@@ -34,8 +34,8 @@ function shopEscape(text) {
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// 3550 -> "€35.50", 45000 -> "€450"; in dollars, "450 USD". `money` is
-// { before, after } from the server. Same as shopMoney() in shopFunctions.php.
+// 3550 -> "35.50 USD", 45000 -> "450 USD". `money` is { before, after }
+// from the server (shopMoneyParts). Same as shopMoney() in shopFunctions.php.
 function formatMoney(cents, money) {
     var amount = cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
     return (money.before || '') + amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (money.after || '');
@@ -1271,7 +1271,7 @@ function checkoutChanged(state, session) {
     }
     state.session = session;
     // (Stripe's own total, the one that will be charged; written the site's
-    // way, "€47", rather than Stripe's "€47.00")
+    // way, "47 USD", rather than Stripe's "$47.00")
     var total = session.total && session.total.total ? session.total.total.amount : '';
     var cents = total ? session.total.total.minorUnitsAmount : null;
     if (typeof cents === 'number' && basketView && session.minorUnitsAmountDivisor === 100) {

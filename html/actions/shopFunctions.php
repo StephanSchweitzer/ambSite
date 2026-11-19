@@ -126,14 +126,13 @@ function shopSaveSetting($conn, $name, $value)
 // text. Same as formatMoney() in js/shop.js and js/shopAdminFunctions.js.
 // ---------------------------------------------------------------------------
 
-// 'symbol' is what sits beside a price box in the admin; 'before' and
-// 'after' are how a price is written everywhere else. US dollars are
-// written "450 USD" (with a space that never breaks), not "$450".
+// 'symbol' is what sits beside a price box in the admin. Everywhere else a
+// price is written with the currency's code after it: "450 USD", "35 EUR".
 function shopCurrencies()
 {
     return array(
         'eur' => array('symbol' => '€', 'name' => 'Euro (€)'),
-        'usd' => array('symbol' => '$', 'before' => '', 'after' => "\u{00A0}USD", 'name' => 'US dollar ($)'),
+        'usd' => array('symbol' => '$', 'name' => 'US dollar ($)'),
         'gbp' => array('symbol' => '£', 'name' => 'British pound (£)'),
         'cad' => array('symbol' => 'CA$', 'name' => 'Canadian dollar (CA$)'),
         'aud' => array('symbol' => 'A$', 'name' => 'Australian dollar (A$)'),
@@ -142,18 +141,14 @@ function shopCurrencies()
     );
 }
 
-// How a currency's prices are written: array('before' => ..., 'after' => ...)
+// How a currency's prices are written: array('before' => ..., 'after' => ...).
+// The code follows the number after a space that never breaks.
 function shopMoneyParts($currency)
 {
-    $currencies = shopCurrencies();
-    if (!isset($currencies[$currency])) {
-        return array('before' => strtoupper($currency) . ' ', 'after' => '');
-    }
-    $c = $currencies[$currency];
-    return array('before' => isset($c['before']) ? $c['before'] : $c['symbol'], 'after' => isset($c['after']) ? $c['after'] : '');
+    return array('before' => '', 'after' => "\u{00A0}" . strtoupper((string) $currency));
 }
 
-// 45000 -> "€450", 3550 -> "€35.50"; in dollars, "450 USD"
+// 45000 -> "450 USD", 3550 -> "35.50 EUR"
 function shopMoney($cents, $currency)
 {
     $parts = shopMoneyParts($currency);
