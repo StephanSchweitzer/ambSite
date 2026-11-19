@@ -126,11 +126,14 @@ function shopSaveSetting($conn, $name, $value)
 // text. Same as formatMoney() in js/shop.js and js/shopAdminFunctions.js.
 // ---------------------------------------------------------------------------
 
+// 'symbol' is what sits beside a price box in the admin; 'before' and
+// 'after' are how a price is written everywhere else. US dollars are
+// written "450 USD" (with a space that never breaks), not "$450".
 function shopCurrencies()
 {
     return array(
         'eur' => array('symbol' => '€', 'name' => 'Euro (€)'),
-        'usd' => array('symbol' => '$', 'name' => 'US dollar ($)'),
+        'usd' => array('symbol' => '$', 'before' => '', 'after' => "\u{00A0}USD", 'name' => 'US dollar ($)'),
         'gbp' => array('symbol' => '£', 'name' => 'British pound (£)'),
         'cad' => array('symbol' => 'CA$', 'name' => 'Canadian dollar (CA$)'),
         'aud' => array('symbol' => 'A$', 'name' => 'Australian dollar (A$)'),
@@ -139,13 +142,23 @@ function shopCurrencies()
     );
 }
 
-// 45000 -> "€450", 3550 -> "€35.50"
-function shopMoney($cents, $currency)
+// How a currency's prices are written: array('before' => ..., 'after' => ...)
+function shopMoneyParts($currency)
 {
     $currencies = shopCurrencies();
-    $symbol = isset($currencies[$currency]) ? $currencies[$currency]['symbol'] : strtoupper($currency) . ' ';
+    if (!isset($currencies[$currency])) {
+        return array('before' => strtoupper($currency) . ' ', 'after' => '');
+    }
+    $c = $currencies[$currency];
+    return array('before' => isset($c['before']) ? $c['before'] : $c['symbol'], 'after' => isset($c['after']) ? $c['after'] : '');
+}
+
+// 45000 -> "€450", 3550 -> "€35.50"; in dollars, "450 USD"
+function shopMoney($cents, $currency)
+{
+    $parts = shopMoneyParts($currency);
     $cents = (int) $cents;
-    return $symbol . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',');
+    return $parts['before'] . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',') . $parts['after'];
 }
 
 // ---------------------------------------------------------------------------

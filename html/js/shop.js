@@ -27,17 +27,18 @@ var SHOP_API = '/actions/shopAPI.php';
 var SHOP_ITEM_SIZES = '(max-width: 767px) 92vw, 500px'; // same as SHOP_ITEM_SIZES in shopPageFunctions.php
 var BASKET_KEY = 'ambBasket';
 var BASKET_CODE_KEY = 'ambBasketCode'; // the promo code the visitor has applied
-var basketView = null; // what the basket page is showing: { lines, symbol, countries, ... }
+var basketView = null; // what the basket page is showing: { lines, money, countries, ... }
 
 function shopEscape(text) {
     return String(text === null || text === undefined ? '' : text)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// 3550 -> "€35.50", 45000 -> "€450". Same as shopMoney() in shopFunctions.php.
-function formatMoney(cents, symbol) {
+// 3550 -> "€35.50", 45000 -> "€450"; in dollars, "450 USD". `money` is
+// { before, after } from the server. Same as shopMoney() in shopFunctions.php.
+function formatMoney(cents, money) {
     var amount = cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
-    return symbol + amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (money.before || '') + amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (money.after || '');
 }
 
 function shopPost(data) {
@@ -828,7 +829,7 @@ function paintBasket(content) {
             '<div class="basket-line-text"><a class="basket-line-name" href="' + shopEscape(line.path) + '" data-shop-nav>' + shopEscape(line.name) + '</a>' +
             (line.label ? '<span class="basket-line-option">' + shopEscape(line.label) + '</span>' : '') +
             '<div class="basket-line-controls">' + stepper + '<button type="button" class="basket-remove">Remove</button></div></div>' +
-            '<div class="basket-line-price">' + shopEscape(formatMoney(line.priceCents * line.quantity, data.symbol)) + '</div></li>';
+            '<div class="basket-line-price">' + shopEscape(formatMoney(line.priceCents * line.quantity, data.money)) + '</div></li>';
     }).join('');
 
     var codes = Object.keys(data.countries).sort(function (a, b) {
@@ -891,10 +892,10 @@ function updateBasketTotals() {
     var country = data.countries[$('#basketCountry').val()];
     var delivery = country ? (large ? country.large : country.standard) : null;
     var discount = promoDiscount(data.promo, items);
-    $('#basketItems').text(formatMoney(items, data.symbol));
-    $('#basketDiscount').text('\u2212' + formatMoney(discount, data.symbol));
-    $('#basketDelivery').text(delivery === null ? 'Choose a country' : (delivery === 0 ? 'Free' : formatMoney(delivery, data.symbol)));
-    $('#basketTotal').text(formatMoney(items - discount + (delivery || 0), data.symbol));
+    $('#basketItems').text(formatMoney(items, data.money));
+    $('#basketDiscount').text('\u2212' + formatMoney(discount, data.money));
+    $('#basketDelivery').text(delivery === null ? 'Choose a country' : (delivery === 0 ? 'Free' : formatMoney(delivery, data.money)));
+    $('#basketTotal').text(formatMoney(items - discount + (delivery || 0), data.money));
 }
 
 // Promo code: the small link opens a box to type it in; applying it asks
@@ -1170,7 +1171,7 @@ function checkoutLines(data) {
             '<div class="basket-line-text"><span class="basket-line-name">' + shopEscape(line.name) + '</span>' +
             (line.label ? '<span class="basket-line-option">' + shopEscape(line.label) + '</span>' : '') +
             (line.quantity > 1 ? '<span class="basket-line-option">Qty ' + line.quantity + '</span>' : '') + '</div>' +
-            '<div class="basket-line-price">' + shopEscape(formatMoney(line.priceCents * line.quantity, data.symbol)) + '</div></li>';
+            '<div class="basket-line-price">' + shopEscape(formatMoney(line.priceCents * line.quantity, data.money)) + '</div></li>';
     }).join('');
 }
 
@@ -1196,10 +1197,10 @@ function startCheckout(answer, country, noStripeJs) {
     content.html('<div class="shop shop-basket">' + shopHeader('Checkout') +
         '<div class="basket-layout is-checkout">' +
         '<div class="checkout-order"><ul class="basket-lines">' + checkoutLines(data) + '</ul>' +
-        '<dl class="basket-totals"><dt>Items</dt><dd>' + shopEscape(formatMoney(items, data.symbol)) + '</dd>' +
-        (discount ? '<dt>Promo code ' + shopEscape(data.promo.code) + '</dt><dd>−' + shopEscape(formatMoney(discount, data.symbol)) + '</dd>' : '') +
-        '<dt>Delivery to ' + shopEscape(place ? place.name : country) + '</dt><dd>' + (delivery === 0 ? 'Free' : shopEscape(formatMoney(delivery, data.symbol))) + '</dd>' +
-        '<dt class="is-total">Total</dt><dd class="is-total">' + shopEscape(formatMoney(items - discount + delivery, data.symbol)) + '</dd></dl>' +
+        '<dl class="basket-totals"><dt>Items</dt><dd>' + shopEscape(formatMoney(items, data.money)) + '</dd>' +
+        (discount ? '<dt>Promo code ' + shopEscape(data.promo.code) + '</dt><dd>−' + shopEscape(formatMoney(discount, data.money)) + '</dd>' : '') +
+        '<dt>Delivery to ' + shopEscape(place ? place.name : country) + '</dt><dd>' + (delivery === 0 ? 'Free' : shopEscape(formatMoney(delivery, data.money))) + '</dd>' +
+        '<dt class="is-total">Total</dt><dd class="is-total">' + shopEscape(formatMoney(items - discount + delivery, data.money)) + '</dd></dl>' +
         '<p class="basket-more"><button type="button" class="checkout-back">Edit basket</button></p></div>' +
         '<form class="basket-summary checkout-form" novalidate>' +
         '<h3 class="checkout-heading">Your details</h3>' +
@@ -1274,7 +1275,7 @@ function checkoutChanged(state, session) {
     var total = session.total && session.total.total ? session.total.total.amount : '';
     var cents = total ? session.total.total.minorUnitsAmount : null;
     if (typeof cents === 'number' && basketView && session.minorUnitsAmountDivisor === 100) {
-        total = formatMoney(cents, basketView.symbol);
+        total = formatMoney(cents, basketView.money);
     }
     if (!state.paying) {
         $('.checkout-pay').text(total ? 'Pay ' + total : 'Pay');
