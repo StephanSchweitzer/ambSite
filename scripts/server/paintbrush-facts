@@ -1,0 +1,25 @@
+#!/bin/sh
+# paintbrush-facts — prints what this server runs, for the practice site on the
+# Mac to match. Pinned to one SSH key as a forced command, so that key can do
+# nothing else. Setup: scripts/paintbrush/README.md.
+#
+# PRINTS FACTS, NEVER SECRETS. It can read a .env holding the live Stripe
+# secret, the webhook secret, the Resend key and the database password, and
+# prints only the left-hand side of each line. Whatever this prints ends up on
+# a laptop, so keep it that way.
+set -u
+ENV_FILE="${PAINTBRUSH_ENV_FILE:-/var/www/ambarvelasco.com/.env}"
+have() { command -v "$1" >/dev/null 2>&1; }
+
+have php && php -r 'echo "php=", PHP_VERSION, "\n";
+    echo "php_extensions=", implode(",", get_loaded_extensions()), "\n";' || echo "php=none"
+have mysqld && echo "mysqld=$(mysqld --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)" || echo "mysqld=none"
+have apache2 && echo "apache=$(apache2 -v | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+[ -r /etc/os-release ] && echo "os=$(. /etc/os-release && printf '%s %s' "$NAME" "$VERSION_ID")"
+
+# Setting NAMES only.
+if [ -r "$ENV_FILE" ]; then
+    sed -nE 's/^[[:space:]]*([A-Za-z_][A-Za-z_0-9]*)[[:space:]]*=.*/env_key=\1/p' "$ENV_FILE" | sort -u
+else
+    echo "env_keys=unreadable"
+fi

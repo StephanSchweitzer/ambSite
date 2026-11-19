@@ -176,9 +176,28 @@ log "site=$SITE_PATH  webroot=$WEB_ROOT  db=$LOCAL_DB  port=$PORT"
 # 1. Make sure local MySQL is running
 # ---------------------------------------------------------------------------
 
+# Which Homebrew formula is MySQL installed as? The practice site has to run
+# the same MySQL as the live server, and Homebrew calls an older release
+# "mysql@8.4" rather than "mysql" -- so a hardcoded `brew services start mysql`
+# fails outright on a Mac that has been matched to the server, and the launcher
+# dies with "MySQL did not come up". Resolve it from whichever mysqld is
+# actually on PATH instead, which is the one about to be started.
+mysql_formula() {
+    local bin link
+    bin="$(command -v mysqld 2>/dev/null)" || true
+    if [ -z "$bin" ]; then printf 'mysql'; return; fi
+    link="$(readlink "$bin" 2>/dev/null || printf '%s' "$bin")"
+    case "$link" in
+        */Cellar/*) printf '%s' "$(printf '%s' "$link" | sed -E 's|.*/Cellar/([^/]+)/.*|\1|')" ;;
+        *)          printf 'mysql' ;;
+    esac
+}
+
+MYSQL_FORMULA="$(mysql_formula)"
+
 step_start "Starting MySQL..."
-log "Starting MySQL (no-op if already running)..."
-brew services start mysql >>"$LOG_FILE" 2>&1
+log "Starting MySQL ($MYSQL_FORMULA; no-op if already running)..."
+brew services start "$MYSQL_FORMULA" >>"$LOG_FILE" 2>&1
 
 # `brew services start` returns before the server is actually accepting
 # connections, so wait for a real ping rather than racing the load below.
@@ -190,7 +209,7 @@ for _ in $(seq 1 30); do
     fi
     sleep 1
 done
-[ "$mysql_ready" -eq 1 ] || fail "MySQL did not come up. Try: brew services restart mysql"
+[ "$mysql_ready" -eq 1 ] || fail "MySQL did not come up. Try: brew services restart $MYSQL_FORMULA"
 log "MySQL is up."
 step_done "MySQL is up"
 

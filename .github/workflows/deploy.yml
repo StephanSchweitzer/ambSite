@@ -33,6 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The runner's bundled PHP is whatever ubuntu-latest happens to ship, so
+      # without this the last line of defence before production checks the code
+      # against a different language version than the one that will run it.
+      - name: Use the same PHP the server runs
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
       - name: Lint every PHP file
         # `php -l` is a syntax check only — it won't catch logic bugs, but it
         # stops a stray typo from taking the whole site down.
@@ -40,9 +48,59 @@ jobs:
           find . -name '*.php' -not -path './ambOldSite/*' -print0 \
             | xargs -0 -n1 -P4 php -l
 
+  database:
+    name: Query check on MySQL 8.4
+    runs-on: ubuntu-latest
+    # `php -l` catches typos, not mistakes. This catches the other thing that
+    # can reach production untested: SQL that works on a laptop's MySQL and
+    # fails on the server's. Homebrew installs whatever MySQL is newest, which
+    # is an Innovation release well ahead of the server's 8.4 LTS, and newer
+    # versions add reserved words and change defaults. So the real tables are
+    # created here on the real version and the site's own functions are called
+    # against them -- see .github/ci/db-smoke.php.
+    #
+    # It holds no secrets, so the third-party action below cannot reach the
+    # deploy key: secrets are scoped per job, and this job is given none.
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: amb_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the same PHP the server runs
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_mysql, gd, mbstring
+
+      - name: Create the tables
+        run: |
+          mysql -h 127.0.0.1 -uroot -pci amb_ci < database/schema.sql
+          mysql -h 127.0.0.1 -uroot -pci amb_ci < database/shop.sql
+          mysql -h 127.0.0.1 -uroot -pci amb_ci < .github/ci/fixtures.sql
+
+      - name: Run the site's own queries against it
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: amb_ci
+          DB_USER: root
+          DB_PASSWORD: ci
+          APP_ENV: ci
+        run: php .github/ci/db-smoke.php
+
   deploy:
     name: Rsync to server
-    needs: lint          # deploy only runs if the lint job passed
+    needs: [lint, database]   # deploy only runs if both gates passed
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
