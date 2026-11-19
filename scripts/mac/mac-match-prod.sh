@@ -154,15 +154,45 @@ for f in $(brew list --formula | grep -E '^php(@|$)' || true); do
 done
 brew link --overwrite --force "$PHP_FORMULA"
 
-# MySQL
+# MySQL. Installing comes FIRST, while the old server is still serving. An
+# install can fail for reasons that have nothing to do with this Mac's MySQL --
+# no bottle for this macOS, no compiler, no network -- and stopping the server
+# before finding that out leaves the practice site with no database at all,
+# until somebody notices and starts it again. That happened once.
+install_or_upgrade "$MYSQL_FORMULA"
+
+# Past this point the old server is being taken away. A failure in the window
+# between stopping it and linking the new one would leave the Mac with no
+# MySQL linked and none running, so that window gets a safety net.
+MYSQL_WAS=""
+MYSQL_SWITCHED=0
+
+rescue_mysql() {
+  [ "$MYSQL_SWITCHED" = 1 ] && return 0
+  [ -n "$MYSQL_WAS" ] || return 0
+  say ""
+  say "Stopped partway through the switch, so putting $MYSQL_WAS back ..."
+  brew link --overwrite --force "$MYSQL_WAS" >/dev/null 2>&1 || true
+  brew services start "$MYSQL_WAS" >/dev/null 2>&1 || true
+  say "The practice site should have its database again. Nothing was deleted;"
+  say "run this again when you know why it stopped."
+}
+trap rescue_mysql EXIT
+
 for s in $(brew services list 2>/dev/null | awk '$1 ~ /^mysql/ && $2 == "started" {print $1}'); do
+  MYSQL_WAS="$s"
   say "==> Stopping $s ..."; brew services stop "$s" || true
 done
-install_or_upgrade "$MYSQL_FORMULA"
 for f in $(brew list --formula | grep -E '^mysql(@|$)' || true); do
   [ "$f" = "$MYSQL_FORMULA" ] || brew unlink "$f" >/dev/null 2>&1 || true
 done
 brew link --overwrite --force "$MYSQL_FORMULA"
+
+# The switch itself is done. Whether the new server then starts is a separate
+# matter, handled at the end -- a data folder written by a newer MySQL is a
+# known case with its own advice, and rolling back there would undo exactly
+# what was asked for.
+MYSQL_SWITCHED=1
 
 # --- check it worked ---------------------------------------------------------
 hash -r
