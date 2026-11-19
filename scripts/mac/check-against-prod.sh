@@ -210,11 +210,23 @@ if [ "$DRIFT" -eq 0 ]; then
 fi
 
 if [ "$VERSION_DRIFT" -eq 1 ]; then
-    say "  To match the versions:"
+    say "  A version difference is not urgent by itself. The deploy will not run"
+    say "  unless the site's own queries pass on the server's MySQL first — the"
+    say "  database job in .github/workflows/deploy.yml does that on every push —"
+    say "  so SQL that works only on a newer version cannot reach the live site."
+    say "  Matching is for when you want the practice site to behave exactly like"
+    say "  the real one. It is not what keeps the site safe."
+    say ""
+    say "  To match them:"
     say "    bash scripts/mac/mac-match-prod.sh --php $(minor "$prod_php") --mysql $(minor "$prod_mysqld") --apply"
-    say "  Quit Paintbrush first. MySQL will not open a data folder written by a"
-    say "  newer version, so that script moves the old one aside — safe here,"
-    say "  since the practice database is rebuilt on every launch."
+    say ""
+    say "  Quit Paintbrush first, and expect two snags. Homebrew may have no"
+    say "  prebuilt package for the older version on this Mac and try to compile"
+    say "  it, which it refuses to do unless the Command Line Tools are current"
+    say "  for this macOS — check with: brew config. And MySQL will not open a"
+    say "  data folder written by a newer version, so the script moves the old"
+    say "  one aside, which is safe here: the practice database is rebuilt from"
+    say "  the server on every launch."
 fi
 if [ "$KEY_DRIFT" -eq 1 ]; then
     say "  Add the missing settings to .env (this Mac) and .env.example (committed),"
