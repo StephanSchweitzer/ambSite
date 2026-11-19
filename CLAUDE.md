@@ -461,6 +461,18 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   The Resend key is send-only. Locally, `dev/resend-mock.php` can stand in
   (header explains; `RESEND_API_BASE` points at it).
 
+- **Test mode** (`shopTestMode()`: true until `STRIPE_SECRET_KEY` is
+  `sk_live_`/`rk_live_`): a slim "Test shop" bar floats at the top of the
+  screen on shop pages (`shopRenderTestBar()`, drawn once by index.php
+  outside `<main>`; `showShopTestBar()` from `setView()` hides it
+  elsewhere; "More" opens the details and test card; z-index 1020, under the
+  item panel), a short note sits under "Add to basket" and "Pay"
+  (`shopTestNote`), shop pages are `noindex` and left out of the sitemap.
+  It all disappears with live keys; no code change needed.
+- **The menu's Shop link** (the `navLinks` row whose `onclick` has
+  `loadShop`) follows the shop setting `inMenu` ("Show Shop in the menu",
+  default on) once the shop tables exist, not the row's `visible` flag
+  (`ambGetNavLinks()`, also used by `navLinksAPI.php`).
 - **The tables are created by hand**, once, from `database/shop.sql` (it only
   adds tables). Schema changes are not something to do against production
   from here (see Hard limits), so a change to the shop's tables means a new
@@ -478,14 +490,32 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   never the evidence); and an order is only cancelled — its stock put back —
   once Stripe confirms the session is expired, so nothing can be paid for
   after going back on sale. `stockHeld` flipping 1→0 guards against putting
-  stock back twice.
+  stock back twice. Putting stock back never takes an original
+  (`isUnique`) above 1.
+- **Held stock is "Reserved", not "Sold".** `shopHeldStock()` sums the
+  items of orders with `stockHeld = 1`; `shopGetProducts()` gives each
+  variant `held` and the product `reserved` (nothing left, but only because
+  of a hold). The shop says "Reserved" (amber), the admin "Being bought",
+  and while an original is held the admin can't change whether it's for
+  sale — the server ignores a stock change for a held original too, which
+  is what stops one being sold twice.
+- **One visitor, two open checkouts** (`SHOP_OPEN_CHECKOUTS`, by `ipHash`),
+  besides 12 starts an hour: each holds its items for 31 minutes, so
+  without it one visitor could keep the whole shop reserved. The visitor's
+  own earlier checkout is given up first (`replaces`), on Stripe's hosted
+  page too (its token is now returned and kept).
+- **Bank payments** (`processing`) are re-checked with Stripe each time the
+  shop admin loads (`shopCheckProcessingOrders()`), in case the webhook's
+  message was lost.
 - **Promo codes** take money off the items, never delivery, one per order.
   `shopCheckPromo()` / `shopPromoDiscount()` decide (the basket's
   `promoDiscount()` in `shop.js` is only a preview of the same sum). The
   saving reaches Stripe as a one-off `amount_off` coupon made for that
   session, so Stripe's total can't differ from ours. A use is counted when
   checkout starts and given back if it's never paid, under the same
-  `stockHeld` guard as the stock.
+  `stockHeld` guard as the stock. Ten wrong codes an hour per visitor, then
+  codes aren't even looked up (`SHOP_WRONG_CODES_PER_HOUR`, via
+  `actions/rateLimit.php`), so codes can't be found by guessing.
 - **Markup lives only in PHP.** `shopPageFunctions.php` draws `/shop` and
   item pages for `index.php`; moving between shop pages fetches the same HTML
   (`shopAPI.php?view=page`). `shop.js` adds behaviour through delegated
@@ -498,6 +528,17 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
 - The shop's views (`shop`, `shop-item`, `shop-basket`, `shop-thanks`) share
   routes by address, so "is this page already showing" is `isShowing(view,
   route)` (view **and** `shownPath`), not `view === currentView`.
+- **Items open in a side panel over the shop**, not a page of their own
+  (`shopRenderPanel()`; shop.js "The item panel"): from the right on
+  computers, a sheet from the bottom under 768px (pull down to close). The
+  address still becomes `/shop/<id>/<slug>` (history state `shopPanel`, so
+  closing is `history.back()`); arriving there directly draws the shop with
+  the panel open, which is what search engines see. `shopAPI.php?view=page`
+  returns `panel` (the item alone) besides `html`. The panel is moved to
+  `body` on arrival (`adoptPanel`), sits at z-index 1030 (under the viewer),
+  and holds the page like the viewer does (`html.shop-panel-open`, not on
+  touch screens). `shopPanelMove()` tells `goTo()`/`popstate` not to scroll
+  when only the panel opens or closes. Cards fetch their item on hover.
 - An item's pictures open in the works' viewer (`openViewer` with work-shaped
   objects whose `path` is the item page, so no history entry is added). A
   work with a live, in-stock item gets "Available in the shop" in the viewer
@@ -548,6 +589,10 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
 - jQuery comes from CDNs: 3.7.0 (Google) on the public page, 3.5.1/3.6.0
   (code.jquery.com) on admin pages. Bootstrap 4.5.2 via CDN.
   On the public page all scripts load with `defer`, in order.
+  **Every CDN `<script>` carries `integrity` + `crossorigin="anonymous"`**
+  (sha384 of the exact file). Changing a version means a new hash:
+  `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
+  Stripe.js is the exception: Stripe changes it, so it never gets one.
 - The menu links come from the `navLinks` table; their `onclick` column holds
   `;`-separated names that `navLinksFunctions.js` maps to functions
   (`getProjectsAndWorks`, `openInfo`, `toggleSublinks`, ...). Those names now
@@ -594,6 +639,13 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   lines with a "more" button (`setUpDescription()`). Zoom and See to scale
   are icon buttons in `.viewer-toolbar` beside the close button — don't put
   controls under the caption, people won't scroll to find them.
+- **The prev/next arrows always sit outside the painting.** The painting
+  is never wider than the screen minus `--arrow-room` a side (mirrored by
+  `viewerArrowRoom()` in `viewerImageWidth()`), and `fitViewerToScreen()`
+  sets `--painting-w` so `.modal-nav-arrows` is the painting plus
+  `--arrow-reach` each side. Under 577px they go beneath the painting,
+  either side of the title, so phone paintings stay full width. In See to
+  scale they go back to the wall's edges.
 - **Zoom** (viewer tools section of `photoFunctions.js`): `enterZoom()`
   lifts a copy of the painting into `#zoomLayer` over the whole viewer and
   scales/moves that, so the viewer's own open/close/step animations are
@@ -610,8 +662,21 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   4-card one), under project titles and behind menu links on hover is
   CSS only, from the SVGs in `miscIcons/tape/` (`--tape-*` on `:root`).
   They're drawn stand-ins; Ambar's own scanned tape can replace the files.
-- Security headers (nosniff, Referrer-Policy, X-Frame-Options, HSTS) are set
-  in `html/.htaccess`.
+- Security headers (nosniff, Referrer-Policy, X-Frame-Options, HSTS and a
+  narrow CSP: `object-src 'none'; base-uri 'self'; frame-ancestors 'self'`)
+  are set in `html/.htaccess`.
+- **Saves from other websites are refused** in `database/session.php`
+  (`ambRefuseOtherSites()`): any non-GET whose `Origin` isn't this host gets
+  403 before the session starts. A second lock beside SameSite=Lax. Requests
+  with no Origin (curl, Stripe's webhook, which doesn't include session.php
+  anyway) pass.
+- **`actions/rateLimit.php`**: `ambRateLimited($bucket, $max)` /
+  `ambRateCount($bucket)`, per hashed IP, in files under
+  `sys_get_temp_dir()/amb-rate-limit` (no table needed). Used for wrong
+  promo codes and newsletter sign-ups (5 an hour; the reply is the same
+  whether or not the address was already on the list).
+- The deploy trusts the server's host key from the `SSH_KNOWN_HOSTS` secret
+  when it is set, else fetches it each run with a warning.
 
 ## Conventions
 

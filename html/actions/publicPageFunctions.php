@@ -98,11 +98,34 @@ function ambWorkImage($work, $lazy, $sizes = null, $className = null, $priority 
 // loadAndDisplayProjectTitles)
 // ---------------------------------------------------------------------------
 
+// The menu's links, in order. The "Shop" link (the one whose instructions
+// include loadShop) isn't changeable on the admin's menu page; once the shop
+// exists, whether it's in the menu is the shop's own "Show Shop in the menu"
+// setting instead of the row's visible flag. Used by navLinksAPI.php too.
 function ambGetNavLinks($conn)
 {
-    return $conn->query('SELECT ID, displayedText, linkRedirection, displayedOrder, isChangeable, onclick, isNewTab, attachedFollowingDiv
-                         FROM navLinks WHERE visible = 1 ORDER BY displayedOrder ASC')
-                ->fetchAll(PDO::FETCH_ASSOC);
+    include_once __DIR__ . '/shopFunctions.php';
+    $shopInMenu = null; // null: no shop yet, so the row's own flag decides
+    try {
+        if (shopReady($conn)) {
+            $shopInMenu = shopSettings($conn)['inMenu'] === '1';
+        }
+    } catch (Throwable $e) {
+        error_log('ambGetNavLinks shop: ' . $e->getMessage());
+    }
+    $rows = $conn->query('SELECT ID, displayedText, linkRedirection, displayedOrder, isChangeable, onclick, isNewTab, attachedFollowingDiv, visible
+                          FROM navLinks ORDER BY displayedOrder ASC, ID ASC')
+                 ->fetchAll(PDO::FETCH_ASSOC);
+    $links = array();
+    foreach ($rows as $row) {
+        $isShop = strpos((string) $row['onclick'], 'loadShop') !== false;
+        $shown = $isShop && $shopInMenu !== null ? $shopInMenu : (int) $row['visible'] === 1;
+        if ($shown) {
+            unset($row['visible']);
+            $links[] = $row;
+        }
+    }
+    return $links;
 }
 
 // The site page a menu link shows, from the instructions stored with it

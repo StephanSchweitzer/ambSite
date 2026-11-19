@@ -166,6 +166,7 @@ try {
             }
             try {
                 shopReleaseStaleOrders($conn);
+                shopCheckProcessingOrders($conn);
             } catch (Throwable $e) {
                 error_log('shopAdminAPI: ' . $e->getMessage());
             }
@@ -394,6 +395,10 @@ try {
             $current = $conn->prepare('SELECT id FROM shopVariants WHERE productId = ? AND active = 1');
             $current->execute(array($id));
             $existing = array_map('intval', $current->fetchAll(PDO::FETCH_COLUMN));
+            // An original someone is paying for right now keeps the stock it
+            // has: marking it available would put it on sale a second time,
+            // and marking it sold would come undone if they don't finish
+            $heldNow = $isUnique ? shopHeldStock($conn, $existing) : array();
             $kept = array();
             foreach ($variants as $index => $variant) {
                 if ($variant['id'] && in_array($variant['id'], $existing, true)) {
@@ -403,7 +408,9 @@ try {
                     // Stock moves by the difference between what the page
                     // showed and what was typed, so a sale that happened
                     // while the page was open isn't undone by saving
-                    if ($variant['stock'] === null) {
+                    if (!empty($heldNow[$variant['id']])) {
+                        // (left as it is: see $heldNow)
+                    } elseif ($variant['stock'] === null) {
                         $conn->prepare('UPDATE shopVariants SET stock = NULL WHERE id = ?')->execute(array($variant['id']));
                     } elseif ($variant['stockWas'] === null) {
                         $conn->prepare('UPDATE shopVariants SET stock = ? WHERE id = ?')->execute(array($variant['stock'], $variant['id']));
@@ -594,6 +601,27 @@ try {
         shopSaveSetting($conn, 'intro', cleanText($input['intro'] ?? '', 1000));
         shopSaveSetting($conn, 'deliveryNote', cleanText($input['deliveryNote'] ?? '', 1000));
         shopSaveSetting($conn, 'paused', !empty($input['paused']) ? '1' : '0');
+        shopSaveSetting($conn, 'inMenu', !empty($input['inMenu']) ? '1' : '0');
+
+        // The commissions note (only when the page sent it, so an older copy
+        // of the admin page can't wipe it)
+        if (array_key_exists('commissionEmail', $input)) {
+            $email = cleanText($input['commissionEmail'], 255);
+            if ($email !== '' && !shopEmailIsAddress($email)) {
+                adminFail('The email address for commissions doesn\'t look quite right. Please check it.');
+            }
+            if (!empty($input['commissionOn']) && $email === '') {
+                adminFail('To show the note about commissions, please fill in the email address requests should go to.');
+            }
+            $defaults = shopCommissionDefaults();
+            $title = cleanText($input['commissionTitle'] ?? '', 100);
+            $text = cleanText($input['commissionText'] ?? '', 1000);
+            shopSaveSetting($conn, 'commissionOn', !empty($input['commissionOn']) ? '1' : '0');
+            shopSaveSetting($conn, 'commissionEmail', $email);
+            shopSaveSetting($conn, 'commissionTitle', $title !== '' ? $title : $defaults['commissionTitle']);
+            shopSaveSetting($conn, 'commissionText', $text !== '' ? $text : $defaults['commissionText']);
+            shopSaveSetting($conn, 'commissionSoldText', cleanText($input['commissionSoldText'] ?? '', 500));
+        }
         adminReply(array('success' => true, 'settings' => shopSettings($conn, true)));
     }
 

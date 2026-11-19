@@ -247,7 +247,8 @@ function sendEmailToDB() {
         },
         error: function (xhr, status, error) {
             console.error("Error sending email:", error);
-            showNewsletterMessage("An error occurred. Please try again later.", "error");
+            showNewsletterMessage(xhr.status === 429 && xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message : "An error occurred. Please try again later.", "error");
         },
         complete: function () {
             newsletterSubmissionInProgress = false;

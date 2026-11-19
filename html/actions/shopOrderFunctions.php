@@ -22,9 +22,12 @@
 
 include_once __DIR__ . '/shopFunctions.php';
 include_once __DIR__ . '/stripeFunctions.php';
+include_once __DIR__ . '/rateLimit.php';
 
 define('SHOP_HOLD_MINUTES', 31);          // Stripe's shortest is 30
 define('SHOP_CHECKOUTS_PER_HOUR', 12);    // per visitor: stops one person tying up the stock
+define('SHOP_OPEN_CHECKOUTS', 2);
+define('SHOP_WRONG_CODES_PER_HOUR', 10);  // per visitor: so codes can't be found by trying words         // per visitor, at once: each one holds its items for half an hour
 
 // Something the customer can be told as it is ("Sorry, that print has sold out")
 class ShopProblem extends Exception
@@ -158,10 +161,16 @@ function shopCheckPromo($conn, $code, $subtotal)
     if ($code === '') {
         return null;
     }
+    // Someone trying code after code is stopped before the code is even
+    // looked up, so the answer can't tell them anything
+    if (ambRateLimited('promo', SHOP_WRONG_CODES_PER_HOUR)) {
+        return array('problem' => 'Too many codes tried. Please wait a little and try again.');
+    }
     $stmt = $conn->prepare('SELECT * FROM shopPromoCodes WHERE code = ?');
     $stmt->execute(array($code));
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$row || (int) $row['active'] !== 1) {
+        ambRateCount('promo');
         return array('problem' => "Sorry, that code isn't valid.");
     }
     if ($row['endsAt'] !== null && gmdate('Y-m-d') > $row['endsAt']) {
@@ -225,6 +234,16 @@ function shopStartCheckout($conn, $items, $countryCode, $promoCode = '')
     // Anything left set aside by a payment page that has since closed goes
     // back on sale first
     shopReleaseStaleOrders($conn);
+
+    // Each checkout holds what's in it for half an hour, so one visitor
+    // starting checkout after checkout could keep the whole shop looking
+    // sold. Their own earlier one in this tab has been given up already
+    // (shopAPI.php, 'replaces'); this is for the others.
+    $open = $conn->prepare("SELECT COUNT(*) FROM shopOrders WHERE ipHash = ? AND status = 'pending' AND stockHeld = 1");
+    $open->execute(array($ipHash));
+    if ((int) $open->fetchColumn() >= SHOP_OPEN_CHECKOUTS) {
+        throw new ShopProblem('You already have a checkout open in another window. Please finish it there, or try again in half an hour.');
+    }
 
     $lines = shopPriceBasket($conn, $basket);
     $problems = array();
@@ -431,9 +450,13 @@ function shopCancelOrder($conn, $orderId)
         if ($release->rowCount() === 1) {
             $items = $conn->prepare('SELECT variantId, quantity FROM shopOrderItems WHERE orderId = ?');
             $items->execute(array($orderId));
-            $restore = $conn->prepare('UPDATE shopVariants SET stock = stock + ? WHERE id = ? AND stock IS NOT NULL');
+            // (an original never goes above one, whatever happened to it
+            // meanwhile, so it can't be sold twice)
+            $restore = $conn->prepare('UPDATE shopVariants v JOIN shopProducts p ON p.id = v.productId
+                                       SET v.stock = IF(p.isUnique = 1, LEAST(1, v.stock + ?), v.stock + ?)
+                                       WHERE v.id = ? AND v.stock IS NOT NULL');
             foreach ($items->fetchAll(PDO::FETCH_ASSOC) as $item) {
-                $restore->execute(array((int) $item['quantity'], (int) $item['variantId']));
+                $restore->execute(array((int) $item['quantity'], (int) $item['quantity'], (int) $item['variantId']));
             }
             // ...and its use of a promo code is given back
             $conn->prepare('UPDATE shopPromoCodes p JOIN shopOrders o ON o.promoId = p.id
@@ -565,6 +588,23 @@ function shopReleaseStaleOrders($conn)
 {
     $stmt = $conn->prepare("SELECT * FROM shopOrders WHERE status = 'pending' AND expiresAt < ? ORDER BY id ASC LIMIT 5");
     $stmt->execute(array(gmdate('Y-m-d H:i:s', time() - 60)));
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $order) {
+        try {
+            shopSyncOrder($conn, $order);
+        } catch (Throwable $e) {
+            error_log('Shop: could not check order ' . shopOrderNumber($order['id']) . ': ' . $e->getMessage());
+        }
+    }
+}
+
+// Bank payments still on their way. Stripe tells the webhook when one
+// clears or fails, but if that message were lost the order would wait at
+// "processing" (its stock held) for ever, so the shop admin asks Stripe
+// about them each time it opens. There are only ever a handful.
+function shopCheckProcessingOrders($conn)
+{
+    $stmt = $conn->prepare("SELECT * FROM shopOrders WHERE status = 'processing' AND createdAt < ? ORDER BY id ASC LIMIT 10");
+    $stmt->execute(array(gmdate('Y-m-d H:i:s', time() - 600)));
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $order) {
         try {
             shopSyncOrder($conn, $order);

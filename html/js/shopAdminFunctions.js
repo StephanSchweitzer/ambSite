@@ -129,7 +129,9 @@
         } else if (!state.setup.live) {
             box.prop('hidden', false).addClass('is-info').html(
                 '<h3>Practice mode</h3><p>Stripe is in test mode: no real money moves. To try a purchase, pay with the card ' +
-                'number <code>4242 4242 4242 4242</code>, any future date and any three digits.</p>');
+                'number <code>4242 4242 4242 4242</code>, any future date and any three digits.</p>' +
+                '<p>Visitors see a notice on every shop page saying the shop is a test and not to use a real card. ' +
+                'It goes away by itself once the shop is switched to real payments.</p>');
         } else {
             box.prop('hidden', true);
         }
@@ -288,6 +290,9 @@
         if (product.status !== 'live') {
             return '<span class="sa-pill">Hidden</span>';
         }
+        if (product.reserved) {
+            return '<span class="sa-pill is-reserved" title="Someone is paying for it right now. If they don\'t finish, it goes back on sale by itself within half an hour.">Being bought</span>';
+        }
         if (product.soldOut) {
             return '<span class="sa-pill is-sold">' + (product.isUnique ? 'Sold' : 'Sold out') + '</span>';
         }
@@ -302,7 +307,7 @@
         if (product.status !== 'live') {
             return 'hidden';
         }
-        return product.soldOut ? 'sold' : 'live';
+        return product.soldOut && !product.reserved ? 'sold' : 'live';
     }
 
     // canMove: the up / down arrows (only when the whole shop is listed, in
@@ -425,7 +430,7 @@
             images: product ? product.images.map(function (image) { return image.location; }) : [],
             options: product && product.variants.length
                 ? product.variants.map(function (v) {
-                    return { key: nextKey++, id: v.id, label: v.label, price: priceText(v.priceCents), stock: v.stock === null ? '' : String(v.stock), stockWas: v.stock };
+                    return { key: nextKey++, id: v.id, label: v.label, price: priceText(v.priceCents), stock: v.stock === null ? '' : String(v.stock), stockWas: v.stock, held: v.held || 0 };
                 })
                 : [{ key: nextKey++, id: 0, label: '', price: '', stock: '', stockWas: null }]
         };
@@ -469,8 +474,13 @@
             '<div class="sa-field" id="uniqueBlock"><div class="sa-row">' +
             '<div><label class="sa-label" for="fPrice">Price</label>' + moneyField('price', first.price, 'id="fPrice"') + '</div>' +
             '<div><label class="sa-label" for="fAvailable">Is it still for sale?</label>' +
-            '<select id="fAvailable"><option value="1">Yes, it\'s available</option><option value="0"' + (first.stockWas === 0 ? ' selected' : '') + '>No, it has sold</option></select></div>' +
-            '</div></div>' +
+            (first.held
+                // (the server leaves it alone while it's being bought, too)
+                ? '<select id="fAvailable" disabled><option value="">Someone is buying it right now</option></select></div>' +
+                  '</div><span class="sa-hint">Someone is paying for it at this moment. If they finish, it becomes &ldquo;Sold&rdquo;; ' +
+                  'if they don\'t, it goes back on sale by itself within half an hour. You can change this once that has happened.</span></div>'
+                : '<select id="fAvailable"><option value="1">Yes, it\'s available</option><option value="0"' + (first.stockWas === 0 ? ' selected' : '') + '>No, it has sold</option></select></div>' +
+                  '</div></div>') +
 
             '<div class="sa-field" id="optionsBlock"><span class="sa-label">Prices</span>' +
             '<span class="sa-hint">One row is enough. Add more if it comes in several sizes or kinds, each with its own price. ' +
@@ -618,7 +628,10 @@
         var unique = $('#fUnique').prop('checked');
         var first = editing.options[0];
         var variants = unique
-            ? [{ id: first.id, label: '', price: $.trim($('#fPrice').val()), stock: $('#fAvailable').val() === '1' ? '1' : '0', stockWas: first.stockWas }]
+            ? [{ id: first.id, label: '', price: $.trim($('#fPrice').val()),
+                // (while it's being bought, what it has stays: the server keeps it too)
+                stock: first.held ? String(first.stockWas === null ? '' : first.stockWas) : ($('#fAvailable').val() === '1' ? '1' : '0'),
+                stockWas: first.stockWas }]
             : editing.options.map(function (option) {
                 return { id: option.id, label: option.label, price: option.price, stock: option.stock, stockWas: option.stockWas };
             });
@@ -1129,6 +1142,8 @@
             '<form class="sa-editor" id="settingsForm" novalidate>' +
             '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="sPaused"' + (s.paused === '1' ? ' checked' : '') + '>' +
             '<span><strong>Pause the shop</strong><br><span class="sa-muted">For holidays or busy weeks. Everything stays on show, but nothing can be bought until you untick this.</span></span></label></div>' +
+            '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="sInMenu"' + (s.inMenu === '1' ? ' checked' : '') + '>' +
+            '<span><strong>Show &ldquo;Shop&rdquo; in the menu</strong><br><span class="sa-muted">Untick to take the shop out of your website\'s menu. Its pages still work for anyone who has the link.</span></span></label></div>' +
 
             '<div class="sa-field"><label for="sIntro">A few words at the top of the shop</label>' +
             '<span class="sa-hint">Optional. One or two lines under the &ldquo;Shop&rdquo; title.</span>' +
@@ -1142,6 +1157,24 @@
             '<span class="sa-hint">The money your prices are in. Changing it does not convert the prices you\'ve already typed.</span>' +
             '<select id="sCurrency">' + currencies + '</select></div>' +
 
+            '<section class="sa-email"><h3>Commissions</h3>' +
+            '<p class="sa-hint">A short note under everything for sale, inviting people to write to you about a commission, ' +
+            'with a line on each sold original too. Untick it whenever you&rsquo;re not taking commissions.</p>' +
+            '<div class="sa-field"><label class="sa-check"><input type="checkbox" id="sCommissionOn"' + (s.commissionOn === '1' ? ' checked' : '') + '>' +
+            '<span><strong>Show the note about commissions</strong></span></label></div>' +
+            '<div class="sa-field"><label for="sCommissionEmail">Email address for commission requests</label>' +
+            '<span class="sa-hint">Shown on the shop, so visitors can write to you. It can be different from your shop email.</span>' +
+            '<input type="email" id="sCommissionEmail" maxlength="255" value="' + esc(s.commissionEmail) + '" placeholder="you@example.com"></div>' +
+            '<div class="sa-field"><label for="sCommissionTitle">Title</label>' +
+            '<input type="text" id="sCommissionTitle" maxlength="100" value="' + esc(s.commissionTitle) + '"></div>' +
+            '<div class="sa-field"><label for="sCommissionText">The note</label>' +
+            '<span class="sa-hint">Under the title, at the bottom of the shop. A link to write to you comes after it.</span>' +
+            '<textarea id="sCommissionText" maxlength="1000">' + esc(s.commissionText) + '</textarea></div>' +
+            '<div class="sa-field"><label for="sCommissionSold">On a sold original</label>' +
+            '<span class="sa-hint">Shown under &ldquo;Sold&rdquo;. Leave it empty to show nothing there.</span>' +
+            '<textarea id="sCommissionSold" class="sa-short" maxlength="500">' + esc(s.commissionSoldText) + '</textarea></div>' +
+            '</section>' +
+
             '<div class="sa-save-bar"><button type="submit" class="sa-button">Save settings</button></div></form>');
     }
 
@@ -1151,9 +1184,15 @@
         post({
             action: 'saveSettings',
             paused: $('#sPaused').prop('checked'),
+            inMenu: $('#sInMenu').prop('checked'),
             intro: $('#sIntro').val(),
             deliveryNote: $('#sDelivery').val(),
-            currency: $('#sCurrency').val()
+            currency: $('#sCurrency').val(),
+            commissionOn: $('#sCommissionOn').prop('checked'),
+            commissionEmail: $('#sCommissionEmail').val(),
+            commissionTitle: $('#sCommissionTitle').val(),
+            commissionText: $('#sCommissionText').val(),
+            commissionSoldText: $('#sCommissionSold').val()
         }).done(function () {
             toast('Settings saved');
             loadState(drawSettings);

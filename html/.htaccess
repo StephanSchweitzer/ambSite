@@ -34,6 +34,10 @@ RewriteRule . /index.php [L]
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+    # A narrow content policy that can't get in the way of the site or Stripe:
+    # no plug-ins, no rewriting where relative links point, and only this
+    # site may show its pages inside a frame
+    Header always set Content-Security-Policy "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
 </IfModule>
 
 # Smaller downloads: text files are sent compressed

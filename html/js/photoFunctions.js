@@ -145,10 +145,20 @@ function viewerImageWidth(work) {
     var ratio = work.width / work.height;
     var mobile = window.innerWidth <= BREAKPOINT;
     var room = viewer.room || window.innerHeight * (mobile ? 0.9 : 0.82);
+    var across = window.innerWidth - 2 * viewerArrowRoom();
     if (mobile) {
-        return Math.min(window.innerWidth * 0.9, room * ratio);
+        return Math.min(across, room * ratio);
     }
-    return Math.min(window.innerWidth * 0.9, room * ratio, work.width);
+    return Math.min(across, room * ratio, work.width);
+}
+
+// The space kept free at each side of the screen for the prev / next arrows
+// (--arrow-room in ambar.css; on phones they go beneath the painting)
+function viewerArrowRoom() {
+    var w = window.innerWidth;
+    if (w <= 576) return w * 0.05;
+    if (w <= 768) return 54;
+    return w <= BREAKPOINT ? 60 : 72;
 }
 
 // The viewer always fits on the screen, with nothing to scroll to: the
@@ -172,6 +182,13 @@ function fitViewerToScreen() {
     modal.style.setProperty('--viewer-top', top + 'px');
     modal.style.setProperty('--viewer-bottom', VIEWER_BOTTOM_PX + 'px');
     modal.style.setProperty('--room', viewer.room + 'px');
+    // The painting's width, so the arrows can sit just outside it
+    var work = viewer.items && viewer.items[viewer.index];
+    if (work && work.width && work.height) {
+        modal.style.setProperty('--painting-w', Math.round(viewerImageWidth(work)) + 'px');
+    } else {
+        modal.style.removeProperty('--painting-w');
+    }
 }
 
 // A long description shows its first lines, with "more" to open it up
@@ -425,6 +442,7 @@ function renderView(view, route) {
 
 // Go to another page of the site, adding it to the browser history.
 // options.section: scroll to that project section once the works are shown.
+// options.state: more to keep in the history entry
 function goTo(path, options) {
     options = options || {};
     if (viewer.open) {
@@ -433,12 +451,13 @@ function goTo(path, options) {
 
     var route = parseRoute(path);
     var view = resolveView(route);
-    var changingPage = !isShowing(view, route);
+    // (opening or closing a shop item's panel keeps the shop where it is)
+    var changingPage = !isShowing(view, route) && !shopPanelMove(view);
 
     if (path !== location.pathname) {
         rememberScroll();
         var newPath = view === 'works' && route.view === 'home' ? '/select-works' : path;
-        history.pushState({ path: newPath }, '', newPath);
+        history.pushState($.extend({}, options.state, { path: newPath }), '', newPath);
     }
 
     var ready = renderView(view, route);
@@ -478,6 +497,12 @@ window.addEventListener('popstate', function (event) {
         return;
     }
 
+    // A shop item's panel opening or closing: the shop stays where it is
+    if (shopPanelMove(view)) {
+        renderView(view, route);
+        return;
+    }
+
     renderView(view, route).then(function () {
         if (route.workId) {
             openSharedWork(route.workId, {});
@@ -492,6 +517,7 @@ window.addEventListener('popstate', function (event) {
 
 function setView(view) {
     leaveCheckout(view); // shop.js: a payment left unfinished is given up
+    leaveShopPanel(view); // shop.js: an item's panel closes when the shop does
     var main = document.getElementById('imagesAndContent');
     pageIsServerDrawn = main.getAttribute('data-server-view') === view;
     main.removeAttribute('data-server-view');
@@ -501,6 +527,7 @@ function setView(view) {
     document.title = pageTitle;
     $('#imagesAndContent').attr('data-view', view);
     drawBasketPill(); // shop.js: the basket button isn't shown on the basket page itself
+    showShopTestBar(view); // shop.js: "Test shop" bar, on shop pages while Stripe is in test mode
 }
 
 // For a page whose title depends on what it shows (a shop item's name)
@@ -1423,7 +1450,8 @@ function setupViewer() {
     // handlers below stop it scrolling instead.
     modal.on('show.bs.modal', function () {
         scrollPosition = window.pageYOffset;
-        if (isTouchScreen()) {
+        // (a shop item's panel, open under the viewer, already holds it)
+        if (isTouchScreen() || $('html').hasClass('shop-panel-open')) {
             return;
         }
         var scrollbar = window.innerWidth - document.documentElement.clientWidth;
@@ -1471,7 +1499,9 @@ function setupViewer() {
         viewer.loadToken++;
         $('#spinner').hide();
         $('html').removeClass('no-scroll');
-        $('body').css('padding-right', '');
+        if (!$('html').hasClass('shop-panel-open')) {
+            $('body').css('padding-right', ''); // (a shop item's panel still needs it)
+        }
         if (Math.abs(window.pageYOffset - scrollPosition) > 1) {
             instantScrollTo(scrollPosition);
         }

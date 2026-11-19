@@ -3,6 +3,7 @@
 global $conn;
 include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
+include_once __DIR__ . '/rateLimit.php';
 
 header('Content-Type: application/json');
 
@@ -41,10 +42,17 @@ try {
                 sendError('Email is required', 400);
             }
 
-            $email = filter_var($data['email'], FILTER_VALIDATE_EMAIL);
+            $email = filter_var(is_scalar($data['email']) ? trim((string) $data['email']) : '', FILTER_VALIDATE_EMAIL);
             if (!$email) {
                 sendError('Invalid email format', 400);
             }
+
+            // A few sign-ups an hour from one visitor is plenty; more is a
+            // script filling the list with other people's addresses
+            if (ambRateLimited('newsletter', 5)) {
+                sendError('Too many sign-ups in a short time. Please try again later.', 429);
+            }
+            ambRateCount('newsletter');
 
             // Check if email already exists
             $checkQuery = "SELECT id FROM newsletterEmailList WHERE email = :email";
@@ -60,7 +68,9 @@ try {
                 $updateStmt->bindParam(':id', $existingRow['id'], PDO::PARAM_INT);
                 $updateStmt->execute();
 
-                echo json_encode(['status' => 'success', 'message' => 'Subscription reactivated']);
+                // (the same answer either way, so nobody can find out who is
+                // on the list by trying addresses)
+                echo json_encode(['status' => 'success', 'message' => 'Subscribed']);
             } else {
                 // Insert new subscription
                 $insertQuery = "INSERT INTO newsletterEmailList (email) VALUES (:email)";
@@ -68,7 +78,7 @@ try {
                 $insertStmt->bindParam(':email', $email, PDO::PARAM_STR);
                 $insertStmt->execute();
 
-                echo json_encode(['status' => 'success', 'message' => 'Subscription added successfully']);
+                echo json_encode(['status' => 'success', 'message' => 'Subscribed']);
             }
             break;
 
@@ -185,6 +195,8 @@ try {
             break;
     }
 } catch (PDOException $e) {
-    sendError($e->getMessage());
+    // The details are for the server's log, never for visitors
+    error_log('newsletterAPI: ' . $e->getMessage());
+    sendError('Something went wrong. Please try again later.');
 }
 ?>

@@ -3,12 +3,13 @@
 // no session: everything here is either public or reached with an order's
 // own private link.
 //
-//   GET  ?view=page&path=/shop/12/name   that shop page, already drawn
+//   GET  ?view=page&path=/shop/12/name   that shop page, already drawn (for an
+//                                        item, also 'panel': the item alone)
 //   GET  ?view=order&token=...           a customer's own order, for the thank-you page
 //   POST {action: 'basket',   items, code}     the basket priced as of right now
 //   POST {action: 'checkout', items, country, code, replaces}   start paying ->
 //        {clientSecret, publishableKey, token} to pay on the basket page, or
-//        {url} of Stripe's own page. `replaces` is an earlier payment this
+//        {url, token} of Stripe's own page. `replaces` is an earlier payment this
 //        visitor left unfinished: it's given up first, so its stock is free.
 //   POST {action: 'abandon',  token}     went back without paying: free the stock
 //
@@ -39,6 +40,8 @@ try {
                 'path' => $page['path'],
                 'title' => $page['status'] === 404 ? 'Page not found - Ambar Velasco' : $page['title'],
                 'html' => $page['status'] === 404 ? ambRenderNotFound() : $page['html'],
+                // (an item alone, to open over the shop already on screen)
+                'panel' => isset($page['panel']) ? $page['panel'] : null,
             ), $page['status'] === 404 ? 404 : 200);
         }
 
@@ -104,7 +107,9 @@ try {
                     shopReply(array('clientSecret' => $started['clientSecret'], 'publishableKey' => stripePublishableKey(),
                         'token' => $started['token']));
                 }
-                shopReply(array('url' => $started['url']));
+                // (the token too, so the basket can give this one up if they
+                // come back without paying)
+                shopReply(array('url' => $started['url'], 'token' => $started['token']));
             } catch (ShopProblem $problem) {
                 shopReply(array('message' => $problem->getMessage(), 'lines' => $problem->lines, 'promo' => $problem->promo), 409);
             }

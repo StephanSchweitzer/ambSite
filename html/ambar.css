@@ -570,7 +570,13 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 /* ==========================================================================
    Galleries / projects
    ========================================================================== */
+/* Full width of the sheet from the start. Left to size itself (it's an
+   item in #imagesAndContent's flex row) it took its width from whichever
+   pictures had loaded: half-width until they arrived, then full. The page
+   grew by a screen or more after a jump to a project, so the first jump
+   from the menu landed in the wrong place. */
 .project {
+  width: 100%;
   min-width: 51vw;
   max-width: 100%;
   margin-bottom: 4rem;
@@ -857,10 +863,36 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
    once the buttons above and the caption below have theirs, so the whole
    viewer fits on the screen (fitViewerToScreen in photoFunctions.js, which
    sets it). viewerImageWidth() there does the same sums. */
+/* --arrow-room is the space kept free at each side of the screen for the
+   prev / next arrows, so they always sit beside the painting, never on it
+   (on phones they go beneath it instead, see .modal-nav-arrows) */
+#bigPicModal {
+  --arrow-room: 72px;   /* screen edge + arrow + gap to the painting */
+  --arrow-reach: 58px;  /* arrow + gap to the painting */
+}
+
+@media (max-width: 992px) {
+  #bigPicModal {
+    --arrow-room: 60px;
+    --arrow-reach: 52px;
+  }
+}
+
+@media (max-width: 768px) {
+  #bigPicModal {
+    --arrow-room: 54px;   /* the arrows are smaller here */
+    --arrow-reach: 46px;
+  }
+}
+
+@media (max-width: 576px) {
+  #bigPicModal { --arrow-room: 5vw; }
+}
+
 .popUpImage {
   max-height: var(--room, 74vh);
-  max-width: 90vw;
-  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)), calc(var(--w) * 1px));
+  max-width: calc(100vw - 2 * var(--arrow-room));
+  width: min(calc(100vw - 2 * var(--arrow-room)), calc(var(--room, 74vh) * var(--w) / var(--h)), calc(var(--w) * 1px));
   aspect-ratio: var(--w) / var(--h);
   height: auto;
   border-radius: 3px;
@@ -869,8 +901,8 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 .popUpImageMobile {
   max-height: var(--room, 74vh);
-  max-width: 90vw;
-  width: min(90vw, calc(var(--room, 74vh) * var(--w) / var(--h)));
+  max-width: calc(100vw - 2 * var(--arrow-room));
+  width: min(calc(100vw - 2 * var(--arrow-room)), calc(var(--room, 74vh) * var(--w) / var(--h)));
   aspect-ratio: var(--w) / var(--h);
   height: auto;
   border-radius: 3px;
@@ -1057,18 +1089,42 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   transform: rotate(90deg);
 }
 
-/* Prev / next arrows */
+/* Prev / next arrows: just outside the painting's left and right edges.
+   --painting-w is the painting's drawn width (fitViewerToScreen sets it), and
+   the painting is never wider than the screen minus --arrow-room a side, so
+   the arrows always have room beside it */
 .modal-nav-arrows {
   position: absolute;
-  width: 100%;
+  width: calc(var(--painting-w, 100%) + 2 * var(--arrow-reach));
   height: 100%;
   top: 0;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   pointer-events: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0;
+  transition: width 0.3s ease;
+}
+
+/* Phones: no room beside the painting without shrinking it, so the arrows
+   sit beneath it, either side of the title */
+@media (max-width: 576px) {
+  .modal-nav-arrows {
+    top: 100%;
+    height: auto;
+    width: 100%;
+    left: 0;
+    transform: none;
+    margin-top: 18px;
+    align-items: flex-start;
+  }
+
+  #bigPicModal .imageInfo {
+    padding-left: 46px;
+    padding-right: 46px;
+  }
 }
 
 .nav-arrow {
@@ -1227,6 +1283,14 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 #bigPicModal.is-scale .nav-arrow path { stroke: var(--color-ink); }
+
+/* ...and along the edges of the wall, not beside the (hidden) painting */
+@media (min-width: 577px) {
+  #bigPicModal.is-scale .modal-nav-arrows {
+    width: 100%;
+    padding: 0 20px;
+  }
+}
 
 @keyframes scaleSceneIn {
   from { opacity: 0; transform: scale(0.98); }
@@ -1590,6 +1654,69 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   margin: 0 auto 18px;
 }
 
+/* The note inviting commissions, closing the shop (shopRenderCommission):
+   a smaller title with its own strip of tape, then a few quiet lines */
+.shop-commission {
+  max-width: 36rem;
+  margin: 7rem auto 2rem;
+  padding: 0 20px;
+}
+
+.shop-empty + .shop-commission {
+  margin-top: 0;
+}
+
+.shop-commission-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+}
+
+.shop-commission-title:after {
+  content: '';
+  display: block;
+  width: 84px;
+  aspect-ratio: 160 / 44;
+  background: var(--tape-pink) center / 100% 100% no-repeat;
+  margin: 0.6rem auto 1.3rem;
+  transform: rotate(1.5deg);
+}
+
+.shop-commission-text {
+  margin: 0 0 1.4rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-light);
+}
+
+.shop-commission-contact {
+  margin: 0;
+}
+
+.shop-commission-address {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+/* Under "Sold" on an original (shopRenderCommissionLine) */
+.shop-commission-line {
+  max-width: 42ch;
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.shop-commission-line a {
+  white-space: nowrap;
+}
+
 /* A quiet notice: the shop is paused, something sold out... */
 .shop-status {
   max-width: 520px;
@@ -1608,6 +1735,145 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   display: none;
 }
 
+/* While the shop runs on Stripe's test keys: a slim "Test shop" bar floating
+   at the top of the screen on shop pages (shopRenderTestBar; "More" opens the
+   details), and a short line beside each "Add to basket" and "Pay" button
+   (shopRenderTestNote). Over the header and basket button, under the item
+   panel (1030) and the viewer. On computers it's centred over the content
+   sheet (which starts at 24vw), clear of the basket button on the right. */
+.shop-test-bar {
+  position: fixed;
+  top: 16px;
+  left: 24vw;
+  right: 170px;
+  z-index: 1020;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.shop-test-bar[hidden] {
+  display: none;
+}
+
+.shop-test-bar details {
+  max-width: 100%;
+  pointer-events: auto;
+  border: 1px solid #ecd27a;
+  border-radius: 18px;
+  background: rgba(255, 248, 223, 0.97);
+  box-shadow: 0 4px 16px rgba(29, 29, 27, 0.12);
+  color: var(--color-ink);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.shop-test-bar details[open] {
+  border-radius: 12px;
+}
+
+.shop-test-bar summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 8px 5px 5px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.shop-test-bar summary::-webkit-details-marker {
+  display: none;
+}
+
+.shop-test-tag {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: var(--color-ink);
+  color: #fff8df;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.shop-test-line {
+  font-weight: var(--font-weight-normal);
+}
+
+.shop-test-more {
+  flex: none;
+  padding-left: 2px;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--color-text-secondary);
+}
+
+.shop-test-more::after {
+  content: 'More';
+}
+
+.shop-test-bar details[open] .shop-test-more::after {
+  content: 'Close';
+}
+
+.shop-test-details {
+  max-width: 440px;
+  padding: 2px 14px 10px;
+}
+
+.shop-test-details p {
+  margin: 0 0 6px;
+}
+
+.shop-test-details p:last-child {
+  margin-bottom: 0;
+}
+
+.shop-test-card {
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  font-weight: 700;
+}
+
+.shop-test-narrow {
+  display: none;
+}
+
+/* Phones and tablets: just under the white header bar, across the page */
+@media (max-width: 991px) {
+  .shop-test-bar {
+    top: 90px;
+    left: 12px;
+    right: 12px;
+  }
+}
+
+/* Phones: the short wording, so the bar stays one line */
+@media (max-width: 600px) {
+  .shop-test-wide {
+    display: none;
+  }
+
+  .shop-test-narrow {
+    display: inline;
+  }
+}
+
+.shop-test-note {
+  margin: 10px 0 0;
+  padding: 7px 10px;
+  border-left: 3px solid var(--amb-yellow);
+  background: #fff8df;
+  color: var(--color-ink);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+
 /* A gallery's red dot: sold */
 .shop-sold {
   color: #b5372b;
@@ -1621,6 +1887,21 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   margin-right: 0.55em;
   border-radius: 50%;
   background: #cf3b2e;
+}
+
+/* ...amber while someone is paying for it (it may come back on sale) */
+.shop-sold.is-reserved {
+  color: #8a6a00;
+}
+
+.shop-sold.is-reserved:before {
+  background: #d9a400;
+}
+
+.shop-reserved-note {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
 }
 
 /* ---------- Everything for sale ---------- */
@@ -1711,7 +1992,7 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .shop-card:nth-child(4n+3) .shop-card-picture { --tape-a: var(--tape-lilac); --tape-b: var(--tape-coral); }
 .shop-card:nth-child(4n+4) .shop-card-picture { --tape-a: var(--tape-blue); --tape-b: var(--tape-yellow); }
 
-.shop-item-picture { --tape-w: clamp(64px, 20%, 124px); --tape-a: var(--tape-pink); --tape-b: var(--tape-yellow); }
+.shop-item-picture { --tape-w: clamp(56px, 18%, 96px); --tape-a: var(--tape-pink); --tape-b: var(--tape-yellow); }
 
 .shop-card .img-container,
 .shop-item-picture .img-container {
@@ -1773,41 +2054,189 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   color: var(--color-ink);
 }
 
-/* ---------- One item ---------- */
+/* ---------- The item panel ----------
+   An item opens in a panel over the shop: from the right on computers, a
+   sheet up from the bottom on phones (shop.js: the item panel). Above the
+   menu and the basket button, under the viewer (Bootstrap's 1040/1050). */
+.shop-panel-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1030;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear 0.42s; /* stays visible while it slides away */
+}
+
+.shop-panel-layer.is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transition: none;
+}
+
+.shop-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(29, 29, 27, 0.3);
+  opacity: 0;
+  transition: opacity 0.42s ease;
+}
+
+.is-open > .shop-panel-backdrop {
+  opacity: 1;
+}
+
+.shop-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: clamp(420px, 40vw, 580px);
+  background: var(--color-background);
+  box-shadow: -16px 0 44px rgba(29, 29, 27, 0.14);
+  transform: translateX(calc(100% + 50px));
+  transition: transform 0.42s var(--ease-out-soft);
+  outline: none;
+}
+
+.is-open > .shop-panel {
+  transform: none;
+}
+
+/* (closed on the way to another page, or for people who'd rather not have
+   things slide about) */
+.shop-panel-layer.is-instant,
+.shop-panel-layer.is-instant > * {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-panel {
+    transition: none;
+  }
+}
+
+.shop-panel-bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 16px 4px 40px;
+}
+
+.shop-panel-handle {
+  display: none;
+}
+
+.shop-panel-basket,
+.shop-panel-basket:link,
+.shop-panel-basket:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  transition: transform 0.3s var(--ease-out-soft);
+}
+
+.shop-panel-basket[hidden] {
+  display: none;
+}
+
+.shop-panel-basket b {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.shop-panel-basket.is-bumped {
+  transform: scale(1.08);
+}
+
+.shop-panel-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.shop-panel-close:hover {
+  background: var(--color-paper);
+}
+
+.shop-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 40px 56px;
+}
+
+.shop-panel-body > .loading-spinner,
+.shop-panel-body > .shop-empty {
+  margin-top: 20vh;
+}
+
+/* While the item is on its way (shop.js: drawStandIn) */
+.is-standin .loading-spinner {
+  margin: 28px 0 0;
+}
+
+/* Computers: the shop behind holds still (shop.js: holdPage) */
+html.shop-panel-open {
+  overflow: hidden;
+}
+
+/* ---------- One item, in the panel ---------- */
 .shop-item {
   text-align: left;
 }
 
-.shop-crumb {
-  margin: 0 0 30px;
-  font-size: 0.74rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+.shop-item-pictures {
+  margin: 14px 0 30px;
 }
 
-.shop-crumb a {
-  color: var(--color-text-secondary);
-  padding: 6px 0;
-}
-
-.shop-crumb a:hover {
-  color: var(--color-ink);
-}
-
-.shop-item-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 4vw;
-  align-items: start;
-}
-
+/* A tall painting is kept short enough that its name, price and button
+   are in sight beneath it: --w and --h are its proportions */
 .shop-item-picture {
+  --room: min(52vh, 600px);
+  width: min(100%, calc(var(--room) * var(--w, 4) / var(--h, 5)));
+  margin: 0 auto;
   cursor: zoom-in;
+}
+
+.is-standin .shop-item-picture {
+  cursor: default;
+}
+
+/* (the card's picture shows through until the sharper copy arrives) */
+.shop-item-picture .img-container img {
+  background-size: 100% 100%;
 }
 
 .shop-thumbs {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin-top: 18px;
 }
@@ -1841,16 +2270,10 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   border-color: var(--color-ink);
 }
 
-/* The words stay beside a tall picture as the page scrolls */
-.shop-item-info {
-  position: sticky;
-  top: 44px;
-}
-
 .shop-item-title {
   margin: 8px 0 10px;
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: 2.3rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -2045,10 +2468,54 @@ a.shop-button {
   transform: none;
 }
 
+/* After "Add to basket": on to the basket, or back to the shop */
 .shop-added {
-  margin: 12px 0 0;
-  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--amb-green);
+  border-radius: 4px;
+  background: var(--color-paper);
+}
+
+.shop-added p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-ink);
+}
+
+.shop-button-quiet,
+a.shop-button-quiet {
+  width: auto;
+  padding: 11px 24px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+  color: var(--color-ink) !important;
+}
+
+.shop-button-quiet:hover {
+  background: var(--color-ink);
+  color: #fff !important;
+}
+
+.shop-keep-browsing {
+  padding: 6px 0 2px;
+  border: none;
+  border-bottom: 1px solid currentColor;
+  background: none;
+  font-family: inherit;
+  font-size: 0.86rem;
   color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.shop-keep-browsing:hover {
+  color: var(--color-ink);
 }
 
 .shop-item-description {
@@ -2592,18 +3059,9 @@ a.shop-button {
     letter-spacing: 0.14em;
   }
 
-  .shop-item-layout,
   .basket-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 34px;
-  }
-
-  .shop-item-info {
-    position: static;
-  }
-
-  .shop-item-title {
-    font-size: 2.1rem;
   }
 
   .shop-button {
@@ -2622,6 +3080,61 @@ a.shop-button {
 
   .basket-pill span {
     display: none;
+  }
+}
+
+/* Phones: the item panel is a sheet up from the bottom, with a handle to
+   pull it down by */
+@media (max-width: 767px) {
+  .shop-panel {
+    top: max(32px, 5vh);
+    left: 0;
+    width: auto;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(29, 29, 27, 0.16);
+    transform: translateY(calc(100% + 40px));
+  }
+
+  .shop-panel-bar {
+    padding: 12px 8px 0 22px;
+  }
+
+  .shop-panel-handle {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 2px;
+    background: #d5d3cd;
+  }
+
+  .shop-panel-body {
+    padding: 0 22px calc(40px + env(safe-area-inset-bottom));
+  }
+
+  .shop-item-pictures {
+    margin-top: 10px;
+  }
+
+  .shop-item-picture {
+    --room: 42vh;
+    --tape-w: 60px;
+  }
+
+  .shop-thumb {
+    width: 54px;
+    height: 54px;
+  }
+
+  .shop-item-title {
+    font-size: 1.9rem;
+  }
+
+  .shop-item-price {
+    font-size: 1.6rem;
   }
 }
 

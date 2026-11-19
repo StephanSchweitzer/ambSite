@@ -6,7 +6,8 @@
 // the script only adds behaviour (the basket, choosing a size, the viewer).
 //
 //   /shop                 everything for sale            view 'shop'
-//   /shop/<id>/<name>     one item                       view 'shop-item'
+//   /shop/<id>/<name>     the same, with that item open  view 'shop-item'
+//                         in the side panel
 //   /shop/basket          the basket (drawn by shop.js)  view 'shop-basket'
 //   /shop/thank-you       after paying (drawn by shop.js) view 'shop-thanks'
 
@@ -14,7 +15,7 @@ include_once __DIR__ . '/publicPageFunctions.php';
 include_once __DIR__ . '/shopFunctions.php';
 
 define('SHOP_GRID_SIZES', '(max-width: 992px) 45vw, 30vw');
-define('SHOP_ITEM_SIZES', '(max-width: 992px) 92vw, 36vw');
+define('SHOP_ITEM_SIZES', '(max-width: 767px) 92vw, 500px'); // the side panel's picture
 
 // Everything about the shop page at $path: which view it is, its title and
 // description, its HTML (null when the script draws it), and for an item the
@@ -23,8 +24,8 @@ function shopPage($conn, $path)
 {
     $page = array(
         'view' => 'shop', 'status' => 200, 'title' => 'Shop - Ambar Velasco', 'description' => null,
-        'html' => null, 'product' => null, 'noindex' => false, 'path' => $path,
-    );
+        'html' => null, 'product' => null, 'noindex' => shopTestMode(), 'path' => $path,
+    ); // a test shop's made-up prices stay out of search results
     $ready = shopReady($conn);
 
     if ($path === '/shop/basket') {
@@ -56,13 +57,18 @@ function shopPage($conn, $path)
             return array('view' => 'notfound', 'status' => 404) + $page;
         }
         $settings = shopSettings($conn);
+        $zones = shopGetZones($conn);
         $page['view'] = 'shop-item';
         $page['product'] = $product;
         $page['path'] = $product['path']; // its proper address (the name part may be old)
         $page['title'] = $product['name'] . ' - Shop - Ambar Velasco';
         $about = trim($product['description']) !== '' ? $product['description'] : $product['details'];
         $page['description'] = trim(($product['typeLabel'] !== '' ? $product['typeLabel'] . ' by Ambar Velasco. ' : '') . ambExcerpt($about, 130));
-        $page['html'] = shopRenderProduct($product, $settings, shopGetZones($conn));
+        // An item opens over the shop, in the side panel: 'panel' is the item
+        // alone (to open it over the shop already on screen), 'html' the shop
+        // with it open
+        $page['panel'] = shopRenderProduct($product, $settings, $zones);
+        $page['html'] = shopRenderIndex(shopGetProducts($conn), $settings, $zones, $page['panel']);
         return $page;
     }
 
@@ -83,27 +89,123 @@ function shopRenderHeader($title, $intro = '')
         . '</header>';
 }
 
+// While the shop runs on Stripe's test keys (shopTestMode): a slim bar that
+// floats at the top of the screen on every shop page, so the shop itself
+// still looks as it will. index.php draws it once, hidden unless the page is
+// a shop page; shop.js shows and hides it as visitors move around
+// (showShopTestBar). "More" opens the details.
+function shopRenderTestBar($shown)
+{
+    if (!shopTestMode()) {
+        return '';
+    }
+    return '<aside id="shopTestBar" class="shop-test-bar" role="note" aria-label="This shop is a test"' . ($shown ? '' : ' hidden') . '>'
+        . '<details><summary><span class="shop-test-tag">Test<span class="shop-test-wide"> shop</span></span>'
+        . '<span class="shop-test-line shop-test-wide">Prices aren&rsquo;t real. Please don&rsquo;t use a real card.</span>'
+        . '<span class="shop-test-line shop-test-narrow">Prices aren&rsquo;t real &middot; no real cards</span>'
+        . '<span class="shop-test-more" aria-hidden="true"></span></summary>'
+        . '<div class="shop-test-details"><p>We&rsquo;re still designing the shop: nothing here is for sale yet, no orders will be sent and no money can be taken.</p>'
+        . '<p>To try buying something, use the test card <span class="shop-test-card">4242&nbsp;4242&nbsp;4242&nbsp;4242</span>'
+        . ' with any future date and any three digits.</p></div></details></aside>';
+}
+
+// The short version, beside each "Add to basket" and "Pay" button
+function shopRenderTestNote()
+{
+    return shopTestMode()
+        ? '<p class="shop-test-note">Test shop: nothing will be charged. Please don&rsquo;t use a real card.</p>'
+        : '';
+}
+
 // ---------------------------------------------------------------------------
 // /shop
 // ---------------------------------------------------------------------------
 
-function shopRenderIndex($products, $settings, $zones)
+// $itemHtml: an item to show open in the side panel (its address was asked for)
+function shopRenderIndex($products, $settings, $zones, $itemHtml = '')
 {
-    $html = '<div class="shop">' . shopRenderHeader('Shop', $settings['intro']);
+    $html = '<div class="shop shop-index">' . shopRenderHeader('Shop', $settings['intro']);
 
     if ($settings['paused'] === '1' && $products) {
         $html .= '<p class="shop-status">The shop is temporarily closed.</p>';
     }
     if (!$products) {
         return $html . '<div class="shop-empty"><p>Nothing is for sale right now.</p>'
-            . '<p><a href="/select-works" class="shop-text-link">See the works</a></p></div></div>';
+            . '<p><a href="/select-works" class="shop-text-link">See the works</a></p></div>'
+            . shopRenderCommission($settings) . '</div>';
     }
 
     $html .= '<div class="shop-grid">';
     foreach ($products as $index => $product) {
         $html .= shopRenderCard($product, $index);
     }
-    return $html . '</div></div>';
+    return $html . '</div>' . shopRenderCommission($settings) . '</div>' . shopRenderPanel($itemHtml);
+}
+
+// A link that opens the visitor's email, addressed to $email, the subject
+// filled in so Ambar can spot commission requests
+function shopCommissionHref($email, $subject)
+{
+    $at = strrpos($email, '@');
+    return 'mailto:' . rawurlencode(substr($email, 0, $at)) . '@' . substr($email, $at + 1)
+        . '?subject=' . rawurlencode($subject);
+}
+
+// The note inviting commissions, closing the shop (shopCommissionDefaults).
+// Nothing while it's switched off.
+function shopRenderCommission($settings)
+{
+    $email = shopCommissionEmail($settings);
+    if ($email === '') {
+        return '';
+    }
+    return '<section class="shop-commission" aria-labelledby="shopCommissionTitle">'
+        . '<h2 class="shop-commission-title" id="shopCommissionTitle">' . ambHtml($settings['commissionTitle']) . '</h2>'
+        . '<p class="shop-commission-text">' . shopText($settings['commissionText']) . '</p>'
+        . '<p class="shop-commission-contact"><a class="shop-text-link" href="' . ambHtml(shopCommissionHref($email, 'Commission request')) . '">'
+        . 'Write to me about a commission</a>'
+        . '<span class="shop-commission-address">' . ambHtml($email) . '</span></p>'
+        . '</section>';
+}
+
+// The line under "Sold" on an original that has found a buyer
+function shopRenderCommissionLine($product, $settings)
+{
+    $email = shopCommissionEmail($settings);
+    if ($email === '' || trim($settings['commissionSoldText']) === '') {
+        return '';
+    }
+    return '<p class="shop-commission-line">' . shopText($settings['commissionSoldText']) . ' '
+        . '<a class="shop-text-link" href="' . ambHtml(shopCommissionHref($email, 'Commission request, after "' . $product['name'] . '"')) . '">'
+        . 'Write to me</a></p>';
+}
+
+// The panel an item opens in: from the right on computers, up from the
+// bottom on phones, with the shop still there behind it. Drawn closed and
+// empty with the shop, or open with an item in it. shop.js moves it to the
+// end of the page and fills it as items are clicked.
+function shopRenderPanel($itemHtml = '')
+{
+    $open = $itemHtml !== '';
+    return '<div class="shop-panel-layer' . ($open ? ' is-open' : '') . '" data-shop-panel' . ($open ? '' : ' inert') . '>'
+        . '<div class="shop-panel-backdrop" data-shop-panel-close></div>'
+        . '<aside class="shop-panel" role="dialog" aria-modal="true" aria-labelledby="shopItemTitle" tabindex="-1">'
+        . '<div class="shop-panel-bar"><span class="shop-panel-handle" aria-hidden="true"></span>'
+        . '<a class="shop-panel-basket" href="/shop/basket" data-shop-nav hidden>Basket <b>0</b></a>'
+        . '<button type="button" class="shop-panel-close" data-shop-panel-close aria-label="Close">'
+        . '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+        . '</button></div>'
+        . '<div class="shop-panel-body">' . $itemHtml . '</div></aside></div>';
+}
+
+// "Sold" (an original), "Sold out" (the rest), or "Reserved" while the last
+// of it is set aside for someone paying right now
+function shopSoldWord($product)
+{
+    if (!empty($product['reserved'])) {
+        return 'Reserved';
+    }
+    return $product['isUnique'] ? 'Sold' : 'Sold out';
 }
 
 function shopRenderCard($product, $index)
@@ -113,12 +215,12 @@ function shopRenderCard($product, $index)
         : '<div class="shop-no-picture" aria-hidden="true"></div>';
 
     if ($product['soldOut']) {
-        $price = '<span class="shop-sold">' . ($product['isUnique'] ? 'Sold' : 'Sold out') . '</span>';
+        $price = '<span class="shop-sold' . (!empty($product['reserved']) ? ' is-reserved' : '') . '">' . shopSoldWord($product) . '</span>';
     } else {
         $price = '<span class="shop-card-price">' . ambHtml($product['priceText']) . '</span>';
     }
 
-    return '<a class="shop-card' . ($product['soldOut'] ? ' is-sold' : '') . '" href="' . ambHtml($product['path']) . '" data-shop-nav>'
+    return '<a class="shop-card' . ($product['soldOut'] ? ' is-sold' : '') . '" href="' . ambHtml($product['path']) . '" data-shop-nav data-shop-item>'
         . '<div class="shop-card-picture"><div class="img-container">' . $picture . '</div></div>'
         . '<div class="shop-card-text"><h3 class="shop-card-name">' . ambHtml($product['name']) . '</h3>'
         . '<p class="shop-card-meta">'
@@ -127,8 +229,16 @@ function shopRenderCard($product, $index)
 }
 
 // ---------------------------------------------------------------------------
-// /shop/<id>/<name>
+// /shop/<id>/<name>: one item, as it shows in the side panel
 // ---------------------------------------------------------------------------
+
+// The picture's proportions, so CSS can keep a tall painting short enough
+// that the price and button are in sight beneath it
+function shopPictureShape($image)
+{
+    return $image['width'] && $image['height']
+        ? ' style="--w: ' . (int) $image['width'] . '; --h: ' . (int) $image['height'] . ';"' : '';
+}
 
 function shopRenderProduct($product, $settings, $zones)
 {
@@ -146,15 +256,13 @@ function shopRenderProduct($product, $settings, $zones)
     }
 
     $html = '<article class="shop shop-item" data-product="' . $product['id'] . '" data-name="' . ambHtml($name) . '"'
-        . ' data-images="' . ambHtml(json_encode($forViewer, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '">'
-        . '<p class="shop-crumb"><a href="/shop" data-shop-nav><span aria-hidden="true">&larr;</span> Shop</a></p>'
-        . '<div class="shop-item-layout">';
+        . ' data-images="' . ambHtml(json_encode($forViewer, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '">';
 
     // --- pictures ---
     $html .= '<div class="shop-item-pictures">';
     if ($images) {
         $html .= '<a class="shop-item-picture" href="' . ambHtml(ambWebImageUrl($images[0]['location'])) . '" data-index="0"'
-            . ' aria-label="Look closer at ' . ambHtml($name) . '">'
+            . shopPictureShape($images[0]) . ' aria-label="Look closer at ' . ambHtml($name) . '">'
             . '<div class="img-container">' . ambWorkImage($images[0], false, SHOP_ITEM_SIZES, null, true) . '</div></a>';
         if (count($images) > 1) {
             $html .= '<div class="shop-thumbs">';
@@ -175,7 +283,7 @@ function shopRenderProduct($product, $settings, $zones)
     // --- words ---
     $html .= '<div class="shop-item-info">'
         . ($product['typeLabel'] !== '' ? '<p class="shop-kicker">' . ambHtml($product['typeLabel']) . '</p>' : '')
-        . '<h2 class="shop-item-title">' . ambHtml($name) . '</h2>'
+        . '<h2 class="shop-item-title" id="shopItemTitle">' . ambHtml($name) . '</h2>'
         . ($product['details'] !== '' ? '<p class="shop-item-details">' . shopText($product['details']) . '</p>' : '');
 
     $html .= shopRenderBuying($product, $settings);
@@ -202,7 +310,7 @@ function shopRenderProduct($product, $settings, $zones)
         $html .= '<ul class="shop-item-notes"><li>' . implode('</li><li>', $notes) . '</li></ul>';
     }
 
-    return $html . '</div></div></article>';
+    return $html . '</div></article>';
 }
 
 // The price and the way to buy: sizes to choose from, how many, the button
@@ -226,7 +334,12 @@ function shopRenderBuying($product, $settings)
     $html = '<p class="shop-item-price" data-shop-price>' . ambHtml(count($variants) > 1 && $product['soldOut'] ? $product['priceText'] : $chosen['price']) . '</p>';
 
     if ($product['soldOut']) {
-        return $html . '<p class="shop-sold shop-sold-large">' . ($product['isUnique'] ? 'Sold' : 'Sold out') . '</p>';
+        if (!empty($product['reserved'])) {
+            return $html . '<p class="shop-sold shop-sold-large is-reserved">Reserved</p>'
+                . '<p class="shop-reserved-note">Someone is buying this right now. If they don&rsquo;t finish, it will be back within half an hour.</p>';
+        }
+        return $html . '<p class="shop-sold shop-sold-large">' . shopSoldWord($product) . '</p>'
+            . ($product['isUnique'] ? shopRenderCommissionLine($product, $settings) : '');
     }
     if ($settings['paused'] === '1') {
         return $html . '<p class="shop-status">The shop is temporarily closed.</p>';
@@ -268,7 +381,10 @@ function shopRenderBuying($product, $settings)
     $left = !$product['isUnique'] && $chosen['stock'] !== null && $chosen['stock'] <= 3 ? $chosen['stock'] : null;
     $html .= '<p class="shop-left" data-shop-left' . ($left === null ? ' hidden' : '') . '>' . ($left === null ? '' : 'Only ' . $left . ' left') . '</p>'
         . '<button type="submit" class="shop-button">Add to basket</button>'
-        . '<p class="shop-added" role="status" hidden>Added to basket. <a href="/shop/basket" class="shop-text-link" data-shop-nav>View basket</a></p>'
+        . shopRenderTestNote()
+        . '<div class="shop-added" role="status" hidden><p>Added to your basket.</p>'
+        . '<a href="/shop/basket" class="shop-button shop-button-quiet" data-shop-nav>View basket</a>'
+        . '<button type="button" class="shop-keep-browsing" data-shop-panel-close>Keep browsing</button></div>'
         . '</form>';
     return $html;
 }

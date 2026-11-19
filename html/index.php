@@ -328,8 +328,8 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <link rel="stylesheet" href="/ambar.css?v=<?php echo filemtime(__DIR__ . '/ambar.css'); ?>">
 
     <!-- Scripts load in this order without holding up the page -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js" defer></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js" integrity="sha384-NXgwF8Kv9SSAr+jemKKcbvQsz+teULH/a5UNJvZc6kP47hZgl62M1vGnw6gHQhb1" crossorigin="anonymous" defer></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous" defer></script>
     <!-- (shop.js before photoFunctions.js, whose start-up calls into it) -->
     <script src="/js/shop.js?v=<?php echo filemtime(__DIR__ . '/js/shop.js'); ?>" defer></script>
     <script src="/js/photoFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/photoFunctions.js'); ?>" defer></script>
@@ -451,6 +451,10 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <!-- Navigation Overlay for Mobile -->
     <div class="nav-overlay"></div>
 </div>
+<?= shopRenderTestBar(strpos($view, 'shop') === 0) ?>
+<?php if (shopTestMode()): ?>
+<template id="shopTestNote"><?= shopRenderTestNote() ?></template>
+<?php endif; ?>
 <?php if ($pageData): ?>
 <script>window.AMB_PAGE_DATA = <?= json_encode($pageData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?>;</script>
 <?php endif; ?>
