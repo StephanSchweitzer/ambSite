@@ -49,7 +49,7 @@ function ambSectionId($title)
 }
 
 // The anchor one year group of a project sits at, so a menu link can jump
-// straight to it: section-painting-2023-2025.
+// straight to it: section-painting-2023-2024.
 // Same as groupSectionId() in photoFunctions.js
 function ambGroupSectionId($projectTitle, $label)
 {
@@ -222,7 +222,7 @@ define('AMB_GALLERY_SIZES', '(max-width: 992px) 92vw, 62vw');
 // Year groups inside a project
 //
 // Some projects are shown in groups of years rather than as one long run of
-// works: the Painting works are grouped as 2026, 2023-2025 and 2020-2022,
+// works: the Painting works are grouped as 2025-2026, 2023-2024 and 2020-2022,
 // newest group first, with a small heading over each group. Nothing is stored
 // for this — the groups are worked out from the year each work already
 // carries, so a painting added in the admin portal lands in the right group by
@@ -235,7 +235,7 @@ define('AMB_GALLERY_SIZES', '(max-width: 992px) 92vw, 62vw');
 // Newest first, as the Works page shows them
 function ambYearBands()
 {
-    return array(array(2026, 2026), array(2023, 2025), array(2020, 2022));
+    return array(array(2025, 2026), array(2023, 2024), array(2020, 2022));
 }
 
 // The projects shown in year groups, by title (compared without case or spaces)

@@ -340,7 +340,7 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .hiddenLinkStuff a:last-child { margin-bottom: 0; }
 
 /* The years under a project that is shown in year groups (Works → Painting
-   → 2026 / 2023–2025 / 2020–2022): a step quieter and a step in again.
+   → 2025–2026 / 2023–2024 / 2020–2022): a step quieter and a step in again.
    The step in is text-indent, not a margin: setupResponsiveLayout() writes
    an inline margin and padding onto every menu link at phone width, which
    would beat anything this rule said about either. */
@@ -639,7 +639,7 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 /* ---------- Year groups inside a project ----------
    A project can be shown in groups of years (the Painting works are
-   2026, 2023–2025, 2020–2022), each under a quiet heading in the
+   2025–2026, 2023–2024, 2020–2022), each under a quiet heading in the
    display face: a smaller, softer relative of the project title above it,
    aligned with it. Projects that aren't grouped keep the plain single run
    of works and never see these rules. */

@@ -549,12 +549,12 @@ function setPageTitle(title) {
 // Works page
 // --------------------------------------------------------------------------
 
-// Year groups inside a project. The Painting works are shown as 2026,
-// 2023-2025 and 2020-2022, newest group first, with a small heading over
+// Year groups inside a project. The Painting works are shown as 2025-2026,
+// 2023-2024 and 2020-2022, newest group first, with a small heading over
 // each group; nothing is stored for this, the groups come from the year each
 // work already carries. Mirrors ambWorkGroups() in
 // actions/publicPageFunctions.php - change both.
-var YEAR_BANDS = [[2026, 2026], [2023, 2025], [2020, 2022]];
+var YEAR_BANDS = [[2025, 2026], [2023, 2024], [2020, 2022]];
 var YEAR_GROUPED_PROJECTS = ['painting'];
 
 function groupsByYear(title) {
