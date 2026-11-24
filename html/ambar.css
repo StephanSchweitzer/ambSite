@@ -340,9 +340,12 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .hiddenLinkStuff a:last-child { margin-bottom: 0; }
 
 /* The years under a project that is shown in year groups (Works → Painting
-   → 2026 / 2023–2025 / 2020–2022): a step quieter and a step in again */
+   → 2026 / 2023–2025 / 2020–2022): a step quieter and a step in again.
+   The step in is text-indent, not a margin: setupResponsiveLayout() writes
+   an inline margin and padding onto every menu link at phone width, which
+   would beat anything this rule said about either. */
 .hiddenLinkStuff .project-year-link {
-  margin-left: 14px;
+  text-indent: 14px;
   margin-bottom: 0.32rem;
   font-size: 0.72rem;
   color: var(--color-faint);
@@ -3619,9 +3622,10 @@ html.no-scroll {
     color: var(--color-ink);
   }
 
-  /* Keep the year links the same height to tap as the projects above them */
+  /* Same step in as on a computer; their height to tap comes from the rule
+     for every link above, which is what keeps them a comfortable size */
   .navLinksBoxMobile #selectProjectCategories .project-year-link {
-    margin-left: 14px;
+    text-indent: 14px;
     font-size: 0.75rem;
     color: var(--color-faint);
   }
