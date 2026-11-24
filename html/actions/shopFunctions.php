@@ -126,6 +126,8 @@ function shopSaveSetting($conn, $name, $value)
 // text. Same as formatMoney() in js/shop.js and js/shopAdminFunctions.js.
 // ---------------------------------------------------------------------------
 
+// 'symbol' is what sits beside a price box in the admin. Everywhere else a
+// price is written with the currency's code after it: "450 USD", "35 EUR".
 function shopCurrencies()
 {
     return array(
@@ -139,13 +141,19 @@ function shopCurrencies()
     );
 }
 
-// 45000 -> "€450", 3550 -> "€35.50"
+// How a currency's prices are written: array('before' => ..., 'after' => ...).
+// The code follows the number after a space that never breaks.
+function shopMoneyParts($currency)
+{
+    return array('before' => '', 'after' => "\u{00A0}" . strtoupper((string) $currency));
+}
+
+// 45000 -> "450 USD", 3550 -> "35.50 EUR"
 function shopMoney($cents, $currency)
 {
-    $currencies = shopCurrencies();
-    $symbol = isset($currencies[$currency]) ? $currencies[$currency]['symbol'] : strtoupper($currency) . ' ';
+    $parts = shopMoneyParts($currency);
     $cents = (int) $cents;
-    return $symbol . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',');
+    return $parts['before'] . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',') . $parts['after'];
 }
 
 // ---------------------------------------------------------------------------

@@ -73,7 +73,6 @@ try {
         if ($action === 'basket') {
             $settings = shopSettings($conn);
             $lines = shopPriceBasket($conn, shopCleanBasket(isset($input['items']) ? $input['items'] : array()));
-            $currencies = shopCurrencies();
             // A promo code is checked against what can really be bought
             $subtotal = 0;
             foreach ($lines as $line) {
@@ -87,7 +86,7 @@ try {
                 'promo' => $promo && !isset($promo['problem'])
                     ? array('code' => $promo['code'], 'kind' => $promo['kind'], 'value' => $promo['value'], 'label' => $promo['label']) : null,
                 'promoProblem' => $promo && isset($promo['problem']) ? $promo['problem'] : null,
-                'symbol' => $currencies[$settings['currency']]['symbol'],
+                'money' => shopMoneyParts($settings['currency']),
                 'countries' => shopDeliveryCountries(shopGetZones($conn)),
                 'paused' => $settings['paused'] === '1',
                 'canPay' => stripeIsConfigured(),
