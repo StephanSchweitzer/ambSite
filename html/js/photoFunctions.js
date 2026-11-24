@@ -535,6 +535,8 @@ function setView(view) {
     $('#imagesAndContent').attr('data-view', view);
     drawBasketPill(); // shop.js: the basket button isn't shown on the basket page itself
     showShopTestBar(view); // shop.js: "Test shop" bar, on shop pages while Stripe is in test mode
+    // The menu's Shop link stops glowing once you are in the shop (ambar.css)
+    document.documentElement.classList.toggle('on-shop', view.indexOf('shop') === 0);
 }
 
 // For a page whose title depends on what it shows (a shop item's name)

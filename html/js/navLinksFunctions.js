@@ -103,7 +103,9 @@ function createNewNavLinkRow(displayedText, linkRedirection, instructionString, 
         }
     });
 
-    listItem.attr({ href: href, class: 'mainLinkGenres' }).text(displayedText);
+    // The Shop link catches the eye now and then (ambar.css, shopGlow)
+    const isShop = instructions.indexOf('loadShop') !== -1;
+    listItem.attr({ href: href, class: 'mainLinkGenres' + (isShop ? ' shop-link' : '') }).text(displayedText);
 
     if (isNewTab == 1) {
         listItem.attr({ target: '_blank', rel: 'noopener' });

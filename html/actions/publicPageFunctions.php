@@ -170,9 +170,11 @@ function ambRenderNav($links, $projects)
     $html = '';
     foreach ($links as $link) {
         $href = ambNavLinkHref($link);
+        // The Shop link catches the eye now and then (ambar.css, shopGlow)
+        $isShop = strpos((string) $link['onclick'], 'loadShop') !== false;
         $html .= '<div class="nav-link-container"><a'
             . ($href !== null ? ' href="' . ambHtml($href) . '"' : '')
-            . ' class="mainLinkGenres"'
+            . ' class="mainLinkGenres' . ($isShop ? ' shop-link' : '') . '"'
             . ($link['isNewTab'] == 1 ? ' target="_blank" rel="noopener"' : '')
             . '>' . ambHtml($link['displayedText']) . '</a></div>';
 
