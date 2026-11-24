@@ -225,8 +225,15 @@ function ambYearGroupedProjects()
 
 function ambGroupsByYear($title)
 {
-    $key = strtolower(preg_replace('/\s+/', '', (string) $title));
-    return in_array($key, ambYearGroupedProjects(), true);
+    // /u so an unusual space in the title (a non-breaking one pasted in from
+    // a word processor, say) is stripped here exactly as JavaScript strips it
+    // in groupsByYear() - the two must agree on whether a project is grouped,
+    // or the page and the viewer would disagree about which work is which
+    $clean = preg_replace('/\s+/u', '', (string) $title);
+    if ($clean === null) { // not valid UTF-8; fall back to plain spaces
+        $clean = preg_replace('/\s+/', '', (string) $title);
+    }
+    return in_array(strtolower((string) $clean), ambYearGroupedProjects(), true);
 }
 
 function ambYearBandLabel($from, $to)
@@ -299,10 +306,15 @@ function ambRenderWorks($projects)
             . '<div class="project-header"><h2 class="project-title">' . ambHtml($project['title']) . '</h2>'
             . ($project['description'] ? '<p class="project-description">' . ambMultiline($project['description']) . '</p>' : '')
             . '</div>';
-        foreach (ambWorkGroups($project) as $group) {
-            $titled = $group['label'] !== '';
-            if ($titled) {
-                $html .= '<div class="project-group"><h3 class="project-year">' . ambHtml($group['label']) . '</h3>';
+        $groups = ambWorkGroups($project);
+        // Every group of a grouped project gets the wrapper, headed or not, so
+        // the undated group is spaced like the others instead of looking like
+        // the tail of the group above it
+        $grouped = count($groups) > 1;
+        foreach ($groups as $group) {
+            if ($grouped) {
+                $html .= '<div class="project-group">'
+                    . ($group['label'] !== '' ? '<h3 class="project-year">' . ambHtml($group['label']) . '</h3>' : '');
             }
             $html .= '<div class="projectWorks">';
             foreach ($group['works'] as $work) {
@@ -312,7 +324,7 @@ function ambRenderWorks($projects)
                     . '</div></a>';
                 $index++;
             }
-            $html .= '</div>' . ($titled ? '</div>' : '');
+            $html .= '</div>' . ($grouped ? '</div>' : '');
         }
         if ($projectIndex < $last) {
             $html .= '<div class="work-separator" aria-hidden="true"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>';

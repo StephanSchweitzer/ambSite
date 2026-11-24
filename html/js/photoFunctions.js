@@ -644,11 +644,17 @@ function renderWorks() {
 
         projects.forEach(function (project, projectIndex) {
             var section = createProjectElement(project);
-            workGroups(project).forEach(function (group) {
+            var groups = workGroups(project);
+            // Headed or not, every group of a grouped project gets the wrapper
+            var grouped = groups.length > 1;
+            groups.forEach(function (group) {
                 var grid = $('<div>').addClass('projectWorks');
-                if (group.label) {
-                    section.append($('<div>').addClass('project-group')
-                        .append($('<h3>').addClass('project-year').text(group.label), grid));
+                if (grouped) {
+                    var wrapper = $('<div>').addClass('project-group');
+                    if (group.label) {
+                        wrapper.append($('<h3>').addClass('project-year').text(group.label));
+                    }
+                    section.append(wrapper.append(grid));
                 } else {
                     section.append(grid);
                 }
