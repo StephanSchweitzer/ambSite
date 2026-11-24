@@ -332,31 +332,81 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .nav-link-container:nth-child(4n+4) .mainLinkGenres:after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
 
 /* ---------- The Shop link catches the eye, now and then ----------
-   The word itself glows: the letters take the pastel pink of the "m" in
-   the logo and carry a halo of the same pink, for about two seconds
-   every fifteen. Nothing moves and nothing changes size.
-   It rests while the visitor is already in the shop (html.on-shop, set
-   in setView()) and while the pointer is on the link, so hovering shows
-   its own colour. The reduced-motion rules at the end of this file stop
-   it for anyone who has asked their computer for less movement.
+   The word is lit like a candle: the letters take the pastel pink of
+   the "m" in the logo and carry a halo of it, guttering unevenly for
+   about two and a half seconds, then going out for five or so. The
+   unevenness is the point — a steady pulse reads as a notification,
+   a flame reads as warmth — so the stops below are deliberately not
+   spaced evenly and do not all reach the same brightness. Each one is
+   the ink and the logo pink mixed at that moment's brightness, with
+   the halo at the same strength.
 
-   Every property the glow touches is named at every keyframe. Name one
-   only at the peak and it is carried to the end of the cycle instead of
-   back to the start: the first version of this took fourteen seconds to
-   fade rather than two. */
+   Nothing moves and nothing changes size. It rests while the visitor
+   is already in the shop (html.on-shop, set in setView()) and while
+   the pointer is on the link, so hovering shows its own colour. The
+   reduced-motion rules at the end of this file stop it for anyone who
+   has asked their computer for less movement.
+
+   Colour and shadow are named at every stop. Name a property at one
+   keyframe only and it is carried to the end of the cycle instead of
+   back to the start: an early version took fourteen seconds to fade
+   rather than two. */
 @keyframes shopGlow {
-  0%, 14%, 100% {
-    color: var(--color-text);
-    text-shadow: 0 0 0 rgba(254, 150, 198, 0);
+  0% {
+    color: rgb(42, 42, 40);
+    text-shadow: none;
   }
-  6% {
-    color: var(--shop-glow);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.9), 0 0 20px rgba(254, 150, 198, 0.55);
+  4% {
+    color: rgb(190, 118, 151);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.63), 0 0 20px rgba(254, 150, 198, 0.39);
+  }
+  7% {
+    color: rgb(127, 85, 103);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.36), 0 0 20px rgba(254, 150, 198, 0.22);
+  }
+  10% {
+    color: rgb(243, 145, 190);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.85), 0 0 20px rgba(254, 150, 198, 0.52);
+  }
+  13% {
+    color: rgb(159, 101, 127);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.50), 0 0 20px rgba(254, 150, 198, 0.30);
+  }
+  16% {
+    color: rgb(254, 150, 198);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.90), 0 0 20px rgba(254, 150, 198, 0.55);
+  }
+  19% {
+    color: rgb(169, 107, 135);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.54), 0 0 20px rgba(254, 150, 198, 0.33);
+  }
+  22% {
+    color: rgb(222, 134, 174);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.77), 0 0 20px rgba(254, 150, 198, 0.47);
+  }
+  25% {
+    color: rgb(127, 85, 103);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.36), 0 0 20px rgba(254, 150, 198, 0.22);
+  }
+  28% {
+    color: rgb(173, 109, 138);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.56), 0 0 20px rgba(254, 150, 198, 0.34);
+  }
+  31% {
+    color: rgb(74, 58, 64);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.14), 0 0 20px rgba(254, 150, 198, 0.08);
+  }
+  34% {
+    color: rgb(42, 42, 40);
+    text-shadow: none;
+  }
+  100% {
+    color: rgb(42, 42, 40);
+    text-shadow: none;
   }
 }
-
 .shop-link {
-  animation: shopGlow 15s ease-in-out 6s infinite;
+  animation: shopGlow 8s ease-in-out 4s infinite;
 }
 
 /* Nothing to catch the eye about a shop you are already standing in,
