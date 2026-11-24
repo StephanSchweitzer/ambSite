@@ -185,18 +185,27 @@ function ambRenderNav($links, $projects)
         $style = '';
         if ($id === 'selectProjectCategories') {
             foreach ($projects as $project) {
-                $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '">' . ambHtml($project['title']) . '</a>';
-                // A project shown in year groups lists its years under itself
-                $groups = ambWorkGroups($project);
-                if (count($groups) > 1) {
-                    foreach ($groups as $group) {
-                        if ($group['label'] === '') {
-                            continue; // the undated group has no heading to jump to
-                        }
-                        $inner .= '<a class="project-year-link" href="/select-works#'
-                            . ambHtml(ambGroupSectionId($project['title'], $group['label'])) . '">'
-                            . ambHtml($group['label']) . '</a>';
+                // A project shown in year groups keeps its years folded away
+                // underneath it; clicking the project's name unfolds them
+                // (navLinksFunctions.js). The undated group has no heading to
+                // jump to, so it is not listed.
+                $years = '';
+                foreach (ambWorkGroups($project) as $group) {
+                    if ($group['label'] === '') {
+                        continue;
                     }
+                    $years .= '<a class="project-year-link" href="/select-works#'
+                        . ambHtml(ambGroupSectionId($project['title'], $group['label'])) . '">'
+                        . ambHtml($group['label']) . '</a>';
+                }
+                // One group is no grouping: ambWorkGroups() gives a lone
+                // unlabelled group, which leaves $years empty
+                $yearsId = 'years-' . ambSectionId($project['title']);
+                $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '"'
+                    . ($years === '' ? '' : ' class="project-link" aria-expanded="false" aria-controls="' . ambHtml($yearsId) . '"')
+                    . '>' . ambHtml($project['title']) . '</a>';
+                if ($years !== '') {
+                    $inner .= '<div class="project-years" id="' . ambHtml($yearsId) . '">' . $years . '</div>';
                 }
             }
         } elseif ($id === 'newsletterSignUp') {

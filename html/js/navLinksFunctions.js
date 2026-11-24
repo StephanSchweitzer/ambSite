@@ -176,6 +176,37 @@ function projectCategoryLink(sectionId, text) {
     return link;
 }
 
+// A project's name in the "Works" dropdown, when it has years folded away
+// underneath: clicking it unfolds them instead of going anywhere, the way
+// "Works" itself unfolds the projects. One project's years at a time, so the
+// menu stays short. (The link keeps its address, so it still works as a link
+// before this script has run, and for anything that doesn't run scripts.)
+function projectYearsToggle(title, yearsId) {
+    const link = $('<a>')
+        .addClass('project-link')
+        .attr({ href: '/select-works#' + projectSectionId(title), 'aria-expanded': 'false', 'aria-controls': yearsId })
+        .text(title);
+
+    link.on('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation(); // keep the Works list open
+
+        const years = $('#' + yearsId);
+        const opening = !years.is(':visible');
+
+        $('#selectProjectCategories .project-years').not(years).slideUp(200);
+        $('#selectProjectCategories .project-link').not(this).attr('aria-expanded', 'false');
+
+        years.slideToggle(220);
+        $(this).attr('aria-expanded', opening ? 'true' : 'false');
+    });
+
+    return link;
+}
+
 // The project names under "Works" — from the same request the Works page
 // uses — each with its year groups under it where it has them (mirrors the
 // same list in ambRenderNav(), actions/publicPageFunctions.php)
@@ -184,21 +215,26 @@ function loadAndDisplayProjectTitles() {
         const container = $('#selectProjectCategories');
         container.empty();
         projects.forEach(function (project) {
-            container.append(projectCategoryLink(projectSectionId(project.title), project.title));
+            const sectionId = projectSectionId(project.title);
+            const years = $('<div>').addClass('project-years').attr('id', 'years-' + sectionId);
 
-            const groups = workGroups(project);
-            if (groups.length < 2) {
-                return;
-            }
-            groups.forEach(function (group) {
+            workGroups(project).forEach(function (group) {
                 if (!group.label) {
                     return; // the undated group has no heading to jump to
                 }
-                container.append(
+                years.append(
                     projectCategoryLink(groupSectionId(project.title, group.label), group.label)
                         .addClass('project-year-link')
                 );
             });
+
+            // A project with years unfolds them when its name is clicked; one
+            // without them goes to the project, as every project used to
+            if (!years.children().length) {
+                container.append(projectCategoryLink(sectionId, project.title));
+                return;
+            }
+            container.append(projectYearsToggle(project.title, 'years-' + sectionId), years);
         });
     }, function () {
         console.log('Error loading project titles.');

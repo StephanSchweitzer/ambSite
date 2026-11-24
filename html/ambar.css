@@ -349,9 +349,16 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 /* The years under a project that is shown in year groups (Works → Painting
    → 2025–2026 / 2023–2024 / 2020–2022): a step quieter and a step in again.
+   They stay folded away until the project's name is clicked, so the Works
+   list is as short as it ever was — the script unfolds them, and with no
+   script the project's name is still a link to the project.
    The step in is text-indent, not a margin: setupResponsiveLayout() writes
    an inline margin and padding onto every menu link at phone width, which
    would beat anything this rule said about either. */
+.project-years {
+  display: none;
+}
+
 .hiddenLinkStuff .project-year-link {
   text-indent: 14px;
   margin-bottom: 0.32rem;
