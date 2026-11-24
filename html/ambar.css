@@ -36,6 +36,11 @@
   --amb-rainbow: linear-gradient(90deg,
       var(--amb-blue), var(--amb-pink), var(--amb-green), var(--amb-yellow));
 
+  /* The pink of the "m" in the logo, read off the file itself, for the
+     Shop link's glow. Paler than --amb-pink, which is the same pink
+     deepened for text and borders. */
+  --shop-glow: #fe96c6;
+
   --transition-standard: all 0.3s ease;
   --ease-out-soft: cubic-bezier(0.25, 0.6, 0.3, 1);
   --shadow-soft: 0 2px 16px rgba(29, 29, 27, 0.06);
@@ -327,43 +332,38 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .nav-link-container:nth-child(4n+4) .mainLinkGenres:after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
 
 /* ---------- The Shop link catches the eye, now and then ----------
-   A slow swell of soft pink every fifteen seconds or so — warm enough to
-   belong with the paper ground, and gone again before it can nag. It is
-   a glow, not a flash: nothing moves, nothing changes size.
-   It rests while the visitor is already in the shop (html.on-shop, set in
-   setView()), and the reduced-motion rules at the end of this file stop it
-   for anyone who has asked their computer for less movement.
+   The word itself glows: the letters take the pastel pink of the "m" in
+   the logo and carry a halo of the same pink, for about two seconds
+   every fifteen. Nothing moves and nothing changes size.
+   It rests while the visitor is already in the shop (html.on-shop, set
+   in setView()) and while the pointer is on the link, so hovering shows
+   its own colour. The reduced-motion rules at the end of this file stop
+   it for anyone who has asked their computer for less movement.
 
-   It is a bloom of colour behind the word, not a shadow on the letters:
-   on a pale ground a glow around dark text is all but invisible, which
-   the first attempt at this proved. Only the opacity moves, so it costs
-   a phone nothing, and nothing shifts position or size. */
+   Every property the glow touches is named at every keyframe. Name one
+   only at the peak and it is carried to the end of the cycle instead of
+   back to the start: the first version of this took fourteen seconds to
+   fade rather than two. */
 @keyframes shopGlow {
   0%, 14%, 100% {
-    opacity: 0;
+    color: var(--color-text);
+    text-shadow: 0 0 0 rgba(254, 150, 198, 0);
   }
   6% {
-    opacity: 1;
+    color: var(--shop-glow);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.9), 0 0 20px rgba(254, 150, 198, 0.55);
   }
 }
 
-.shop-link::before {
-  content: '';
-  position: absolute;
-  inset: -0.8em -1.1em -0.55em;
-  z-index: -1;
-  border-radius: 999px;
-  background: radial-gradient(ellipse at center,
-      rgba(239, 127, 174, 0.5) 0%,
-      rgba(239, 127, 174, 0.28) 45%,
-      rgba(239, 127, 174, 0) 72%);
-  opacity: 0;
-  pointer-events: none;
+.shop-link {
   animation: shopGlow 15s ease-in-out 6s infinite;
 }
 
-/* Nothing to catch the eye about a shop you are already standing in */
-html.on-shop .shop-link::before {
+/* Nothing to catch the eye about a shop you are already standing in,
+   and nothing to fight the hover colour of a link under the pointer */
+html.on-shop .shop-link,
+.shop-link:hover,
+.shop-link:focus-visible {
   animation: none;
 }
 
@@ -3681,13 +3681,6 @@ html.no-scroll {
 
   .navLinksBoxMobile #selectProjectCategories a:hover {
     color: var(--color-ink);
-  }
-
-  /* setupResponsiveLayout() pads every menu link by 0.7em here, for the
-     tap targets, so the Shop link's bloom has to pull in by the same
-     amount or it swells into a blotch the size of a thumb */
-  .navLinksBoxMobile .shop-link::before {
-    inset: -0.1em -0.4em;
   }
 
   /* Same step in as on a computer; their height to tap comes from the rule
