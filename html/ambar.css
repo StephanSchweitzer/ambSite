@@ -625,6 +625,30 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   margin-top: 40px;
 }
 
+/* ---------- Year groups inside a project ----------
+   A project can be shown in groups of years (the Painting works are
+   2026, 2023–2025, 2020–2022), each under a quiet heading in the
+   display face: a smaller, softer relative of the project title above it,
+   aligned with it. Projects that aren't grouped keep the plain single run
+   of works and never see these rules. */
+.project-group + .project-group {
+  margin-top: 4.5rem;
+}
+
+.project-year {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-normal);
+  font-size: 1.5rem;
+  letter-spacing: 0.12em;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* The grid's own 40px already sits under the heading */
+.project-year + .projectWorks {
+  margin-top: 28px;
+}
+
 /* ---------- Artwork cards ---------- */
 .card {
   margin-right: 2px;
@@ -3636,6 +3660,8 @@ html.no-scroll {
 
   .project-header h2,
   .project-title { font-size: 1.85rem; }
+
+  .project-year { font-size: 1.3rem; }
 
   #ambarPersoPic {
     max-width: 90% !important;

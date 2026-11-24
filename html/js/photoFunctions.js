@@ -542,6 +542,85 @@ function setPageTitle(title) {
 // Works page
 // --------------------------------------------------------------------------
 
+// Year groups inside a project. The Painting works are shown as 2026,
+// 2023-2025 and 2020-2022, newest group first, with a small heading over
+// each group; nothing is stored for this, the groups come from the year each
+// work already carries. Mirrors ambWorkGroups() in
+// actions/publicPageFunctions.php - change both.
+var YEAR_BANDS = [[2026, 2026], [2023, 2025], [2020, 2022]];
+var YEAR_GROUPED_PROJECTS = ['painting'];
+
+function groupsByYear(title) {
+    return YEAR_GROUPED_PROJECTS.indexOf(String(title).replace(/\s+/g, '').toLowerCase()) !== -1;
+}
+
+function yearBandLabel(from, to) {
+    return from === to ? String(from) : from + '\u2013' + to;
+}
+
+// The four-digit year a work carries, or null if it hasn't got a sensible one
+function workYear(work) {
+    var found = String(work.creationYear === null || work.creationYear === undefined ? '' : work.creationYear).match(/\d{4}/);
+    if (!found) {
+        return null;
+    }
+    var year = Number(found[0]);
+    return (year < 1900 || year > 2100) ? null : year;
+}
+
+// A project's works as the page draws them: one group per year band that has
+// works in it, newest first, then any undated works in a last group with no
+// heading. A project that isn't grouped - or one whose works all fall in the
+// same group - comes back as a single group with no heading, which draws
+// exactly as it always has.
+function workGroups(project) {
+    var single = [{ label: '', works: project.works }];
+    if (!groupsByYear(project.title)) {
+        return single;
+    }
+
+    var groups = [];
+    var byLabel = {};
+    project.works.forEach(function (work) {
+        var year = workYear(work);
+        var label = '';
+        var from = -1; // undated works sort to the end
+        if (year !== null) {
+            label = String(year);
+            from = year;
+            for (var i = 0; i < YEAR_BANDS.length; i++) {
+                if (year >= YEAR_BANDS[i][0] && year <= YEAR_BANDS[i][1]) {
+                    label = yearBandLabel(YEAR_BANDS[i][0], YEAR_BANDS[i][1]);
+                    from = YEAR_BANDS[i][0];
+                    break;
+                }
+            }
+        }
+        if (!byLabel.hasOwnProperty(label)) {
+            byLabel[label] = { label: label, from: from, works: [] };
+            groups.push(byLabel[label]);
+        }
+        byLabel[label].works.push(work);
+    });
+
+    if (groups.length < 2) {
+        return single;
+    }
+    return groups.sort(function (a, b) { return b.from - a.from; });
+}
+
+// Every work on the page in the order it is drawn, which is what the number
+// on each card counts through and what the viewer's arrows follow
+function worksInDrawnOrder(projects) {
+    var works = [];
+    projects.forEach(function (project) {
+        workGroups(project).forEach(function (group) {
+            works = works.concat(group.works);
+        });
+    });
+    return works;
+}
+
 function renderWorks() {
     setView('works');
     var content = $('#imagesAndContent').css('padding-top', '50px');
@@ -556,7 +635,7 @@ function renderWorks() {
             return;
         }
         if (keepServerDrawn) {
-            galleryItems = [].concat.apply([], projects.map(function (project) { return project.works; }));
+            galleryItems = worksInDrawnOrder(projects);
             viewReady = true;
             return;
         }
@@ -565,12 +644,20 @@ function renderWorks() {
 
         projects.forEach(function (project, projectIndex) {
             var section = createProjectElement(project);
-            var grid = section.find('.projectWorks');
-            project.works.forEach(function (work) {
-                // The first couple of pictures load straight away; the rest
-                // load as the visitor scrolls towards them
-                grid.append(createWorkCard(work, items.length, items.length > 1));
-                items.push(work);
+            workGroups(project).forEach(function (group) {
+                var grid = $('<div>').addClass('projectWorks');
+                if (group.label) {
+                    section.append($('<div>').addClass('project-group')
+                        .append($('<h3>').addClass('project-year').text(group.label), grid));
+                } else {
+                    section.append(grid);
+                }
+                group.works.forEach(function (work) {
+                    // The first couple of pictures load straight away; the rest
+                    // load as the visitor scrolls towards them
+                    grid.append(createWorkCard(work, items.length, items.length > 1));
+                    items.push(work);
+                });
             });
             if (projectIndex < projects.length - 1) {
                 section.append('<div class="work-separator" aria-hidden="true"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>');
@@ -594,7 +681,7 @@ function createProjectElement(project) {
     if (project.description) {
         header.append($('<p>').addClass('project-description').html(multiline(project.description)));
     }
-    section.append(header, $('<div>').addClass('projectWorks'));
+    section.append(header); // renderWorks adds a grid of works per year group
     return section;
 }
 
