@@ -250,6 +250,13 @@ function projectSectionId(title) {
     return 'section-' + (slug || 'project');
 }
 
+// The anchor one year group of a project sits at, so a menu link can jump
+// straight to it. Mirrors ambGroupSectionId() in publicPageFunctions.php.
+function groupSectionId(projectTitle, label) {
+    var slug = String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return projectSectionId(projectTitle) + (slug ? '-' + slug : '');
+}
+
 function multiline(text) {
     return text ? String(text).replace(/\n/g, '<br>') : '';
 }
@@ -652,6 +659,7 @@ function renderWorks() {
                 if (grouped) {
                     var wrapper = $('<div>').addClass('project-group');
                     if (group.label) {
+                        wrapper.attr('id', groupSectionId(project.title, group.label));
                         wrapper.append($('<h3>').addClass('project-year').text(group.label));
                     }
                     section.append(wrapper.append(grid));
@@ -2830,6 +2838,8 @@ window.loadProjectSection = loadProjectSection;
 window.makeBigPic = makeBigPic;
 window.fetchPublicWorks = fetchPublicWorks;
 window.projectSectionId = projectSectionId;
+window.groupSectionId = groupSectionId;
+window.workGroups = workGroups;
 window.ensureDropdownOpen = function (sublinksId) {
     var sublinks = $('#' + sublinksId);
     if (!sublinks.is(':visible')) {

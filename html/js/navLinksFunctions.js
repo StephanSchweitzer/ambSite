@@ -150,34 +150,55 @@ const functionMappings = {
     "selectWorksAreNotShown": function () {}
 };
 
-// The project names under "Works" — from the same request the Works page uses
+// One link in the "Works" dropdown: a project, or one of the year groups
+// listed under a project that is shown in year groups
+function projectCategoryLink(sectionId, text) {
+    const link = $('<a>').attr('href', '/select-works#' + sectionId).text(text);
+
+    link.on('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation(); // keep the dropdown open
+
+        // On phones, close the drawer so the works are visible
+        if (window.innerWidth <= 992) {
+            $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
+            $('#navLinksBox').removeClass('active');
+            $('.nav-overlay').removeClass('active');
+            $('#sideBySide').removeClass('menu-open');
+        }
+
+        loadProjectSection(sectionId);
+    });
+
+    return link;
+}
+
+// The project names under "Works" — from the same request the Works page
+// uses — each with its year groups under it where it has them (mirrors the
+// same list in ambRenderNav(), actions/publicPageFunctions.php)
 function loadAndDisplayProjectTitles() {
     fetchPublicWorks('projects').then(function (projects) {
         const container = $('#selectProjectCategories');
         container.empty();
         projects.forEach(function (project) {
-            const sectionId = projectSectionId(project.title);
-            const link = $('<a>').attr('href', '/select-works#' + sectionId).text(project.title);
+            container.append(projectCategoryLink(projectSectionId(project.title), project.title));
 
-            link.on('click', function (e) {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-                    return;
+            const groups = workGroups(project);
+            if (groups.length < 2) {
+                return;
+            }
+            groups.forEach(function (group) {
+                if (!group.label) {
+                    return; // the undated group has no heading to jump to
                 }
-                e.preventDefault();
-                e.stopPropagation(); // keep the dropdown open
-
-                // On phones, close the drawer so the works are visible
-                if (window.innerWidth <= 992) {
-                    $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
-                    $('#navLinksBox').removeClass('active');
-                    $('.nav-overlay').removeClass('active');
-                    $('#sideBySide').removeClass('menu-open');
-                }
-
-                loadProjectSection(sectionId);
+                container.append(
+                    projectCategoryLink(groupSectionId(project.title, group.label), group.label)
+                        .addClass('project-year-link')
+                );
             });
-
-            container.append(link);
         });
     }, function () {
         console.log('Error loading project titles.');

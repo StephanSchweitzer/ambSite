@@ -339,6 +339,15 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 
 .hiddenLinkStuff a:last-child { margin-bottom: 0; }
 
+/* The years under a project that is shown in year groups (Works → Painting
+   → 2026 / 2023–2025 / 2020–2022): a step quieter and a step in again */
+.hiddenLinkStuff .project-year-link {
+  margin-left: 14px;
+  margin-bottom: 0.32rem;
+  font-size: 0.72rem;
+  color: var(--color-faint);
+}
+
 .hiddenLinkStuff .nav-link-container { margin-bottom: 0.55rem; }
 
 .hiddenLinkStuff a:hover {
@@ -3608,6 +3617,13 @@ html.no-scroll {
 
   .navLinksBoxMobile #selectProjectCategories a:hover {
     color: var(--color-ink);
+  }
+
+  /* Keep the year links the same height to tap as the projects above them */
+  .navLinksBoxMobile #selectProjectCategories .project-year-link {
+    margin-left: 14px;
+    font-size: 0.75rem;
+    color: var(--color-faint);
   }
 
   .navLinksBoxMobile #newsletterSignUp {

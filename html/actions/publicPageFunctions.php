@@ -48,6 +48,15 @@ function ambSectionId($title)
     return 'section-' . ($slug === '' ? 'project' : $slug);
 }
 
+// The anchor one year group of a project sits at, so a menu link can jump
+// straight to it: section-painting-2023-2025.
+// Same as groupSectionId() in photoFunctions.js
+function ambGroupSectionId($projectTitle, $label)
+{
+    $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $label)), '-');
+    return ambSectionId($projectTitle) . ($slug === '' ? '' : '-' . $slug);
+}
+
 // Same as workSrcset() in photoFunctions.js
 function ambWorkSrcset($work)
 {
@@ -177,6 +186,18 @@ function ambRenderNav($links, $projects)
         if ($id === 'selectProjectCategories') {
             foreach ($projects as $project) {
                 $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '">' . ambHtml($project['title']) . '</a>';
+                // A project shown in year groups lists its years under itself
+                $groups = ambWorkGroups($project);
+                if (count($groups) > 1) {
+                    foreach ($groups as $group) {
+                        if ($group['label'] === '') {
+                            continue; // the undated group has no heading to jump to
+                        }
+                        $inner .= '<a class="project-year-link" href="/select-works#'
+                            . ambHtml(ambGroupSectionId($project['title'], $group['label'])) . '">'
+                            . ambHtml($group['label']) . '</a>';
+                    }
+                }
             }
         } elseif ($id === 'newsletterSignUp') {
             $inner = '<div class="newsletter-container">'
@@ -313,7 +334,9 @@ function ambRenderWorks($projects)
         $grouped = count($groups) > 1;
         foreach ($groups as $group) {
             if ($grouped) {
-                $html .= '<div class="project-group">'
+                $html .= '<div class="project-group"'
+                    . ($group['label'] !== '' ? ' id="' . ambHtml(ambGroupSectionId($project['title'], $group['label'])) . '"' : '')
+                    . '>'
                     . ($group['label'] !== '' ? '<h3 class="project-year">' . ambHtml($group['label']) . '</h3>' : '');
             }
             $html .= '<div class="projectWorks">';
