@@ -341,10 +341,13 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
    the ink and the logo pink mixed at that moment's brightness, with
    the halo at the same strength.
 
-   The brightest moment stops around seven tenths of the way to the
-   pink, and the steps between stops are small: at full strength, with
-   bigger steps, it read as a flicker to be dealt with rather than a
-   candle to be glanced at.
+   The gentleness is in the dips and the steps between them, not in the
+   height of the flame: one moment in the middle of each burst reaches
+   the logo pink itself, and everything around it stays low and close
+   together. An earlier version was gentle by being dim throughout and
+   never quite arrived at the pink; an earlier one still was bright
+   throughout with long steps, and read as a flicker to be dealt with
+   rather than a candle to be glanced at.
 
    Nothing moves and nothing changes size. It rests while the visitor
    is already in the shop (html.on-shop, set in setView()) and while
@@ -362,44 +365,44 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
     text-shadow: none;
   }
   4% {
-    color: rgb(131, 87, 106);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.32), 0 0 20px rgba(254, 150, 198, 0.19);
+    color: rgb(137, 91, 111);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.36), 0 0 20px rgba(254, 150, 198, 0.22);
   }
   7% {
-    color: rgb(106, 74, 87);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.22), 0 0 20px rgba(254, 150, 198, 0.14);
-  }
-  10% {
-    color: rgb(165, 105, 132);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.43), 0 0 20px rgba(254, 150, 198, 0.26);
-  }
-  13% {
-    color: rgb(127, 85, 103);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.30), 0 0 20px rgba(254, 150, 198, 0.18);
-  }
-  16% {
-    color: rgb(190, 118, 151);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.52), 0 0 20px rgba(254, 150, 198, 0.32);
-  }
-  19% {
-    color: rgb(140, 92, 113);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.35), 0 0 20px rgba(254, 150, 198, 0.21);
-  }
-  22% {
-    color: rgb(165, 105, 132);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.43), 0 0 20px rgba(254, 150, 198, 0.26);
-  }
-  25% {
-    color: rgb(114, 79, 94);
+    color: rgb(110, 77, 91);
     text-shadow: 0 0 9px rgba(254, 150, 198, 0.26), 0 0 20px rgba(254, 150, 198, 0.15);
   }
-  28% {
+  10% {
+    color: rgb(195, 120, 154);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.58), 0 0 20px rgba(254, 150, 198, 0.35);
+  }
+  13% {
     color: rgb(135, 90, 110);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.33), 0 0 20px rgba(254, 150, 198, 0.20);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.35), 0 0 20px rgba(254, 150, 198, 0.21);
+  }
+  16% {
+    color: rgb(254, 150, 198);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.80), 0 0 20px rgba(254, 150, 198, 0.48);
+  }
+  19% {
+    color: rgb(152, 98, 122);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.42), 0 0 20px rgba(254, 150, 198, 0.25);
+  }
+  22% {
+    color: rgb(190, 118, 151);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.56), 0 0 20px rgba(254, 150, 198, 0.34);
+  }
+  25% {
+    color: rgb(123, 83, 100);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.30), 0 0 20px rgba(254, 150, 198, 0.18);
+  }
+  28% {
+    color: rgb(144, 94, 116);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.38), 0 0 20px rgba(254, 150, 198, 0.23);
   }
   31% {
-    color: rgb(70, 56, 61);
-    text-shadow: 0 0 9px rgba(254, 150, 198, 0.10), 0 0 20px rgba(254, 150, 198, 0.06);
+    color: rgb(72, 57, 62);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.11), 0 0 20px rgba(254, 150, 198, 0.07);
   }
   34% {
     color: rgb(42, 42, 40);
