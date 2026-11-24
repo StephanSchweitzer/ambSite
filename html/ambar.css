@@ -21,6 +21,10 @@
   --color-faint: #a5a49e;
   --color-background: #ffffff;
   --color-paper: #fbfaf8;
+  /* The ground the white sheet of works sits on: the column the menu
+     lives in, and the margin down the other side. Warm, like unbleached
+     paper or a gallery wall, so the sheet reads as brighter against it. */
+  --color-surround: #f2eee6;
   --color-line: #eae8e3;
   --color-accent: #8a8a8a;
 
@@ -59,9 +63,10 @@ body {
   font-family: var(--font-primary);
   color: var(--color-text);
   /* Warm paper with a faint dot grid — distinguishes the nav column from
-     the white "sheet" the works sit on (#imagesAndContent) */
-  background-color: var(--color-paper);
-  background-image: radial-gradient(rgba(29, 29, 27, 0.055) 1px, transparent 1.4px);
+     the white "sheet" the works sit on (#imagesAndContent). The dots are
+     warm too: a neutral grey dot on this ground reads as a smudge. */
+  background-color: var(--color-surround);
+  background-image: radial-gradient(rgba(92, 74, 48, 0.05) 1px, transparent 1.4px);
   background-size: 22px 22px;
   line-height: 1.65;
   margin: 0;
@@ -1312,8 +1317,8 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   height: min(var(--room, 66vh), 580px);
   border-radius: 4px;
   overflow: hidden;
-  background-color: var(--color-paper);
-  background-image: radial-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1.4px);
+  background-color: var(--color-surround);
+  background-image: radial-gradient(rgba(92, 74, 48, 0.055) 1px, transparent 1.4px);
   background-size: 22px 22px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
   cursor: default;
