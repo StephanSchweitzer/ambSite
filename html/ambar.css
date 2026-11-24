@@ -257,6 +257,14 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   width: 18vw;
   font-family: var(--font-primary);
   font-weight: var(--font-weight-normal);
+  /* With every project's years open the list can outgrow a shorter
+     screen, and this column is fixed, so scrolling the page would not
+     bring the last links back - they would simply be out of reach. Let
+     the column scroll instead, as the phone drawer already does.
+     Nothing in here reaches past its right edge, so the sideways
+     clipping this brings with it costs nothing. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .nav-link-container {
