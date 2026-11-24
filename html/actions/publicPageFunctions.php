@@ -222,12 +222,16 @@ define('AMB_GALLERY_SIZES', '(max-width: 992px) 92vw, 62vw');
 // Year groups inside a project
 //
 // Some projects are shown in groups of years rather than as one long run of
-// works: the Painting and Plant Art works are grouped as 2025-2026,
-// 2023-2024 and 2020-2022, newest group first, with a small heading over
-// each group. Nothing is stored for this — the groups are worked out from
-// the year each work already carries, so a work added in the admin portal
-// lands in the right group by itself, and a year outside the bands gets a
-// group of its own rather than being dropped.
+// works: the projects named in ambYearGroupedProjects() - today all four of
+// them - are grouped as 2025-2026, 2023-2024 and 2020-2022, newest group
+// first, with a small heading over each group. A project whose works all
+// fall in one group is drawn as one run, with no heading, so the list can
+// name a project before its works span the years.
+//
+// Nothing is stored for any of this — the groups are worked out from the
+// year each work already carries, so a work added in the admin portal lands
+// in the right group by itself, and a year outside the bands gets a group of
+// its own rather than being dropped.
 //
 // Mirrored by YEAR_BANDS / workGroups() in js/photoFunctions.js — change both.
 // ---------------------------------------------------------------------------
@@ -241,7 +245,7 @@ function ambYearBands()
 // The projects shown in year groups, by title (compared without case or spaces)
 function ambYearGroupedProjects()
 {
-    return array('painting', 'plantart');
+    return array('painting', 'plantart', 'drawing', 'tapeworks');
 }
 
 function ambGroupsByYear($title)
