@@ -11,10 +11,9 @@
   --paper: var(--amb-inset);
   --field: var(--amb-sidebar);
   --blue: var(--amb-highlight);
-  --pink: var(--amb-accent);
-  --green: #6fd39a;
+  --green: var(--amb-good-text);
   --yellow: #ffd27a;
-  --red: #ff8a7d;
+  --red: var(--amb-bad-text);
   color-scheme: dark;
 }
 

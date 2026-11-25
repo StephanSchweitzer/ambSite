@@ -29,6 +29,9 @@
     --amb-danger-hover: #cf3f30;
     --amb-warning: #f39c12;
     --amb-info: #4a86b4;
+    --amb-good-text: #6fd39a;   /* green words on the dark panel ("Active") */
+    --amb-bad-text: #ff8a7d;    /* red words and icons on it ("Inactive", Logout) */
+    --amb-raised: #343a40;      /* a row in a list inside a dialog */
     --amb-radius: 10px;
     --amb-radius-sm: 8px;
     --amb-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
@@ -156,7 +159,7 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .amb-topbar-logout i {
-    color: #ff8a7d;
+    color: var(--amb-bad-text);
 }
 
 .amb-topbar-count {
@@ -345,6 +348,15 @@ h1, h2, h3, h4, h5, h6,
 
 .sidebar-actions .btn {
     font-weight: 600;
+}
+
+/* Where the keyboard is, on the sidebar's and the shop's own buttons */
+.sidebar .nav-link:focus-visible,
+.sidebar .view-options > button:focus-visible,
+.sa-button:focus-visible,
+.sa-chip:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: 2px;
 }
 
 /* Numbers in the sidebar. Only the ones that filter (role="button") lift
@@ -692,7 +704,7 @@ select option {
 
 /* Lists */
 .list-group-item {
-    background-color: #343a40;
+    background-color: var(--amb-raised);
     color: var(--amb-text);
     border-color: var(--amb-border);
 }
@@ -744,6 +756,8 @@ select option {
 }
 
 .toast-header {
+    background-color: var(--amb-sidebar);
+    color: var(--amb-text);
     border-bottom: 1px solid var(--amb-line);
 }
 

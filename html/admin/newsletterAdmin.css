@@ -193,11 +193,11 @@
 }
 
 .status-active {
-    color: #6fd39a;
+    color: var(--amb-good-text);
 }
 
 .status-inactive {
-    color: #ff8a7d;
+    color: var(--amb-bad-text);
 }
 
 .subscriber-actions {

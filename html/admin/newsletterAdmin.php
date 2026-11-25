@@ -163,11 +163,11 @@ $newSubscribersCount = count($newSubscribers);
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                         </div>
-                        <input type="text" id="searchInput" class="form-control" placeholder="Search emails...">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search emails..." aria-label="Search emails">
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <select id="statusFilter" class="form-control">
+                    <select id="statusFilter" class="form-control" aria-label="Which subscribers">
                         <option value="all">All Subscribers</option>
                         <option value="active">Active Only</option>
                         <option value="inactive">Inactive Only</option>
@@ -177,7 +177,7 @@ $newSubscribersCount = count($newSubscribers);
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <select id="sortFilter" class="form-control">
+                    <select id="sortFilter" class="form-control" aria-label="Sort by">
                         <option value="email_asc">Email (A-Z)</option>
                         <option value="email_desc">Email (Z-A)</option>
                         <option value="date_desc">Newest First</option>

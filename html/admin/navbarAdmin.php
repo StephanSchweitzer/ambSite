@@ -155,7 +155,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             <div class="page-title-row">
                 <h1 class="h3">Navbar Administration</h1>
                 <div>
-                    <input type="text" id="searchLinks" class="form-control form-control-sm" placeholder="Search links...">
+                    <input type="text" id="searchLinks" class="form-control form-control-sm" placeholder="Search links..." aria-label="Search links">
                 </div>
             </div>
 

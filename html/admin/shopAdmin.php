@@ -52,7 +52,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
   <div class="content-area">
     <div class="main-content">
       <div class="page-title-row">
-        <h1>Shop Administration</h1>
+        <h1 class="h3">Shop Administration</h1>
       </div>
 
       <!-- What still needs doing before the shop can take orders -->
@@ -65,7 +65,7 @@ if (($_SESSION["ambar"] ?? null) != "connected")
 
 <!-- Picking a picture from the works, or the countries of a destination -->
 <div id="overlay" class="sa-overlay" hidden>
-  <div class="sa-sheet" role="dialog" aria-modal="true">
+  <div class="sa-sheet" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
     <div class="sa-sheet-head">
       <h2 id="overlayTitle"></h2>
       <button type="button" class="sa-button sa-quiet" id="overlayClose">Close</button>

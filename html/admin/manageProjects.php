@@ -160,7 +160,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         .project-info {
             background-color: var(--amb-panel);
             border-radius: 4px;
-            color: #adb5bd;
+            color: var(--amb-muted);
             font-size: 0.8rem;
             margin-left: 10px;
             padding: 2px 8px;
@@ -298,13 +298,13 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .order-controls .order-position {
-            color: #adb5bd;
+            color: var(--amb-muted);
             flex: 1;
             font-size: 0.85rem;
         }
 
         .drag-handle {
-            color: #adb5bd;
+            color: var(--amb-muted);
             cursor: grab;
             padding: 4px;
         }
@@ -341,7 +341,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .arrange-group-title {
-            color: #adb5bd;
+            color: var(--amb-muted);
             font-size: 0.95rem;
             font-weight: 600;
             margin: 0 0 8px;
@@ -389,7 +389,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .arrange-item .order-position {
-            color: #adb5bd;
+            color: var(--amb-muted);
             font-size: 0.85rem;
         }
 
@@ -465,7 +465,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                 </div>
-                <input type="text" class="form-control" id="projectSearch" placeholder="Search projects...">
+                <input type="text" class="form-control" id="projectSearch" placeholder="Search projects..." aria-label="Search projects">
             </div>
 
             <p class="order-hint" id="projectOrderHint">
@@ -566,7 +566,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
                 <form id="updateProjectForm">
                     <input type="hidden" id="projectId">
 
-                    <ul class="nav nav-tabs" id="projectTabs" role="tablist" style="border-bottom-color: #495057;">
+                    <ul class="nav nav-tabs" id="projectTabs" role="tablist">
                         <li class="nav-item">
                             <a class="nav-link active" id="details-tab" data-toggle="tab" href="#details" role="tab" aria-controls="details" aria-selected="true">Project Details</a>
                         </li>
