@@ -25,11 +25,11 @@
 
     <div class="signin-form">
       <form action="verifySignIn.php" method="post">
-        <div class="form-group mb-3">
+        <div class="mb-3">
           <label for="username" class="form-label">Username</label>
           <input type="text" class="form-control" id="username" name="username" placeholder="Username" autocomplete="username">
         </div>
-        <div class="form-group mb-4">
+        <div class="mb-4">
           <label for="password" class="form-label">Password</label>
           <input type="password" class="form-control" name="password" id="password" placeholder="Password" autocomplete="current-password">
         </div>

@@ -569,7 +569,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="createSelectAllProjects">
-                                    <label class="form-check-label"for="createSelectAllProjects">
+                                    <label class="form-check-label" for="createSelectAllProjects">
                                         Select All Projects
                                     </label>
                                 </div>

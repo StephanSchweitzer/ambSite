@@ -108,7 +108,7 @@ $newSubscribersCount = count($newSubscribers);
                             <i class="fas fa-bell"></i>
                         </div>
                         <h2>New Subscribers Since Your Last Visit</h2>
-                        <span class="badge rounded-pill bg-primary"><?php echo $newSubscribersCount; ?></span>
+                        <span class="badge rounded-pill bg-info"><?php echo $newSubscribersCount; ?></span>
                     </div>
 
                     <div class="new-subscribers-grid">

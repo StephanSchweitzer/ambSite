@@ -75,7 +75,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 </div>
 
 <!-- Toast Container -->
-<div class="toast-container p-3"></div>
+<div class="toast-container"></div>
 <script src="../js/navbarAdmin.js?v=<?php echo filemtime(__DIR__ . '/../js/navbarAdmin.js'); ?>"></script>
 
 </body>

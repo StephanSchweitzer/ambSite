@@ -78,7 +78,7 @@
     --bs-info-rgb: 74, 134, 180;
     --bs-warning: var(--amb-warning);
     --bs-warning-rgb: 243, 156, 18;
-    --bs-secondary-rgb: 73, 80, 87;
+    --bs-secondary-rgb: 127, 140, 141;   /* the "Inactive" badge */
     --bs-focus-ring-color: rgba(59, 122, 87, 0.35);
 }
 
@@ -203,7 +203,7 @@ h1, h2, h3, h4, h5, h6,
 
 .amb-topbar-link.is-current {
     color: var(--amb-text);
-    font-weight: 600;
+    font-weight: 700;
     border-bottom-color: var(--amb-accent);
 }
 
@@ -358,7 +358,7 @@ h1, h2, h3, h4, h5, h6,
     text-transform: uppercase;
     letter-spacing: 0.1rem;
     color: var(--amb-highlight);
-    font-weight: 500;
+    font-weight: 400;
     margin: 20px 0 10px;
 }
 
@@ -402,14 +402,12 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .sidebar-actions .btn {
-    font-weight: 600;
+    font-weight: 700;
 }
 
 /* Where the keyboard is, on the sidebar's and the shop's own buttons */
 .sidebar .nav-link:focus-visible,
-.sidebar .view-options > button:focus-visible,
-.sa-button:focus-visible,
-.sa-chip:focus-visible {
+.sidebar .view-options > button:focus-visible {
     outline: 2px solid var(--amb-highlight);
     outline-offset: 2px;
 }
@@ -473,7 +471,7 @@ h1, h2, h3, h4, h5, h6,
 
 .panel-box-title {
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 700;
     margin: 0 0 15px;
     color: var(--amb-text);
 }
@@ -495,7 +493,7 @@ h1, h2, h3, h4, h5, h6,
    in section 1; these set what its dark mode doesn't. */
 
 .form-label {
-    font-weight: 500;
+    font-weight: 400;
 }
 
 /* Fields: as dark as the sidebar, like the Works page's dialogs */
@@ -515,7 +513,6 @@ h1, h2, h3, h4, h5, h6,
 
 .main-content .panel-box .form-control,
 .main-content .panel-box .form-select,
-.main-content .nav-item-card .form-control,
 .signin-box .form-control {
     background-color: var(--amb-sidebar);
 }
@@ -649,7 +646,7 @@ select option {
 }
 
 .nav-tabs .nav-link.active {
-    font-weight: 600;
+    font-weight: 700;
     box-shadow: inset 0 -3px 0 var(--amb-accent);
 }
 
@@ -681,7 +678,7 @@ select option {
 }
 
 .badge {
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .spinner-border.text-primary {
@@ -769,7 +766,7 @@ select option {
 
 .admin-card-title {
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 4px;
 }
 
@@ -844,8 +841,7 @@ select option {
         gap: 8px;
     }
 
-    .sidebar-actions .btn,
-    .sidebar-actions .sa-button {
+    .sidebar-actions .btn {
         margin-bottom: 0 !important;
         font-size: 0.95rem;
     }
@@ -1026,7 +1022,7 @@ body.page-works .work-info {
 }
 
 body.page-works .work-title {
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 5px;
     white-space: nowrap;
     overflow: hidden;
@@ -1082,6 +1078,7 @@ body.page-works .multi-select-toolbar {
 }
 
 body.page-works .custom-toast {
+    pointer-events: auto;
     min-width: 300px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border-radius: 8px;
@@ -1261,7 +1258,7 @@ body.page-about .preview-title {
     text-transform: uppercase;
     letter-spacing: 0.1rem;
     color: var(--amb-highlight);
-    font-weight: 500;
+    font-weight: 400;
     margin-bottom: 10px;
 }
 
@@ -1400,7 +1397,7 @@ body.page-newsletter .new-subscribers-header {
 body.page-newsletter .new-subscribers-header h2 {
     margin: 0 15px;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 body.page-newsletter .pulse-icon {
@@ -1458,7 +1455,7 @@ body.page-newsletter .subscriber-details {
 }
 
 body.page-newsletter .subscriber-email {
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 5px;
     word-break: break-all;
 }
@@ -1530,7 +1527,7 @@ body.page-newsletter .welcome-icon {
         left: 15px;
         width: 32%;
         text-align: left;
-        font-weight: 600;
+        font-weight: 700;
         color: var(--amb-muted);
     }
 
@@ -1586,6 +1583,10 @@ body.page-navbar .nav-item-card {
     transition: all 0.3s ease;
     position: relative;
     cursor: grab;
+}
+
+body.page-navbar .nav-item-card .form-control {
+    background-color: var(--amb-sidebar);
 }
 
 body.page-navbar .nav-item-card:hover {
@@ -1707,7 +1708,7 @@ body.page-shop {
 body.page-shop h1,
 body.page-shop h2,
 body.page-shop h3 {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   margin: 0;
 }
@@ -1787,6 +1788,12 @@ body.page-shop .sa-button.sa-danger {
 }
 
 body.page-shop .sa-button.sa-danger:hover { border-color: var(--amb-danger); background: rgba(231, 76, 60, 0.15); }
+
+body.page-shop .sa-button:focus-visible,
+body.page-shop .sa-chip:focus-visible {
+  outline: 2px solid var(--amb-highlight);
+  outline-offset: 2px;
+}
 
 body.page-shop .sa-button.sa-small { padding: 6px 14px; font-size: 0.84rem; }
 
@@ -2415,7 +2422,7 @@ body.page-projects .project-card:hover {
 
 body.page-projects .project-card .card-title {
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 15px;
 }
 
@@ -2430,7 +2437,7 @@ body.page-projects .project-card .card-text {
 
 body.page-projects .project-card .card-text strong {
     color: var(--amb-text);
-    font-weight: 600;
+    font-weight: 700;
     margin-right: 5px;
 }
 
@@ -2493,7 +2500,7 @@ body.page-projects .work-item-thumbnail {
 
 body.page-projects .work-item-name {
     flex: 1;
-    font-weight: 500;
+    font-weight: 400;
 }
 
 body.page-projects .work-search-container {
@@ -2572,20 +2579,6 @@ body.page-projects .badge-deleted {
 body.page-projects .badge-current {
     background-color: var(--primary-color);
     color: white;
-}
-
-body.page-projects .loading-spinner {
-    align-items: center;
-    background-color: rgba(0, 0, 0, 0.4);
-    border-radius: 5px;
-    display: flex;
-    height: 100%;
-    justify-content: center;
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
 }
 
 /* The coloured edge on each project: its status */
@@ -2704,7 +2697,7 @@ body.page-projects .is-searching .order-controls {
 body.page-projects .arrange-group-title {
     color: var(--amb-muted);
     font-size: 0.95rem;
-    font-weight: 600;
+    font-weight: 700;
     margin: 0 0 8px;
 }
 
