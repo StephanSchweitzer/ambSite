@@ -13,6 +13,12 @@
  * read here, never written: a failure just leaves the count off.
  */
 
+// Only ever included by a page; opened by its own address it shows nothing
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+
 $ambAdminPage = $ambAdminPage ?? '';
 
 if (!function_exists('ambAdminNavCounts')) {
@@ -44,7 +50,7 @@ if (!function_exists('ambAdminNavCounts')) {
     }
 }
 
-$ambNavCounts = ambAdminNavCounts();
+$ambNavCounts = (($_SESSION['ambar'] ?? null) === 'connected') ? ambAdminNavCounts() : array();
 
 $ambNavLinks = array(
     'dashboard'  => array('mainAdmin.php', 'fa-house', 'Dashboard'),

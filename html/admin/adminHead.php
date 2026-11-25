@@ -16,6 +16,12 @@
  *   curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
  */
 
+// Only ever included by a page; opened by its own address it shows nothing
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+
 $ambPageTitle = $ambPageTitle ?? 'Admin';
 $ambBootstrap = $ambBootstrap ?? true;
 $ambKeepSignedIn = $ambKeepSignedIn ?? true;
