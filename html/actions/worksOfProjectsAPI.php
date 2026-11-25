@@ -3,6 +3,7 @@ global $conn;
 include_once __DIR__ . '/../database/session.php';
 
 include '../database/pdo.php';
+include_once __DIR__ . '/projectOrderFunctions.php';
 
 // GET method with two different behaviors:
 // 1. When projectId is provided, return all works for that project
@@ -10,11 +11,13 @@ include '../database/pdo.php';
 if ($_SERVER['REQUEST_METHOD'] === 'GET')
 {
     if (isset($_GET["projectId"])) {
-        // Original functionality: Get all works for a project
+        // All works for a project, in the order the Works page shows them
         $projectId = $_GET["projectId"];
 
-        // Simplified query - just get the workIds directly
-        $query = "SELECT workId FROM worksInProjects WHERE projectId = ?";
+        $query = "SELECT wip.workId FROM worksInProjects wip
+                  LEFT JOIN allWorks w ON w.workId = wip.workId
+                  WHERE wip.projectId = ?
+                  ORDER BY " . ambProjectWorksOrderBy($conn);
         $theArray = array($projectId);
 
         try {
@@ -57,19 +60,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET')
     die;
 }
 
-// Replaces a set of links in one transaction, so a failure partway through
+// Saves a set of links in one transaction, so a failure partway through
 // leaves the old links in place instead of a half-emptied project.
 // $ownerColumn is the side being edited ('projectId' or 'workId').
+//
+// From a project: the works, in the order given, replace its whole set, and
+// that order is kept (sortOrder 0, 1, 2...).
+// From a work: only the projects added or removed change. Its place in the
+// projects it stays in is kept, and a project it joins gets it at the end.
 function replaceLinks($conn, $ownerColumn, $ownerId, $otherIds)
 {
-    $otherColumn = $ownerColumn === 'projectId' ? 'workId' : 'projectId';
+    $ordered = ambProjectOrderReady($conn);
 
     $conn->beginTransaction();
     try {
-        $conn->prepare("DELETE FROM worksInProjects WHERE $ownerColumn = ?")->execute(array($ownerId));
-        $insert = $conn->prepare("INSERT INTO worksInProjects ($ownerColumn, $otherColumn) VALUES (?, ?)");
-        foreach ($otherIds as $otherId) {
-            $insert->execute(array($ownerId, $otherId));
+        if ($ownerColumn === 'projectId') {
+            $conn->prepare("DELETE FROM worksInProjects WHERE projectId = ?")->execute(array($ownerId));
+            $insert = $ordered
+                ? $conn->prepare("INSERT INTO worksInProjects (projectId, workId, sortOrder) VALUES (?, ?, ?)")
+                : $conn->prepare("INSERT INTO worksInProjects (projectId, workId) VALUES (?, ?)");
+            foreach (array_values($otherIds) as $index => $workId) {
+                $insert->execute($ordered ? array($ownerId, $workId, $index) : array($ownerId, $workId));
+            }
+        } else {
+            $current = $conn->prepare("SELECT DISTINCT projectId FROM worksInProjects WHERE workId = ?");
+            $current->execute(array($ownerId));
+            $current = array_map('intval', $current->fetchAll(PDO::FETCH_COLUMN, 0));
+
+            $remove = $conn->prepare("DELETE FROM worksInProjects WHERE workId = ? AND projectId = ?");
+            foreach (array_diff($current, $otherIds) as $projectId) {
+                $remove->execute(array($ownerId, $projectId));
+            }
+
+            // At the end of a project that has been arranged; in the old
+            // order (no sortOrder) in one that hasn't
+            $insert = $ordered
+                ? $conn->prepare("INSERT INTO worksInProjects (workId, projectId, sortOrder)
+                                  SELECT ?, ?, MAX(sortOrder) + 1 FROM worksInProjects WHERE projectId = ?")
+                : $conn->prepare("INSERT INTO worksInProjects (workId, projectId) VALUES (?, ?)");
+            foreach (array_diff($otherIds, $current) as $projectId) {
+                $insert->execute($ordered ? array($ownerId, $projectId, $projectId) : array($ownerId, $projectId));
+            }
         }
         $conn->commit();
     } catch (Exception $e) {

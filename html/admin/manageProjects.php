@@ -4,6 +4,9 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     header("Location: ../signIn/signIn.php?status=needCredentials");
     die;
 }
+include '../database/pdo.php';
+include_once __DIR__ . '/../actions/projectOrderFunctions.php';
+$workOrderReady = ambProjectOrderReady($conn);
 ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -14,6 +17,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="admin.css">
+    <script>window.AMB_WORK_ORDER_READY = <?php echo $workOrderReady ? 'true' : 'false'; ?>;</script>
     <script src="../js/projectAdminFunctions.js"></script>
     <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Project Admin Dashboard</title>
@@ -471,6 +475,110 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             border-color: #636b74 #636b74 #495057; /* Slightly lighter borders on hover */
         }
 
+        /* Putting projects and works in order */
+        .order-hint {
+            color: #adb5bd;
+            margin-bottom: 15px;
+        }
+
+        .order-controls {
+            align-items: center;
+            border-top: 1px solid #495057;
+            display: flex;
+            gap: 6px;
+            margin-top: 15px;
+            padding-top: 10px;
+        }
+
+        .order-controls .order-position {
+            color: #adb5bd;
+            flex: 1;
+            font-size: 0.85rem;
+        }
+
+        .drag-handle {
+            color: #adb5bd;
+            cursor: grab;
+            padding: 4px;
+        }
+
+        .btn-move {
+            align-items: center;
+            background: transparent;
+            border: 1px solid #6c757d;
+            border-radius: 5px;
+            color: #f8f9fa;
+            cursor: pointer;
+            display: inline-flex;
+            height: 32px;
+            justify-content: center;
+            width: 32px;
+        }
+
+        .btn-move:not(:disabled):hover {
+            border-color: #f8f9fa;
+        }
+
+        .btn-move:disabled {
+            cursor: default;
+            opacity: 0.3;
+        }
+
+        .is-dragging {
+            opacity: 0.4;
+        }
+
+        /* Moving projects while a search hides some would be confusing */
+        .is-searching .order-controls {
+            display: none;
+        }
+
+        #arrangeList {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            list-style: none;
+            margin: 0 0 15px;
+            padding: 0;
+        }
+
+        .arrange-item {
+            background-color: #2c3e50;
+            border: 1px solid #495057;
+            border-radius: 8px;
+            cursor: grab;
+            padding: 8px;
+        }
+
+        .arrange-item img {
+            background-color: #212529;
+            border-radius: 5px;
+            display: block;
+            height: 100px;
+            object-fit: contain;
+            width: 100%;
+        }
+
+        .arrange-item .arrange-name {
+            font-size: 0.85rem;
+            margin: 6px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .arrange-item .arrange-moves {
+            align-items: center;
+            display: flex;
+            gap: 6px;
+            justify-content: space-between;
+        }
+
+        .arrange-item .order-position {
+            color: #adb5bd;
+            font-size: 0.85rem;
+        }
+
         /* Phones and small tablets */
         @media (max-width: 767.98px) {
             .admin-container {
@@ -586,6 +694,12 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
         </div>
     </div>
 
+    <p class="order-hint" id="projectOrderHint">
+        <i class="fas fa-grip-vertical mr-1"></i>
+        Drag a project, or use its arrows, to change where it appears on your Works page. The new order is saved straight away.
+        <span class="ml-1" id="projectOrderStatus" role="status"></span>
+    </p>
+
     <!-- Projects Display Area -->
     <div class="row" id="existingPostInformation">
         <!-- Project cards will be inserted here by JavaScript -->
@@ -649,10 +763,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="postOrderOfDisplay">Display Order / Position</label>
-                        <input type="number" class="form-control" id="postOrderOfDisplay" min="1" value="1">
-                    </div>
+                    <p class="order-hint mb-0">A new project goes first on your Works page. You can move it afterwards.</p>
                 </form>
             </div>
             <div class="modal-footer">
@@ -685,6 +796,9 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" id="works-tab" data-toggle="tab" href="#works" role="tab" aria-controls="works" aria-selected="false">Associated Works</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="arrange-tab" data-toggle="tab" href="#arrange" role="tab" aria-controls="arrange" aria-selected="false">Order of Works</a>
                         </li>
                     </ul>
 
@@ -731,10 +845,6 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="editOrderOfDisplay">Display Order / Position</label>
-                                <input type="number" class="form-control" id="editOrderOfDisplay" min="1">
-                            </div>
                         </div>
 
                         <!-- Associated Works Tab -->
@@ -767,6 +877,11 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                                     <i class="fas fa-save"></i> Save Associated Works
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Order of Works Tab -->
+                        <div class="tab-pane fade" id="arrange" role="tabpanel" aria-labelledby="arrange-tab">
+                            <div id="arrangeArea"></div>
                         </div>
                     </div>
                 </form>

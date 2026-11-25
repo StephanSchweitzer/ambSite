@@ -397,7 +397,7 @@ this Mac.
 
 `allWorks` (artworks: fileLocation, name, desc2/desc3, medium, year, visible,
 isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
-(join table), `navLinks`, `newsletterEmailList`, `aboutMe`,
+(join table; `sortOrder` once `database/projectWorkOrder.sql` has run), `navLinks`, `newsletterEmailList`, `aboutMe`,
 `users`, `login_attempts`, `admin_last_visit`.
 
 The shop: `shopProducts`, `shopVariants` (what's actually bought: a print's
@@ -576,10 +576,25 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   (`===`, `includes`) between the two silently never match — that is what
   once made saving a project wipe its works. The admin JS converts IDs with
   `String()` on arrival; keep doing that.
-- Link-replacing saves (`worksOfProjectsAPI.php` POST) delete and re-insert
-  the whole set in one transaction. The pages keep their own selection and
+- Link saves (`worksOfProjectsAPI.php` POST), in one transaction: from a
+  project, the works list (in order) replaces its whole set; from a work,
+  only the projects added or removed change, so its place in an arranged
+  project survives. The pages keep their own selection and
   only send it once the list has loaded for that item and changed; never
   build the list to save from the checkboxes currently on screen.
+- **Order on the Works page.** Projects: `projects.orderOfDisplay`,
+  highest first, but Ambar never types it any more — the Projects admin's
+  Active list is dragged or moved with arrows and saved as `count..1`
+  (`projectsAPI.php` POST `action=order`); a new project gets MAX+1 (first);
+  the editor's PATCH leaves it alone. Works inside a project: each project
+  keeps its own order in `worksInProjects.sortOrder`, added by
+  `database/projectWorkOrder.sql` (a column for Stephan to add on the
+  server, like shop.sql). `projectOrderFunctions.php` checks the column
+  exists (`ambProjectOrderReady()`) and builds the ORDER BY: arranged links
+  first by `sortOrder`, then NULLs in the old order (`w.orderOfDisplay DESC`,
+  each painting's own number). Without the column everything uses the old
+  order and the admin's "Order of Works" tab says it's waiting on the
+  update.
 - Deleting a painting only sets `visible = 0` (its flags are kept for
   restore); every public query must filter on `visible = 1`.
 - API responses are inconsistent: some endpoints return bare JSON arrays,

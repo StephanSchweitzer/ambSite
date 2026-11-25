@@ -4,6 +4,7 @@
 // index.php and the sitemap. Only visible works are ever returned here.
 
 include_once __DIR__ . '/imageManipulationFunctions.php';
+include_once __DIR__ . '/projectOrderFunctions.php';
 
 if (!defined('AMB_SITE_URL')) {
     define('AMB_SITE_URL', 'https://ambarvelasco.com');
@@ -115,7 +116,7 @@ function ambGetProjectsWithWorks($conn, $which = 'active')
               FROM worksInProjects wip
               JOIN allWorks w ON w.workId = wip.workId
               WHERE wip.projectId IN (' . $placeholders . ') AND w.visible = 1
-              ORDER BY w.orderOfDisplay DESC, wip.id ASC';
+              ORDER BY ' . ambProjectWorksOrderBy($conn);
     $stmt = $conn->prepare($query);
     $stmt->execute(array_keys($byId));
 
