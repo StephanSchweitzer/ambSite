@@ -645,6 +645,7 @@ function renderWorks() {
         }
         if (keepServerDrawn) {
             galleryItems = worksInDrawnOrder(projects);
+            fadeInArrivals(content);
             viewReady = true;
             return;
         }
@@ -682,6 +683,7 @@ function renderWorks() {
         });
 
         galleryItems = items;
+        fadeInArrivals(content);
         viewReady = true;
     }, function () {
         if (currentView === 'works') {
@@ -699,6 +701,34 @@ function createProjectElement(project) {
     }
     section.append(header); // renderWorks adds a grid of works per year group
     return section;
+}
+
+// A painting that hasn't arrived by the time its card is on the page fades
+// in when it does, over a soft space its own size, instead of popping in.
+// Only the lazy ones: the first couple load straight away, and one the
+// browser already has simply shows. No extra downloads; it only waits for
+// the picture that was coming anyway. ambar.css: "A painting on its way".
+function fadeInArrivals(root) {
+    $(root).find('.projectWorks .img-container img').each(function () {
+        var img = this;
+        if (img.loading !== 'lazy' || (img.complete && img.naturalWidth)) {
+            return;
+        }
+        var card = img.parentNode;
+        var errors = 0;
+        function arrived() {
+            card.classList.remove('is-arriving');
+        }
+        card.classList.add('is-arriving');
+        img.addEventListener('load', arrived);
+        // The first error swaps in the original (the error handler above),
+        // whose load arrives here too; only a second means nothing is coming
+        img.addEventListener('error', function () {
+            if (++errors > 1 || !img.getAttribute('data-original')) {
+                arrived();
+            }
+        });
+    });
 }
 
 // Each work is a real link to its own address, so it can be opened in a new

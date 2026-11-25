@@ -1018,6 +1018,26 @@ html.on-shop .shop-link,
 .projectWorks .img-container img {
   width: 100%;
   max-height: none;
+  transition: transform 0.7s var(--ease-out-soft), opacity 0.5s ease;
+}
+
+/* ---------- A painting on its way ----------
+   fadeInArrivals() in photoFunctions.js marks a card whose painting hasn't
+   loaded yet: a soft paper-coloured space of the painting's size, and the
+   painting fades in over it when it lands. The paper colour waits for the
+   fade to finish before it goes, so the painting never fades in from
+   white. */
+.projectWorks .img-container {
+  transition: transform 0.45s var(--ease-out-soft), box-shadow 0.45s ease, background-color 0s linear 0.5s;
+}
+
+.projectWorks .img-container.is-arriving {
+  background-color: var(--color-paper);
+  transition: transform 0.45s var(--ease-out-soft), box-shadow 0.45s ease;
+}
+
+.projectWorks .img-container.is-arriving img {
+  opacity: 0;
 }
 
 /* Hover effects only where there's a mouse: on a phone a tap would set them
