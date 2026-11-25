@@ -103,7 +103,9 @@ function createNewNavLinkRow(displayedText, linkRedirection, instructionString, 
         }
     });
 
-    listItem.attr({ href: href, class: 'mainLinkGenres' }).text(displayedText);
+    // The Shop link catches the eye now and then (ambar.css, shopGlow)
+    const isShop = instructions.indexOf('loadShop') !== -1;
+    listItem.attr({ href: href, class: 'mainLinkGenres' + (isShop ? ' shop-link' : '') }).text(displayedText);
 
     if (isNewTab == 1) {
         listItem.attr({ target: '_blank', rel: 'noopener' });
@@ -150,34 +152,91 @@ const functionMappings = {
     "selectWorksAreNotShown": function () {}
 };
 
-// The project names under "Works" — from the same request the Works page uses
+// One link in the "Works" dropdown: a project, or one of the year groups
+// listed under a project that is shown in year groups
+function projectCategoryLink(sectionId, text) {
+    const link = $('<a>').attr('href', '/select-works#' + sectionId).text(text);
+
+    link.on('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation(); // keep the dropdown open
+
+        // On phones, close the drawer so the works are visible
+        if (window.innerWidth <= 992) {
+            $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
+            $('#navLinksBox').removeClass('active');
+            $('.nav-overlay').removeClass('active');
+            $('#sideBySide').removeClass('menu-open');
+        }
+
+        loadProjectSection(sectionId);
+    });
+
+    return link;
+}
+
+// A project's name in the "Works" dropdown, when it has years folded away
+// underneath: clicking it unfolds them instead of going anywhere, the way
+// "Works" itself unfolds the projects. One project's years at a time, so the
+// menu stays short. (The link keeps its address, so it still works as a link
+// before this script has run, and for anything that doesn't run scripts.)
+function projectYearsToggle(title, yearsId) {
+    const link = $('<a>')
+        .addClass('project-link')
+        .attr({ href: '/select-works#' + projectSectionId(title), 'aria-expanded': 'false', 'aria-controls': yearsId })
+        .text(title);
+
+    link.on('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation(); // keep the Works list open
+
+        const years = $('#' + yearsId);
+        const opening = !years.is(':visible');
+
+        $('#selectProjectCategories .project-years').not(years).slideUp(200);
+        $('#selectProjectCategories .project-link').not(this).attr('aria-expanded', 'false');
+
+        years.slideToggle(220);
+        $(this).attr('aria-expanded', opening ? 'true' : 'false');
+    });
+
+    return link;
+}
+
+// The project names under "Works" — from the same request the Works page
+// uses — each with its year groups under it where it has them (mirrors the
+// same list in ambRenderNav(), actions/publicPageFunctions.php)
 function loadAndDisplayProjectTitles() {
     fetchPublicWorks('projects').then(function (projects) {
         const container = $('#selectProjectCategories');
         container.empty();
         projects.forEach(function (project) {
             const sectionId = projectSectionId(project.title);
-            const link = $('<a>').attr('href', '/select-works#' + sectionId).text(project.title);
+            const years = $('<div>').addClass('project-years').attr('id', 'years-' + sectionId);
 
-            link.on('click', function (e) {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-                    return;
+            workGroups(project).forEach(function (group) {
+                if (!group.label) {
+                    return; // the undated group has no heading to jump to
                 }
-                e.preventDefault();
-                e.stopPropagation(); // keep the dropdown open
-
-                // On phones, close the drawer so the works are visible
-                if (window.innerWidth <= 992) {
-                    $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
-                    $('#navLinksBox').removeClass('active');
-                    $('.nav-overlay').removeClass('active');
-                    $('#sideBySide').removeClass('menu-open');
-                }
-
-                loadProjectSection(sectionId);
+                years.append(
+                    projectCategoryLink(groupSectionId(project.title, group.label), group.label)
+                        .addClass('project-year-link')
+                );
             });
 
-            container.append(link);
+            // A project with years unfolds them when its name is clicked; one
+            // without them goes to the project, as every project used to
+            if (!years.children().length) {
+                container.append(projectCategoryLink(sectionId, project.title));
+                return;
+            }
+            container.append(projectYearsToggle(project.title, 'years-' + sectionId), years);
         });
     }, function () {
         console.log('Error loading project titles.');

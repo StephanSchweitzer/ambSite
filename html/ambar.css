@@ -21,6 +21,10 @@
   --color-faint: #a5a49e;
   --color-background: #ffffff;
   --color-paper: #fbfaf8;
+  /* The ground the white sheet of works sits on: the column the menu
+     lives in, and the margin down the other side. Warm, like unbleached
+     paper or a gallery wall, so the sheet reads as brighter against it. */
+  --color-surround: #f2eee6;
   --color-line: #eae8e3;
   --color-accent: #8a8a8a;
 
@@ -31,6 +35,11 @@
   --amb-yellow: #dfae12;
   --amb-rainbow: linear-gradient(90deg,
       var(--amb-blue), var(--amb-pink), var(--amb-green), var(--amb-yellow));
+
+  /* The pink of the "m" in the logo, read off the file itself, for the
+     Shop link's glow. Paler than --amb-pink, which is the same pink
+     deepened for text and borders. */
+  --shop-glow: #fe96c6;
 
   --transition-standard: all 0.3s ease;
   --ease-out-soft: cubic-bezier(0.25, 0.6, 0.3, 1);
@@ -59,9 +68,10 @@ body {
   font-family: var(--font-primary);
   color: var(--color-text);
   /* Warm paper with a faint dot grid — distinguishes the nav column from
-     the white "sheet" the works sit on (#imagesAndContent) */
-  background-color: var(--color-paper);
-  background-image: radial-gradient(rgba(29, 29, 27, 0.055) 1px, transparent 1.4px);
+     the white "sheet" the works sit on (#imagesAndContent). The dots are
+     warm too: a neutral grey dot on this ground reads as a smudge. */
+  background-color: var(--color-surround);
+  background-image: radial-gradient(rgba(92, 74, 48, 0.05) 1px, transparent 1.4px);
   background-size: 22px 22px;
   line-height: 1.65;
   margin: 0;
@@ -257,6 +267,14 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   width: 18vw;
   font-family: var(--font-primary);
   font-weight: var(--font-weight-normal);
+  /* With every project's years open the list can outgrow a shorter
+     screen, and this column is fixed, so scrolling the page would not
+     bring the last links back - they would simply be out of reach. Let
+     the column scroll instead, as the phone drawer already does.
+     Nothing in here reaches past its right edge, so the sideways
+     clipping this brings with it costs nothing. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .nav-link-container {
@@ -313,6 +331,100 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 .nav-link-container:nth-child(4n+3) .mainLinkGenres:after { --tape-menu: var(--tape-blue); }
 .nav-link-container:nth-child(4n+4) .mainLinkGenres:after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
 
+/* ---------- The Shop link catches the eye, now and then ----------
+   The word is lit like a candle: the letters warm towards the pastel
+   pink of the "m" in the logo and carry a halo of it, guttering for
+   about two and a half seconds, then going out for five or so. The
+   unevenness is the point — a steady pulse reads as a notification,
+   a flame reads as warmth — so the stops below are deliberately not
+   spaced evenly and do not all reach the same brightness. Each one is
+   the ink and the logo pink mixed at that moment's brightness, with
+   the halo at the same strength.
+
+   The gentleness is in the dips and the steps between them, not in the
+   height of the flame: one moment in the middle of each burst reaches
+   the logo pink itself, and everything around it stays low and close
+   together. An earlier version was gentle by being dim throughout and
+   never quite arrived at the pink; an earlier one still was bright
+   throughout with long steps, and read as a flicker to be dealt with
+   rather than a candle to be glanced at.
+
+   Nothing moves and nothing changes size. It rests while the visitor
+   is already in the shop (html.on-shop, set in setView()) and while
+   the pointer is on the link, so hovering shows its own colour. The
+   reduced-motion rules at the end of this file stop it for anyone who
+   has asked their computer for less movement.
+
+   Colour and shadow are named at every stop. Name a property at one
+   keyframe only and it is carried to the end of the cycle instead of
+   back to the start: an early version took fourteen seconds to fade
+   rather than two. */
+@keyframes shopGlow {
+  0% {
+    color: rgb(42, 42, 40);
+    text-shadow: none;
+  }
+  4% {
+    color: rgb(137, 91, 111);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.36), 0 0 20px rgba(254, 150, 198, 0.22);
+  }
+  7% {
+    color: rgb(110, 77, 91);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.26), 0 0 20px rgba(254, 150, 198, 0.15);
+  }
+  10% {
+    color: rgb(195, 120, 154);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.58), 0 0 20px rgba(254, 150, 198, 0.35);
+  }
+  13% {
+    color: rgb(135, 90, 110);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.35), 0 0 20px rgba(254, 150, 198, 0.21);
+  }
+  16% {
+    color: rgb(254, 150, 198);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.80), 0 0 20px rgba(254, 150, 198, 0.48);
+  }
+  19% {
+    color: rgb(152, 98, 122);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.42), 0 0 20px rgba(254, 150, 198, 0.25);
+  }
+  22% {
+    color: rgb(190, 118, 151);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.56), 0 0 20px rgba(254, 150, 198, 0.34);
+  }
+  25% {
+    color: rgb(123, 83, 100);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.30), 0 0 20px rgba(254, 150, 198, 0.18);
+  }
+  28% {
+    color: rgb(144, 94, 116);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.38), 0 0 20px rgba(254, 150, 198, 0.23);
+  }
+  31% {
+    color: rgb(72, 57, 62);
+    text-shadow: 0 0 9px rgba(254, 150, 198, 0.11), 0 0 20px rgba(254, 150, 198, 0.07);
+  }
+  34% {
+    color: rgb(42, 42, 40);
+    text-shadow: none;
+  }
+  100% {
+    color: rgb(42, 42, 40);
+    text-shadow: none;
+  }
+}
+.shop-link {
+  animation: shopGlow 8s ease-in-out 4s infinite;
+}
+
+/* Nothing to catch the eye about a shop you are already standing in,
+   and nothing to fight the hover colour of a link under the pointer */
+html.on-shop .shop-link,
+.shop-link:hover,
+.shop-link:focus-visible {
+  animation: none;
+}
+
 /* ---------- Sub-links dropdown (Works → Painting / Drawing / …) ---------- */
 .hiddenLinkStuff {
   margin-left: 2px;
@@ -338,6 +450,25 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 .hiddenLinkStuff a:last-child { margin-bottom: 0; }
+
+/* The years under a project that is shown in year groups (Works → Painting
+   → 2025–2026 / 2023–2024 / 2020–2022): a step quieter and a step in again.
+   They stay folded away until the project's name is clicked, so the Works
+   list is as short as it ever was — the script unfolds them, and with no
+   script the project's name is still a link to the project.
+   The step in is text-indent, not a margin: setupResponsiveLayout() writes
+   an inline margin and padding onto every menu link at phone width, which
+   would beat anything this rule said about either. */
+.project-years {
+  display: none;
+}
+
+.hiddenLinkStuff .project-year-link {
+  text-indent: 14px;
+  margin-bottom: 0.32rem;
+  font-size: 0.72rem;
+  color: var(--color-faint);
+}
 
 .hiddenLinkStuff .nav-link-container { margin-bottom: 0.55rem; }
 
@@ -623,6 +754,30 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   min-width: 51vw;
   /* Keep the original single-column layout — do not use grid */
   margin-top: 40px;
+}
+
+/* ---------- Year groups inside a project ----------
+   A project can be shown in groups of years (the Painting works are
+   2025–2026, 2023–2024, 2020–2022), each under a quiet heading in the
+   display face: a smaller, softer relative of the project title above it,
+   aligned with it. Projects that aren't grouped keep the plain single run
+   of works and never see these rules. */
+.project-group + .project-group {
+  margin-top: 4.5rem;
+}
+
+.project-year {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-normal);
+  font-size: 1.5rem;
+  letter-spacing: 0.12em;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* The grid's own 40px already sits under the heading */
+.project-year + .projectWorks {
+  margin-top: 28px;
 }
 
 /* ---------- Artwork cards ---------- */
@@ -1261,8 +1416,8 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   height: min(var(--room, 66vh), 580px);
   border-radius: 4px;
   overflow: hidden;
-  background-color: var(--color-paper);
-  background-image: radial-gradient(rgba(29, 29, 27, 0.06) 1px, transparent 1.4px);
+  background-color: var(--color-surround);
+  background-image: radial-gradient(rgba(92, 74, 48, 0.055) 1px, transparent 1.4px);
   background-size: 22px 22px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
   cursor: default;
@@ -3586,6 +3741,14 @@ html.no-scroll {
     color: var(--color-ink);
   }
 
+  /* Same step in as on a computer; their height to tap comes from the rule
+     for every link above, which is what keeps them a comfortable size */
+  .navLinksBoxMobile #selectProjectCategories .project-year-link {
+    text-indent: 14px;
+    font-size: 0.75rem;
+    color: var(--color-faint);
+  }
+
   .navLinksBoxMobile #newsletterSignUp {
     padding: 4px 0 10px;
     margin-top: 0;
@@ -3636,6 +3799,8 @@ html.no-scroll {
 
   .project-header h2,
   .project-title { font-size: 1.85rem; }
+
+  .project-year { font-size: 1.3rem; }
 
   #ambarPersoPic {
     max-width: 90% !important;

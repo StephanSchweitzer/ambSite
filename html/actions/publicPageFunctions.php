@@ -48,6 +48,15 @@ function ambSectionId($title)
     return 'section-' . ($slug === '' ? 'project' : $slug);
 }
 
+// The anchor one year group of a project sits at, so a menu link can jump
+// straight to it: section-painting-2023-2024.
+// Same as groupSectionId() in photoFunctions.js
+function ambGroupSectionId($projectTitle, $label)
+{
+    $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $label)), '-');
+    return ambSectionId($projectTitle) . ($slug === '' ? '' : '-' . $slug);
+}
+
 // Same as workSrcset() in photoFunctions.js
 function ambWorkSrcset($work)
 {
@@ -161,9 +170,11 @@ function ambRenderNav($links, $projects)
     $html = '';
     foreach ($links as $link) {
         $href = ambNavLinkHref($link);
+        // The Shop link catches the eye now and then (ambar.css, shopGlow)
+        $isShop = strpos((string) $link['onclick'], 'loadShop') !== false;
         $html .= '<div class="nav-link-container"><a'
             . ($href !== null ? ' href="' . ambHtml($href) . '"' : '')
-            . ' class="mainLinkGenres"'
+            . ' class="mainLinkGenres' . ($isShop ? ' shop-link' : '') . '"'
             . ($link['isNewTab'] == 1 ? ' target="_blank" rel="noopener"' : '')
             . '>' . ambHtml($link['displayedText']) . '</a></div>';
 
@@ -176,7 +187,28 @@ function ambRenderNav($links, $projects)
         $style = '';
         if ($id === 'selectProjectCategories') {
             foreach ($projects as $project) {
-                $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '">' . ambHtml($project['title']) . '</a>';
+                // A project shown in year groups keeps its years folded away
+                // underneath it; clicking the project's name unfolds them
+                // (navLinksFunctions.js). The undated group has no heading to
+                // jump to, so it is not listed.
+                $years = '';
+                foreach (ambWorkGroups($project) as $group) {
+                    if ($group['label'] === '') {
+                        continue;
+                    }
+                    $years .= '<a class="project-year-link" href="/select-works#'
+                        . ambHtml(ambGroupSectionId($project['title'], $group['label'])) . '">'
+                        . ambHtml($group['label']) . '</a>';
+                }
+                // One group is no grouping: ambWorkGroups() gives a lone
+                // unlabelled group, which leaves $years empty
+                $yearsId = 'years-' . ambSectionId($project['title']);
+                $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '"'
+                    . ($years === '' ? '' : ' class="project-link" aria-expanded="false" aria-controls="' . ambHtml($yearsId) . '"')
+                    . '>' . ambHtml($project['title']) . '</a>';
+                if ($years !== '') {
+                    $inner .= '<div class="project-years" id="' . ambHtml($yearsId) . '">' . $years . '</div>';
+                }
             }
         } elseif ($id === 'newsletterSignUp') {
             $inner = '<div class="newsletter-container">'
@@ -197,6 +229,109 @@ function ambRenderNav($links, $projects)
 
 define('AMB_GALLERY_SIZES', '(max-width: 992px) 92vw, 62vw');
 
+// ---------------------------------------------------------------------------
+// Year groups inside a project
+//
+// Some projects are shown in groups of years rather than as one long run of
+// works: the projects named in ambYearGroupedProjects() - today all four of
+// them - are grouped as 2025-2026, 2023-2024 and 2020-2022, newest group
+// first, with a small heading over each group. A project whose works all
+// fall in one group is drawn as one run, with no heading, so the list can
+// name a project before its works span the years.
+//
+// Nothing is stored for any of this — the groups are worked out from the
+// year each work already carries, so a work added in the admin portal lands
+// in the right group by itself, and a year outside the bands gets a group of
+// its own rather than being dropped.
+//
+// Mirrored by YEAR_BANDS / workGroups() in js/photoFunctions.js — change both.
+// ---------------------------------------------------------------------------
+
+// Newest first, as the Works page shows them
+function ambYearBands()
+{
+    return array(array(2025, 2026), array(2023, 2024), array(2020, 2022));
+}
+
+// The projects shown in year groups, by title (compared without case or spaces)
+function ambYearGroupedProjects()
+{
+    return array('painting', 'plantart', 'drawing', 'tapeworks');
+}
+
+function ambGroupsByYear($title)
+{
+    // /u so an unusual space in the title (a non-breaking one pasted in from
+    // a word processor, say) is stripped here exactly as JavaScript strips it
+    // in groupsByYear() - the two must agree on whether a project is grouped,
+    // or the page and the viewer would disagree about which work is which
+    $clean = preg_replace('/\s+/u', '', (string) $title);
+    if ($clean === null) { // not valid UTF-8; fall back to plain spaces
+        $clean = preg_replace('/\s+/', '', (string) $title);
+    }
+    return in_array(strtolower((string) $clean), ambYearGroupedProjects(), true);
+}
+
+function ambYearBandLabel($from, $to)
+{
+    return $from === $to ? (string) $from : $from . "\xe2\x80\x93" . $to;
+}
+
+// The four-digit year a work carries, or null if it hasn't got a sensible one
+function ambWorkYear($work)
+{
+    if (!preg_match('/\d{4}/', (string) $work['creationYear'], $found)) {
+        return null;
+    }
+    $year = (int) $found[0];
+    return ($year < 1900 || $year > 2100) ? null : $year;
+}
+
+// A project's works as the page draws them: one group per year band that has
+// works in it, newest first, then any undated works in a last group with no
+// heading. A project that isn't grouped — or one whose works all fall in the
+// same group — comes back as a single group with no heading, which draws
+// exactly as it always has.
+function ambWorkGroups($project)
+{
+    $single = array(array('label' => '', 'works' => $project['works']));
+    if (!ambGroupsByYear($project['title'])) {
+        return $single;
+    }
+
+    $groups = array();
+    foreach ($project['works'] as $work) {
+        $year = ambWorkYear($work);
+        $label = '';
+        $from = -1; // undated works sort to the end
+        if ($year !== null) {
+            $label = (string) $year;
+            $from = $year;
+            foreach (ambYearBands() as $band) {
+                if ($year >= $band[0] && $year <= $band[1]) {
+                    $label = ambYearBandLabel($band[0], $band[1]);
+                    $from = $band[0];
+                    break;
+                }
+            }
+        }
+        if (!isset($groups[$label])) {
+            $groups[$label] = array('label' => $label, 'from' => $from, 'works' => array());
+        }
+        $groups[$label]['works'][] = $work;
+    }
+
+    if (count($groups) < 2) {
+        return $single;
+    }
+
+    $groups = array_values($groups);
+    usort($groups, function ($a, $b) {
+        return $b['from'] - $a['from'];
+    });
+    return $groups;
+}
+
 function ambRenderWorks($projects)
 {
     $html = '';
@@ -206,15 +341,29 @@ function ambRenderWorks($projects)
         $html .= '<section class="project" id="' . ambHtml(ambSectionId($project['title'])) . '">'
             . '<div class="project-header"><h2 class="project-title">' . ambHtml($project['title']) . '</h2>'
             . ($project['description'] ? '<p class="project-description">' . ambMultiline($project['description']) . '</p>' : '')
-            . '</div><div class="projectWorks">';
-        foreach ($project['works'] as $work) {
-            $html .= '<a class="card work-card" href="' . ambHtml($work['path']) . '" data-index="' . $index . '" aria-label="' . ambHtml($work['name']) . '">'
-                . '<div class="img-container">' . ambWorkImage($work, $index > 1, AMB_GALLERY_SIZES, null, $index === 0)
-                . '<div class="img-overlay" aria-hidden="true"><h3 class="overlay-title">' . ambHtml($work['name']) . '</h3></div>'
-                . '</div></a>';
-            $index++;
+            . '</div>';
+        $groups = ambWorkGroups($project);
+        // Every group of a grouped project gets the wrapper, headed or not, so
+        // the undated group is spaced like the others instead of looking like
+        // the tail of the group above it
+        $grouped = count($groups) > 1;
+        foreach ($groups as $group) {
+            if ($grouped) {
+                $html .= '<div class="project-group"'
+                    . ($group['label'] !== '' ? ' id="' . ambHtml(ambGroupSectionId($project['title'], $group['label'])) . '"' : '')
+                    . '>'
+                    . ($group['label'] !== '' ? '<h3 class="project-year">' . ambHtml($group['label']) . '</h3>' : '');
+            }
+            $html .= '<div class="projectWorks">';
+            foreach ($group['works'] as $work) {
+                $html .= '<a class="card work-card" href="' . ambHtml($work['path']) . '" data-index="' . $index . '" aria-label="' . ambHtml($work['name']) . '">'
+                    . '<div class="img-container">' . ambWorkImage($work, $index > 1, AMB_GALLERY_SIZES, null, $index === 0)
+                    . '<div class="img-overlay" aria-hidden="true"><h3 class="overlay-title">' . ambHtml($work['name']) . '</h3></div>'
+                    . '</div></a>';
+                $index++;
+            }
+            $html .= '</div>' . ($grouped ? '</div>' : '');
         }
-        $html .= '</div>';
         if ($projectIndex < $last) {
             $html .= '<div class="work-separator" aria-hidden="true"> ✧ ˚. ࣪ ˖ ·ﾟ ·ﾟ·:。·ﾟﾟ·✮ ⋆ ˚。☆ ⋆。°✩·ﾟ ·ﾟ·:。·ﾟﾟ·°˖✧</div>';
         }
