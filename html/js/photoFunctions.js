@@ -2474,12 +2474,66 @@ function renderHome() {
         } else {
             createCarousel(works);
         }
+        startHomeReveal();
         viewReady = true;
     }, function () {
         if (currentView === 'home') {
             content.html(errorHtml('Sorry, there was a problem loading the page. Please try again later.'));
         }
     });
+}
+
+// --------------------------------------------------------------------------
+// The clouds over the first painting
+// --------------------------------------------------------------------------
+
+// A veil and three banks of soft white puffs, laid over the slideshow. All
+// of the movement is in ambar.css ("Clouds over the first painting"), on the
+// elements themselves, so the cloud is opaque from the first frame it is
+// painted and a rebuilt slideshow parts it again simply by being new.
+// Mirrors AMB_HOME_CLOUDS in actions/publicPageFunctions.php - change both.
+var HOME_CLOUDS_HTML = '<div class="home-clouds" aria-hidden="true">' +
+    '<div class="home-clouds-veil"></div>' +
+    '<div class="home-clouds-bank is-left"></div>' +
+    '<div class="home-clouds-bank is-right"></div>' +
+    '<div class="home-clouds-bank is-high"></div>' +
+    '</div>';
+
+// How long the weather takes to leave. Mirrors the animation durations in
+// ambar.css - change both.
+var HOME_CLOUDS_MS = 2400;
+
+var homeRevealTimer = null;
+
+// The two things about the arrival that CSS can't do for itself: the
+// slideshow holds still until the cloud has gone, so the first painting
+// gets a whole turn of being looked at rather than sliding away a moment
+// after it appears; and the painting settles the last of its size into
+// place while the weather leaves. Both are put back afterwards, and
+// neither matters if it never runs.
+function startHomeReveal() {
+    var carousel = document.getElementById('homePageCarousel');
+    if (!carousel) {
+        return;
+    }
+    clearTimeout(homeRevealTimer);
+    var first = carousel.querySelector('.carousel-item.active');
+    if (prefersReducedMotion()) {
+        return; // the cloud is already gone; nothing to wait for
+    }
+    if (first) {
+        first.classList.add('is-settling');
+    }
+    pauseSlideshow(true);
+    homeRevealTimer = setTimeout(function () {
+        if (first) {
+            first.classList.remove('is-settling');
+        }
+        // (not while a painting is open: closing it starts the slideshow again)
+        if (currentView === 'home' && !viewer.open) {
+            pauseSlideshow(false);
+        }
+    }, HOME_CLOUDS_MS);
 }
 
 function createCarousel(works) {
@@ -2494,6 +2548,9 @@ function createCarousel(works) {
         inner.append($('<div>').addClass('carousel-item' + (index === 0 ? ' active' : '')).append(link));
     });
     carousel.append(inner);
+    if (works.length) {
+        carousel.append(HOME_CLOUDS_HTML); // the weather over the first painting
+    }
 
     // Arrows only make sense with more than one picture
     if (works.length > 1) {
