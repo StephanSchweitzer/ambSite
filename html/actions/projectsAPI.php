@@ -92,11 +92,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 {
   requireAdminApi();
 
+  // The order the projects appear in: their ids, first to last. The first
+  // gets the highest number, since the site lists them highest first.
+  if (($_POST['action'] ?? '') === 'order')
+  {
+    header('Content-Type: application/json');
+    $ids = json_decode($_POST['ids'] ?? '', true);
+    if (!is_array($ids) || !$ids) {
+      http_response_code(400);
+      echo json_encode(array('status' => 'error', 'message' => 'No projects to order'));
+      die;
+    }
+    $ids = array_values(array_unique(array_map('intval', $ids)));
+
+    $conn->beginTransaction();
+    try {
+      $set = $conn->prepare('UPDATE projects SET orderOfDisplay = ? WHERE id = ?');
+      foreach ($ids as $index => $id) {
+        $set->execute(array(count($ids) - $index, $id));
+      }
+      $conn->commit();
+    } catch (Throwable $e) {
+      $conn->rollBack();
+      error_log('projectsAPI order: ' . $e->getMessage());
+      http_response_code(500);
+      echo json_encode(array('status' => 'error', 'message' => 'Could not save the order; nothing was changed'));
+      die;
+    }
+    echo json_encode(array('status' => 'success'));
+    die;
+  }
+
   $title = $_POST["title"];
   $description = $_POST["description"];
   $active = $_POST["active"];
-  $orderOfDisplay = $_POST["orderOfDisplay"];
   $isCurrentProject = $_POST["isCurrentProject"];
+
+  // A new project goes first, above every other project
+  $orderOfDisplay = (int) $conn->query('SELECT COALESCE(MAX(orderOfDisplay), 0) + 1 FROM projects')->fetchColumn();
 
   $query = "INSERT INTO projects (title, description, active, orderOfDisplay)
             VALUES (?, ?, ?, ?)";
@@ -143,7 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
   $id = $_PATCH['id'];
   $title = $_PATCH['title'];
   $description = $_PATCH['description'];
-  $orderOfDisplay = $_PATCH['orderOfDisplay'];
+  // Set by dragging on the Projects page now; the editor no longer sends it
+  $orderOfDisplay = $_PATCH['orderOfDisplay'] ?? null;
   $active = $_PATCH['active'];
   $isCurrentProject = $_PATCH['isCurrentProject'];
   $restore = $_PATCH['restore'] ?? '';
@@ -155,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH')
     $restoreQuery->execute([$id]);
   }
 
-  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = ?, isCurrentProject = ? WHERE id = ?";
+  $theQuery = "UPDATE projects SET title = ?, description = ?, active = ?, orderOfDisplay = COALESCE(?, orderOfDisplay), isCurrentProject = ? WHERE id = ?";
   $theArray = array($title, $description, $active, $orderOfDisplay, $isCurrentProject, $id);
   
   // echo json_encode($theArray);

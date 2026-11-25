@@ -52,100 +52,72 @@ try {
 ?>
 
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <link rel="stylesheet" href="admin.css">
-    <meta charset="utf-8">
-    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
-    <title>Main Admin Page</title>
+    <?php $ambPageTitle = 'Dashboard'; include __DIR__ . '/adminHead.php'; ?>
 </head>
-<body>
+<body class="page-dashboard">
+<?php $ambAdminPage = 'dashboard'; include __DIR__ . '/adminNav.php'; ?>
 
-<div class="container admin-container my-5 col-sm-12 col-md-10 col-lg-8" style="margin-top: 10vh !important;">
-    <div class="admin-header-wrapper">
-        <h1 class="admin-header text-center">Administration Dashboard</h1>
-    </div>
+<div class="content-area is-narrow">
+    <div class="main-content">
+        <div class="page-title-row">
+            <div>
+                <h1 class="h3 admin-welcome">Welcome back boober</h1>
+                <p class="admin-date"><?php echo date("l, F j, Y"); ?></p>
+            </div>
+        </div>
 
-    <div class="admin-welcome">Welcome back boober</div>
-    <div class="admin-date"><?php echo date("l, F j, Y"); ?></div>
-
-    <div class="row admin-dashboard">
-        <div class="col-md-6 col-lg-4 mb-4">
-            <a href="pictureAdmin.php" class="text-decoration-none">
-                <div class="admin-card">
-                    <div class="admin-card-icon">
-                        <i class="fas fa-images"></i>
-                    </div>
+        <div class="admin-dashboard">
+            <a href="pictureAdmin.php" class="admin-card">
+                <div class="admin-card-icon"><i class="fas fa-images"></i></div>
+                <div>
                     <div class="admin-card-title">Manage Works</div>
                     <div class="admin-card-description">Upload, edit, and organize your artwork and portfolio pieces.</div>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-6 col-lg-4 mb-4">
-            <a href="manageProjects.php" class="text-decoration-none">
-                <div class="admin-card">
-                    <div class="admin-card-icon">
-                        <i class="fas fa-project-diagram"></i>
-                    </div>
+            <a href="manageProjects.php" class="admin-card">
+                <div class="admin-card-icon"><i class="fas fa-diagram-project"></i></div>
+                <div>
                     <div class="admin-card-title">Manage Projects</div>
                     <div class="admin-card-description">Create and update your project showcase and details.</div>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-6 col-lg-4 mb-4">
-            <a href="aboutMeAdmin.php" class="text-decoration-none">
-                <div class="admin-card">
-                    <div class="admin-card-icon">
-                        <i class="fas fa-user-edit"></i>
-                    </div>
+            <a href="aboutMeAdmin.php" class="admin-card">
+                <div class="admin-card-icon"><i class="fas fa-user-pen"></i></div>
+                <div>
                     <div class="admin-card-title">Manage About Section</div>
                     <div class="admin-card-description">Update your bio, profile picture, and personal information.</div>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-6 col-lg-4 mb-4">
-            <a href="shopAdmin.php" class="text-decoration-none">
-                <div class="admin-card position-relative">
-                    <?php if ($ordersToSend > 0): ?>
-                        <span class="badge-notification"><?php echo $ordersToSend; ?></span>
-                    <?php endif; ?>
-                    <div class="admin-card-icon">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
+            <a href="shopAdmin.php" class="admin-card">
+                <?php if ($ordersToSend > 0): ?>
+                    <span class="badge-notification" title="Orders to send"><?php echo $ordersToSend; ?></span>
+                <?php endif; ?>
+                <div class="admin-card-icon"><i class="fas fa-cart-shopping"></i></div>
+                <div>
                     <div class="admin-card-title">Manage Shop</div>
                     <div class="admin-card-description">Orders to send, the items for sale, delivery prices.</div>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-6 col-lg-4 mb-4">
-            <a href="navbarAdmin.php" class="text-decoration-none">
-                <div class="admin-card">
-                    <div class="admin-card-icon">
-                        <i class="fas fa-bars"></i>
-                    </div>
+            <a href="navbarAdmin.php" class="admin-card">
+                <div class="admin-card-icon"><i class="fas fa-bars"></i></div>
+                <div>
                     <div class="admin-card-title">Manage Navbar</div>
                     <div class="admin-card-description">Customize your website's navigation menu structure.</div>
                 </div>
             </a>
-        </div>
 
-        <div class="col-md-6 col-lg-4 mb-4">
-            <a href="newsletterAdmin.php" class="text-decoration-none">
-                <div class="admin-card position-relative">
-                    <?php if ($newNewsletterCount > 0): ?>
-                        <span class="badge-notification"><?php echo $newNewsletterCount; ?></span>
-                    <?php endif; ?>
-                    <div class="admin-card-icon">
-                        <i class="fas fa-envelope-open-text"></i>
-                    </div>
+            <a href="newsletterAdmin.php" class="admin-card">
+                <?php if ($newNewsletterCount > 0): ?>
+                    <span class="badge-notification" title="New subscribers"><?php echo $newNewsletterCount; ?></span>
+                <?php endif; ?>
+                <div class="admin-card-icon"><i class="fas fa-envelope-open-text"></i></div>
+                <div>
                     <div class="admin-card-title">Manage Newsletter</div>
                     <div class="admin-card-description">View subscribers and manage your email campaigns.</div>
                 </div>
@@ -153,17 +125,5 @@ try {
         </div>
     </div>
 </div>
-
-<div class="logout-container">
-    <form action="../signIn/logout.php" method="post">
-        <button type="submit" class="btn btn-logout">
-            <i class="fas fa-sign-out-alt me-2"></i>Logout
-        </button>
-    </form>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
-<script src="../js/adminSession.js"></script>
 </body>
 </html>

@@ -381,10 +381,10 @@ split out of `pdo.php`.
 |---|---|
 | Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
-| Shop | Pages: `actions/shopPageFunctions.php` (all the markup) + `js/shop.js` (basket, checkout, viewer hook-up). Catalogue: `actions/shopFunctions.php`. Orders and payment: `actions/shopOrderFunctions.php`, `actions/stripeFunctions.php`, `actions/stripeWebhook.php`. Emails: `actions/shopEmailFunctions.php`. Public API `actions/shopAPI.php`; admin `admin/shopAdmin.php` + `admin/shopAdmin.css` + `js/shopAdminFunctions.js` + `actions/shopAdminAPI.php`. Tables: `database/shop.sql`. |
+| Shop | Pages: `actions/shopPageFunctions.php` (all the markup) + `js/shop.js` (basket, checkout, viewer hook-up). Catalogue: `actions/shopFunctions.php`. Orders and payment: `actions/shopOrderFunctions.php`, `actions/stripeFunctions.php`, `actions/stripeWebhook.php`. Emails: `actions/shopEmailFunctions.php`. Public API `actions/shopAPI.php`; admin `admin/shopAdmin.php` + its section of `admin/admin.css` + `js/shopAdminFunctions.js` + `actions/shopAdminAPI.php`. Tables: `database/shop.sql`. |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
 | SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
-| Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB and 4000px). |
+| Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page (and `signIn.php`) puts `admin/adminHead.php` in its `<head>` (the libraries, the fonts, `admin.css` — the admin's only stylesheet, one section per page scoped to `body.page-<name>`, Bootstrap 5.3 dark mode via `data-bs-theme="dark"` pointed at the `--amb-*` colours) and `admin/adminNav.php` first in `<body>` (the top bar). The Works page is the layout the others follow: sidebar + panel. Never give the top bar's links `.nav-link`: `photoAdminFunctions.js` clears `.active` from every `.nav-link`. adminHead also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB and 4000px). |
 | Auth | `html/signIn/` — session-based; every entry point includes `database/session.php` (cookie flags) instead of calling `session_start()`; admin pages check `$_SESSION["ambar"] === "connected"`, admin APIs call `requireAdminApi()` from `actions/adminAuth.php` (401 JSON, never a redirect); `login_attempts` rate-limits (5 per hour, cleared on success) |
 | DB connection | `html/database/pdo.php` — loads `.env` from project root, exposes global `$conn` (PDO) and `env()` helper. Every entry point `include`s it. |
 | Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf, `tape/` scraps). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
@@ -397,7 +397,7 @@ this Mac.
 
 `allWorks` (artworks: fileLocation, name, desc2/desc3, medium, year, visible,
 isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
-(join table), `navLinks`, `newsletterEmailList`, `aboutMe`,
+(join table; `sortOrder` once `database/projectWorkOrder.sql` has run), `navLinks`, `newsletterEmailList`, `aboutMe`,
 `users`, `login_attempts`, `admin_last_visit`.
 
 The shop: `shopProducts`, `shopVariants` (what's actually bought: a print's
@@ -576,18 +576,38 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   (`===`, `includes`) between the two silently never match — that is what
   once made saving a project wipe its works. The admin JS converts IDs with
   `String()` on arrival; keep doing that.
-- Link-replacing saves (`worksOfProjectsAPI.php` POST) delete and re-insert
-  the whole set in one transaction. The pages keep their own selection and
+- Link saves (`worksOfProjectsAPI.php` POST), in one transaction: from a
+  project, the works list (in order) replaces its whole set; from a work,
+  only the projects added or removed change, so its place in an arranged
+  project survives. The pages keep their own selection and
   only send it once the list has loaded for that item and changed; never
   build the list to save from the checkboxes currently on screen.
+- **Order on the Works page.** Projects: `projects.orderOfDisplay`,
+  highest first, but Ambar never types it any more — the Projects admin's
+  Active list is dragged or moved with arrows and saved as `count..1`
+  (`projectsAPI.php` POST `action=order`); a new project gets MAX+1 (first);
+  the editor's PATCH leaves it alone. Works inside a project: each project
+  keeps its own order in `worksInProjects.sortOrder`, added by
+  `database/projectWorkOrder.sql` (a column for Stephan to add on the
+  server, like shop.sql). `projectOrderFunctions.php` checks the column
+  exists (`ambProjectOrderReady()`) and builds the ORDER BY: arranged links
+  first by `sortOrder`, then NULLs in the old order (`w.orderOfDisplay DESC`,
+  each painting's own number). Without the column everything uses the old
+  order and the admin's "Order of Works" tab says it's waiting on the
+  update. Where the Works page shows a project in year groups
+  (`ambWorkGroups()`), the order only applies within each group, so the tab
+  shows the same groups (`arrangeGroups()`, fed the bands and project names
+  by manageProjects.php) and a work only moves inside its own.
 - Deleting a painting only sets `visible = 0` (its flags are kept for
   restore); every public query must filter on `visible = 1`.
 - API responses are inconsistent: some endpoints return bare JSON arrays,
   others `{status, data}` wrappers. Match whatever the consuming JS expects.
 - Query results are often read by numeric column index (`$result[$i][3]`), so
   reordering columns in a SELECT silently breaks the JSON output.
-- jQuery comes from CDNs: 3.7.0 (Google) on the public page, 3.5.1/3.6.0
-  (code.jquery.com) on admin pages. Bootstrap 4.5.2 via CDN.
+- jQuery 3.7.0 (Google) everywhere. Public page: Bootstrap 4.5.2. Admin
+  pages: Bootstrap 5.3.3 (not the shop admin, which has none), all from
+  `admin/adminHead.php`, with Lato + Cormorant Garamond (the public site's
+  typefaces) and Font Awesome 6.2.1.
   On the public page all scripts load with `defer`, in order.
   **Every CDN `<script>` carries `integrity` + `crossorigin="anonymous"`**
   (sha384 of the exact file). Changing a version means a new hash:

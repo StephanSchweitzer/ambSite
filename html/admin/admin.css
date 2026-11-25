@@ -1,364 +1,2754 @@
+/* The admin pages' one stylesheet. Every admin page and the sign-in page
+ * load it, and nothing else, through admin/adminHead.php.
+ *
+ *   1. colours and type, as variables, and Bootstrap 5.3's dark mode
+ *      (data-bs-theme="dark" on each page's <html>) set to them
+ *   2. the bar across the top (admin/adminNav.php)
+ *   3. the page holder: a sidebar beside one panel, as on the Works page
+ *   4. Bootstrap's pieces (fields, buttons, dialogs, tabs...) in these colours
+ *   5. the dashboard and sign-in pages
+ *   then one section per page, every rule scoped to that page's body class
+ *   (body.page-works, body.page-shop...), because pages use some of the same
+ *   class names for different things.
+ *
+ * Change a colour or a typeface in section 1, never on a page.
+ */
+
+/* ---------- 1. Colours and type ---------- */
+:root {
+    --amb-bg: #25252f;          /* behind everything */
+    --amb-sidebar: #1e1e28;     /* sidebar, top bar, fields in dialogs */
+    --amb-panel: #2c3e50;       /* the main panel, dialogs */
+    --amb-inset: #253546;       /* a box or card sitting on the panel */
+    --amb-inset-hover: #2f4256;
+    --amb-border: #495057;
+    --amb-line: rgba(255, 255, 255, 0.1);
+    --amb-text: #ffffff;
+    --amb-soft: rgba(255, 255, 255, 0.85);
+    --amb-muted: #a8c7e0;
+    --amb-accent: #3b7a57;      /* green: the main action, what's chosen */
+    --amb-accent-hover: #46906a;
+    --amb-highlight: #8de4ff;   /* light blue: section titles, links, focus */
+    --amb-highlight-hover: #c2f1ff;
+    --amb-danger: #e74c3c;
+    --amb-danger-hover: #cf3f30;
+    --amb-warning: #f39c12;
+    --amb-info: #4a86b4;
+    --amb-info-hover: #5795c4;
+    --amb-good-text: #6fd39a;   /* green words on the dark panel ("Active") */
+    --amb-bad-text: #ff8a7d;    /* red words and icons on it ("Inactive", Logout) */
+    --amb-raised: #343a40;      /* a row in a list inside a dialog */
+    --amb-radius: 10px;
+    --amb-radius-sm: 8px;
+    --amb-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    /* The public site's own typefaces: Lato for reading, Cormorant Garamond
+       for the page titles and the name in the top bar only */
+    --amb-font: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+    --amb-display: 'Cormorant Garamond', Georgia, serif;
+    --amb-topbar-h: 56px;
+    --amb-sidebar-w: 250px;
+    color-scheme: dark;
+}
+
+/* Bootstrap's own colour names, pointed at the ones above, so its
+   utilities (bg-success, text-muted, links...) speak the same palette */
+[data-bs-theme="dark"] {
+    --bs-body-bg: var(--amb-bg);
+    --bs-body-bg-rgb: 37, 37, 47;
+    --bs-body-color: var(--amb-text);
+    --bs-body-color-rgb: 255, 255, 255;
+    --bs-body-font-family: var(--amb-font);
+    --bs-emphasis-color: var(--amb-text);
+    --bs-heading-color: var(--amb-text);
+    --bs-secondary-color: var(--amb-muted);
+    --bs-secondary-bg: var(--amb-sidebar);
+    --bs-tertiary-bg: var(--amb-inset);
+    --bs-border-color: var(--amb-border);
+    --bs-link-color: var(--amb-highlight);
+    --bs-link-color-rgb: 141, 228, 255;
+    --bs-link-hover-color: var(--amb-highlight-hover);
+    --bs-link-hover-color-rgb: 194, 241, 255;
+    --bs-primary: var(--amb-accent);
+    --bs-primary-rgb: 59, 122, 87;
+    --bs-success: var(--amb-accent);
+    --bs-success-rgb: 59, 122, 87;
+    --bs-danger: var(--amb-danger);
+    --bs-danger-rgb: 231, 76, 60;
+    --bs-info: var(--amb-info);
+    --bs-info-rgb: 74, 134, 180;
+    --bs-warning: var(--amb-warning);
+    --bs-warning-rgb: 243, 156, 18;
+    --bs-secondary-rgb: 127, 140, 141;   /* the "Inactive" badge */
+    --bs-focus-ring-color: rgba(59, 122, 87, 0.35);
+}
+
 body {
-    background-color: #212529; /* Dark background for the whole page */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    padding: 0;
-/*    height: 100vh;
+    background-color: var(--amb-bg);
+    color: var(--amb-text);
+    font-family: var(--amb-font);
+}
+
+a {
+    color: var(--amb-highlight);
+}
+
+a:hover {
+    color: var(--amb-highlight-hover);
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--amb-text);
+}
+
+/* The one place the type has a voice: a page's title, the sidebar's name
+   for the page, and the name in the top bar */
+.page-title-row h1,
+.admin-title,
+.amb-topbar-brand {
+    font-family: var(--amb-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+}
+
+.page-title-row h1 {
+    font-size: 2.1rem;
+}
+
+/* ---------- 2. The bar across the top ---------- */
+.amb-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;               /* under dialogs, dropdowns and the shop's picker */
     display: flex;
-    justify-content: center;
-    align-items: center;*/
+    align-items: center;
+    gap: 16px;
+    min-height: var(--amb-topbar-h);
+    padding: 0 20px;
+    background-color: var(--amb-sidebar);
+    border-bottom: 1px solid var(--amb-line);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    font-family: var(--amb-font);
 }
 
-
-.admin-container {
-  background: linear-gradient(135deg, #0a2941 0%, #0f4261 100%); /* Darker navy blue gradient */
-  border-radius: 15px;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* This remains the same as it was */
-  padding: 2rem;
-  margin: auto;
-  max-width: 90vw;
-}
-.admin-header {
-    font-size: 2.5rem;
-    color: #e0e0e0; /* Soft white for contrast and visibility */
-    margin-bottom: 1rem;
+.amb-topbar-brand {
+    flex: none;
+    color: var(--amb-text);
+    font-size: 1.4rem;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
-.btn-outline-primary {
-    border-color: #e0e0e0;
-    color: #e0e0e0;
+.amb-topbar-brand:hover {
+    color: var(--amb-text);
+}
+
+.amb-topbar-brand span {
+    margin-left: 6px;
+    color: var(--amb-muted);
+    font-family: var(--amb-font);
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+.amb-topbar-links,
+.amb-topbar-end {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    align-self: stretch;
+}
+
+.amb-topbar-links {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.amb-topbar-end form {
+    display: flex;
+    margin: 0;
+}
+
+.amb-topbar-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-top: 3px solid transparent;
+    background: none;
+    color: rgba(255, 255, 255, 0.75);
+    font: inherit;
+    font-size: 0.92rem;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.amb-topbar-link:hover {
+    color: var(--amb-text);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.amb-topbar-link:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: -2px;
+}
+
+.amb-topbar-link.is-current {
+    color: var(--amb-text);
+    font-weight: 700;
+    border-bottom-color: var(--amb-accent);
+}
+
+.amb-topbar-link i {
+    width: 16px;
+    text-align: center;
+    color: var(--amb-highlight);
+}
+
+.amb-topbar-logout i {
+    color: var(--amb-bad-text);
+}
+
+.amb-topbar-count {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background-color: var(--amb-danger);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+}
+
+/* Narrower screens: icons only for the end links, then the page links get
+   a row of their own that scrolls sideways */
+.amb-topbar-links {
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.amb-topbar-links::-webkit-scrollbar {
+    display: none;
+}
+
+@media (max-width: 1199.98px) {
+    .amb-topbar-end .amb-topbar-link span,
+    .amb-topbar-brand span {
+        display: none;
+    }
+
+    .amb-topbar-link {
+        padding: 0 9px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    /* The bar takes two rows here, so it scrolls away with the page and
+       the sidebar sticks to the very top instead */
+    :root {
+        --amb-topbar-h: 0px;
+    }
+
+    .amb-topbar {
+        position: static;
+        flex-wrap: wrap;
+        gap: 0;
+        padding: 0;
+    }
+
+    .amb-topbar-brand {
+        padding: 12px 16px;
+        flex: 1 1 auto;
+    }
+
+    .amb-topbar-end {
+        padding-right: 6px;
+    }
+
+    .amb-topbar-links {
+        order: 3;
+        flex: 1 1 100%;
+        overflow-x: auto;
+        border-top: 1px solid var(--amb-line);
+        scrollbar-width: none;
+    }
+
+    .amb-topbar-links::-webkit-scrollbar {
+        display: none;
+    }
+
+    .amb-topbar-links .amb-topbar-link {
+        padding: 10px 12px 8px;
+    }
+}
+
+/* ---------- 3. The page holder (as on the Works page) ---------- */
+.admin-layout {
+    display: flex;
+    align-items: flex-start;
+}
+
+.sidebar {
+    position: sticky;
+    top: var(--amb-topbar-h);
+    flex: 0 0 var(--amb-sidebar-w);
+    width: var(--amb-sidebar-w);
+    height: calc(100vh - var(--amb-topbar-h));
+    padding: 20px;
+    overflow-y: auto;
+    background-color: var(--amb-sidebar);
+}
+
+.content-area {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 20px;
+}
+
+/* A page without a sidebar keeps its panel to a readable width */
+.content-area.is-narrow {
+    max-width: 1240px;
+    margin: 0 auto;
+}
+
+.main-content {
+    background-color: var(--amb-panel);
+    border-radius: var(--amb-radius);
+    box-shadow: var(--amb-shadow);
+    padding: 20px;
+    color: var(--amb-text);
+}
+
+.admin-title {
+    font-size: 1.75rem;
+    margin-bottom: 20px;
+    color: var(--amb-text);
+}
+
+/* The page's title and the tools beside it, at the top of the panel */
+.page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.page-title-row h1 {
+    margin: 0;
+}
+
+.page-subtitle {
+    margin: 4px 0 0;
+    color: var(--amb-muted);
+}
+
+.section-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1rem;
+    color: var(--amb-highlight);
+    font-weight: 400;
+    margin: 20px 0 10px;
+}
+
+/* A short explanation in the sidebar */
+.sidebar-note {
+    color: var(--amb-muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.sidebar .nav-link,
+.sidebar .view-options > button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    margin-bottom: 5px;
+    border: none;
+    border-radius: 5px;
+    background: none;
+    color: rgba(255, 255, 255, 0.9);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active,
+.sidebar .view-options > button:hover,
+.sidebar .view-options > button.is-current {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--amb-text);
+}
+
+.sidebar .nav-link i,
+.sidebar .view-options > button i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+.sidebar-actions .btn {
+    font-weight: 700;
+}
+
+/* Where the keyboard is, on the sidebar's and the shop's own buttons */
+.sidebar .nav-link:focus-visible,
+.sidebar .view-options > button:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: 2px;
+}
+
+/* Numbers in the sidebar. Only the ones that filter (role="button") lift
+   and point when hovered. */
+.stats-card {
+    display: flex;
+    align-items: center;
+    background-color: var(--amb-accent);
+    border-radius: var(--amb-radius-sm);
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    color: var(--amb-text);
+}
+
+.stats-card[role="button"] {
+    cursor: pointer;
+}
+
+.stats-card[role="button"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.stats-card.active {
+    box-shadow: 0 0 0 2px var(--amb-highlight);
+}
+
+.stats-card:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: 2px;
+}
+
+.stats-card i {
+    font-size: 24px;
+    margin-right: 15px;
+    color: var(--amb-highlight);
+}
+
+.stats-card small {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.stats-card .count {
+    font-size: 1.5rem;
     font-weight: bold;
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
+    margin-bottom: 0;
 }
 
-.btn-outline-primary:hover {
-    background-color: #e0e0e0;
-    color: #1f4037; /* Dark green from the gradient for a cohesive look */
+/* A box sitting on the panel (a card, a group of fields) */
+.panel-box {
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.panel-box-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 15px;
+    color: var(--amb-text);
+}
+
+.panel-box-title i {
+    color: var(--amb-highlight);
+    margin-right: 8px;
+}
+
+/* Waiting and nothing-to-show messages */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--amb-muted);
+}
+
+/* ---------- 4. Bootstrap's pieces, in these colours ---------- */
+/* Most of the look comes from Bootstrap's dark mode and the colour names
+   in section 1; these set what its dark mode doesn't. */
+
+.form-label {
+    font-weight: 400;
+}
+
+/* Fields: as dark as the sidebar, like the Works page's dialogs */
+.form-control,
+.form-select {
+    background-color: var(--amb-sidebar);
+    color: var(--amb-text);
+    border-color: var(--amb-border);
+}
+
+/* ...but the colour of the panel when they sit straight on it (the
+   search and filter rows), as on the Works page */
+.main-content .form-control,
+.main-content .form-select {
+    background-color: var(--amb-panel);
+}
+
+.main-content .panel-box .form-control,
+.main-content .panel-box .form-select,
+.signin-box .form-control {
+    background-color: var(--amb-sidebar);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--amb-bg);
+    color: var(--amb-text);
+    border-color: var(--amb-accent);
+    box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+.form-control::placeholder {
+    color: var(--amb-muted);
+    opacity: 1;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+select option {
+    background-color: var(--amb-panel);
+    color: var(--amb-text);
+}
+
+.input-group-text {
+    background-color: var(--amb-accent);
+    color: var(--amb-text);
+    border-color: var(--amb-accent);
+}
+
+.form-check-input:checked {
+    background-color: var(--amb-accent);
+    border-color: var(--amb-accent);
+}
+
+.form-check-input:focus {
+    border-color: var(--amb-accent);
+    box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+/* Buttons: green for the main action, red to delete, grey to cancel */
+.btn-primary,
+.btn-success {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--amb-accent);
+    --bs-btn-border-color: var(--amb-accent);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--amb-accent-hover);
+    --bs-btn-hover-border-color: var(--amb-accent-hover);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--amb-accent-hover);
+    --bs-btn-active-border-color: var(--amb-accent-hover);
+    --bs-btn-disabled-bg: var(--amb-accent);
+    --bs-btn-disabled-border-color: var(--amb-accent);
+    --bs-btn-focus-shadow-rgb: 59, 122, 87;
 }
 
 .btn-danger {
-    transition: all 0.3s ease;
+    --bs-btn-bg: var(--amb-danger);
+    --bs-btn-border-color: var(--amb-danger);
+    --bs-btn-hover-bg: var(--amb-danger-hover);
+    --bs-btn-hover-border-color: var(--amb-danger-hover);
+    --bs-btn-active-bg: var(--amb-danger-hover);
+    --bs-btn-active-border-color: var(--amb-danger-hover);
+    --bs-btn-disabled-bg: var(--amb-danger);
+    --bs-btn-disabled-border-color: var(--amb-danger);
+    --bs-btn-focus-shadow-rgb: 231, 76, 60;
 }
 
-.d-grid {
-display: flex;
-justify-content: center;
+.btn-secondary {
+    --bs-btn-bg: var(--amb-border);
+    --bs-btn-border-color: var(--amb-border);
+    --bs-btn-hover-bg: #5a6169;
+    --bs-btn-hover-border-color: #5a6169;
+    --bs-btn-active-bg: #5a6169;
+    --bs-btn-active-border-color: #5a6169;
 }
 
+.btn-info {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--amb-info);
+    --bs-btn-border-color: var(--amb-info);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--amb-info-hover);
+    --bs-btn-hover-border-color: var(--amb-info-hover);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--amb-info-hover);
+    --bs-btn-active-border-color: var(--amb-info-hover);
+}
 
+.btn-outline-secondary,
 .btn-outline-light {
-  color: #e0e0e0; /* Button text color */
-  border-color: #e0e0e0; /* Button border color */
-  font-weight: bold;
-  font-size: 1.2rem;
-  transition: all 0.3s ease;
+    --bs-btn-color: var(--amb-text);
+    --bs-btn-border-color: rgba(255, 255, 255, 0.5);
+    --bs-btn-hover-color: var(--amb-text);
+    --bs-btn-hover-bg: rgba(255, 255, 255, 0.12);
+    --bs-btn-hover-border-color: var(--amb-text);
+    --bs-btn-active-color: var(--amb-text);
+    --bs-btn-active-bg: rgba(255, 255, 255, 0.18);
+    --bs-btn-active-border-color: var(--amb-text);
 }
 
-.btn-outline-light:hover {
-  background-color: #e0e0e0;
-  color: #1f4037; /* Dark green from the gradient */
+.btn-light {
+    --bs-btn-color: var(--amb-sidebar);
 }
 
-.button-group .btn {
-  margin-right: 10px; /* Spacing between buttons */
+/* Dialogs (as the Works page's) */
+.modal {
+    --bs-modal-bg: var(--amb-panel);
+    --bs-modal-color: var(--amb-text);
+    --bs-modal-border-color: var(--amb-sidebar);
+    --bs-modal-border-radius: var(--amb-radius);
+    --bs-modal-header-border-color: var(--amb-sidebar);
+    --bs-modal-footer-border-color: var(--amb-sidebar);
+    --bs-modal-box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-.custom-select-lg {
-  font-size: 1.25rem;
-  height: auto;
-  padding: 0.5rem 1rem;
+/* Tabs inside dialogs */
+.nav-tabs {
+    --bs-nav-link-color: var(--amb-soft);
+    --bs-nav-link-hover-color: var(--amb-text);
+    --bs-nav-tabs-border-color: var(--amb-border);
+    --bs-nav-tabs-link-hover-border-color: var(--amb-border) var(--amb-border) transparent;
+    --bs-nav-tabs-link-active-color: var(--amb-text);
+    --bs-nav-tabs-link-active-bg: var(--amb-panel);
+    --bs-nav-tabs-link-active-border-color: var(--amb-border) var(--amb-border) var(--amb-panel);
 }
 
-.photo-grid {
-  justify-content: start;
-  align-items: stretch;
+.nav-tabs .nav-link.active {
+    font-weight: 700;
+    box-shadow: inset 0 -3px 0 var(--amb-accent);
 }
 
-.card
-{
-  max-width: 20vw;
-  min-width: 20vw;
+/* Dropdown menus */
+.dropdown-menu {
+    --bs-dropdown-bg: var(--amb-panel);
+    --bs-dropdown-border-color: var(--amb-border);
+    --bs-dropdown-link-color: var(--amb-text);
+    --bs-dropdown-link-hover-color: var(--amb-text);
+    --bs-dropdown-link-hover-bg: var(--amb-accent);
+    --bs-dropdown-link-active-color: var(--amb-text);
+    --bs-dropdown-link-active-bg: var(--amb-accent);
 }
 
-.d-inline-flex
-{
-  justify-content: center;
+/* Lists inside dialogs */
+.list-group {
+    --bs-list-group-bg: var(--amb-raised);
+    --bs-list-group-color: var(--amb-text);
+    --bs-list-group-border-color: var(--amb-border);
 }
 
-.projectCardContainer
-{
-  display: flex;
-  justify-content: space-evenly;
-  flex-wrap: wrap;
+/* Tables */
+.table {
+    --bs-table-bg: var(--amb-inset);
+    --bs-table-color: var(--amb-text);
+    --bs-table-border-color: var(--amb-line);
+    --bs-table-hover-bg: var(--amb-inset-hover);
+    --bs-table-hover-color: var(--amb-text);
 }
 
-/* General styling for select dropdowns */
-select {
-  width: 100%;        /* Full width of its container */
-  padding: 0.5rem;    /* Padding inside the select box */
-  font-size: 1rem;    /* Text size inside the select box */
-  border-radius: 5px; /* Rounded corners for the select box */
-  border: 1px solid #ced4da; /* Border color for the select box */
-  color: #495057;     /* Text color */
-  background-color: #fff; /* Background color */
-
+.badge {
+    font-weight: 700;
 }
 
-/* Focus and hover states for select dropdowns */
-select:focus {
-  outline: none;       /* Removes the default focus outline */
-  box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.25); /* Custom focus shadow */
-  border-color: #80bdff; /* Custom focus border color */
+.spinner-border.text-primary {
+    color: var(--amb-highlight) !important;
 }
 
-/* If your select has a specific class */
-.custom-select-lg {
-  width: 300px; /* or 100% for full width */
-  padding: 1rem; /* Larger padding for a larger dropdown */
-  font-size: 1.2rem; /* Larger text */
-  /* ... other styles ... */
+/* Little messages ("Saved"): bottom right, on every page */
+.toast-container,
+#toastContainer {
+    position: fixed;
+    top: auto;
+    right: 20px;
+    bottom: 20px;
+    left: auto;
+    z-index: 1100;
 }
 
-/*!* If your select has a specific id *!*/
-/*#projectsDropdown {*/
-/*  width: 300px; !* or 100% for full width *!*/
-/*  padding: 1rem; !* Larger padding for a larger dropdown *!*/
-/*  font-size: 1.2rem; !* Larger text *!*/
-/*  !* ... other styles ... *!*/
-/*}*/
-
-
-#navbarLinks li:last-child {
-  border-bottom: none; /* Removes border from the last item */
+.toast {
+    --bs-toast-bg: var(--amb-panel);
+    --bs-toast-color: var(--amb-text);
+    --bs-toast-border-color: transparent;
+    --bs-toast-border-radius: var(--amb-radius-sm);
+    --bs-toast-box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    --bs-toast-header-bg: var(--amb-sidebar);
+    --bs-toast-header-color: var(--amb-text);
+    --bs-toast-header-border-color: var(--amb-line);
 }
 
-#navbarLinks {
-  list-style-type: none; /* Removes bullet points */
-  padding: 0;
-  background: #003366; /* Dark blue background for the navbar */
-  width: 100%; /* Adjust width as needed */
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin: 0;
+/* ---------- 5. Dashboard ---------- */
+.admin-welcome {
+    margin: 0;
+    color: var(--amb-text);
 }
 
-#navbarLinks li {
-  cursor: pointer;
-  padding: 12px 20px;
-  margin: 10px; /* Adjust margin as needed */
-  background-color: #0055A2; /* Dark blue background */
-  color: #fff; /* White text */
-  border: none;
-  border-radius: 4px; /* Rounded corners */
-  text-align: center; /* Centered text */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
-  transition: background-color 0.3s, box-shadow 0.3s, transform 0.1s; /* Smooth transitions for the effects */
+.admin-date {
+    color: var(--amb-muted);
+    margin: 4px 0 0;
 }
-
-#navbarLinks li:hover {
-  background-color: #66B2FF; /* Light blue background on hover */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* More pronounced shadow on hover */
-  transform: translateY(-2px); /* Slight raise effect */
-}
-
-#navbarLinks li.no-hover:hover {
-  background-color: initial; /* Return to default or specify a different color if desired */
-  box-shadow: none; /* Remove the shadow */
-  transform: none; /* Remove the transformation */
-}
-
-#navbarLinks li.dragging, #navbar li.dragging:hover {
-  background-color: #0055A2; /* Dark blue background */
-  box-shadow: none;  /* No shadow during dragging */
-  transform: none;  /* No transformation during dragging */
-}
-
-#navbarLinks li:hover:not(.dragging) {
-  background-color: #66B2FF; /* Light blue background on hover */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px); /* Slight raise effect */
-}
-
-
-
-
-.maxMinWidth15vw
-{
-    max-width: 15vw; !important;
-    min-width: 15vw; !important;
-}
-
-/* Modern admin dashboard additions - add these to your existing admin.css file */
 
 .admin-dashboard {
-    padding: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
 }
 
 .admin-card {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
     height: 100%;
+    padding: 20px;
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    color: var(--amb-text);
+    text-decoration: none;
+    transition: all 0.3s;
 }
 
 .admin-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
-    background: rgba(255, 255, 255, 0.15);
+    background-color: var(--amb-inset-hover);
+    border-color: rgba(141, 228, 255, 0.35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    color: var(--amb-text);
+}
+
+.admin-card:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: 2px;
 }
 
 .admin-card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    color: #e0e0e0;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--amb-accent);
+    color: var(--amb-highlight);
+    font-size: 1.3rem;
 }
 
 .admin-card-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #e0e0e0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
 }
 
 .admin-card-description {
-    color: rgba(224, 224, 224, 0.7);
+    color: var(--amb-muted);
     font-size: 0.9rem;
-}
-
-.admin-header-wrapper {
-    position: relative;
-    padding-bottom: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .badge-notification {
     position: absolute;
-    top: -10px;
-    right: -10px;
-    background-color: #ff4757;
-    color: white;
-    border-radius: 50%;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-    min-width: 1.5rem;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7);
-    }
-    70% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
-    }
-}
-
-.logout-container {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    z-index: 999;
-}
-
-.btn-logout {
-    background-color: rgba(220, 53, 69, 0.8);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-    color: white;
-    font-weight: 500;
-}
-
-.btn-logout:hover {
-    background-color: rgb(220, 53, 69);
-    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
-    transform: translateY(-2px);
-}
-
-.admin-welcome {
-    color: #e0e0e0;
-    font-weight: 300;
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    top: 12px;
+    right: 12px;
+    min-width: 1.6rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background-color: var(--amb-danger);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
     text-align: center;
 }
 
-.admin-date {
-    color: rgba(224, 224, 224, 0.7);
-    font-size: 0.9rem;
-    margin-bottom: 2rem;
+/* ---------- 5b. Sign in ---------- */
+.signin-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.signin-box {
+    width: 100%;
+    max-width: 420px;
+    padding: 30px;
+}
+
+.signin-box .admin-title {
     text-align: center;
 }
 
-/* Smooth page transitions */
-body {
-    animation: fadeIn 0.5s ease;
+.signin-brand {
+    margin-bottom: 4px;
+    color: var(--amb-muted);
+    font-size: 0.95rem;
+    text-align: center;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+/* ---------- Phones and small tablets: the sidebar sits above the panel ---------- */
+@media (max-width: 767.98px) {
+    .admin-layout {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .admin-card {
+    .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        flex: none;
+        padding: 15px;
+    }
+
+    .admin-title {
+        font-size: 1.7rem;
+        margin-bottom: 12px;
+    }
+
+    .sidebar-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 8px;
+    }
+
+    .sidebar-actions .btn {
+        margin-bottom: 0 !important;
+        font-size: 0.95rem;
+    }
+
+    .section-title {
+        margin: 15px 0 8px;
+    }
+
+    .sidebar .view-options {
+        display: flex;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 0 !important;
+    }
+
+    .sidebar .view-options .nav-link,
+    .sidebar .view-options > button {
+        width: auto;
+        background-color: rgba(255, 255, 255, 0.06);
+        margin-bottom: 0;
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+
+    .sidebar .view-options .nav-link.active,
+    .sidebar .view-options > button.is-current {
+        background-color: var(--amb-accent);
+    }
+
+    .stats-list {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .stats-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 10px 6px;
+        margin-bottom: 0;
+    }
+
+    .stats-card i {
+        font-size: 18px;
+        margin: 0 0 4px;
+    }
+
+    .stats-card .count {
+        font-size: 1.2rem;
+    }
+
+    .content-area {
+        padding: 10px;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .page-title-row h1 {
+        font-size: 1.7rem;
+    }
+
+    .page-title-row {
         margin-bottom: 1rem;
     }
 
-    .admin-header {
-        font-size: 2rem;
+    .panel-box {
+        padding: 15px;
     }
 
-    .logout-container {
-        position: static;
-        margin-top: 2rem;
-        text-align: center;
+    .toast-container,
+    #toastContainer {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
     }
 
-    .btn-logout {
+    .modal-footer {
+        flex-wrap: wrap;
+    }
+}
+
+
+/* ======================================================================
+ * Works page (body.page-works)
+ * ====================================================================== */
+/* Only what is particular to the Works page; the sidebar, panel,
+   fields, buttons and dialogs come from admin.css */
+body.page-works .search-and-filters {
+    margin-bottom: 20px;
+}
+
+body.page-works .filter-tag {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border-radius: 20px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #333;
+}
+
+body.page-works .filter-tag.active {
+    background-color: var(--amb-accent);
+    color: white;
+}
+
+body.page-works .work-card {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+    background-color: white;
+    color: #333;
+}
+
+body.page-works .work-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+body.page-works .work-image {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+}
+
+body.page-works .work-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+body.page-works .work-card:hover .work-image img {
+    transform: scale(1.05);
+}
+
+body.page-works .work-badges {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+body.page-works .badge-select-works {
+    background-color: #4dabf7 !important;
+}
+
+body.page-works .badge-carousel {
+    background-color: #ff922b !important;
+}
+
+body.page-works .badge-available {
+    background-color: #51cf66 !important;
+}
+
+body.page-works .badge-color {
+    background-color: #cc5de8 !important;
+}
+
+body.page-works .badge-bw {
+    background-color: #34495e;
+}
+
+body.page-works .work-info {
+    padding: 15px;
+}
+
+body.page-works .work-title {
+    font-weight: 700;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #333;
+}
+
+body.page-works .work-medium,
+body.page-works .work-year {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+body.page-works .selected-card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(52, 152, 219, 0.3);
+    border: 3px solid #3498db;
+    border-radius: 8px;
+    display: none;
+}
+
+body.page-works .selected-card-overlay .selection-icon {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: #3498db;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.page-works .work-card.selected .selected-card-overlay {
+    display: block;
+}
+
+body.page-works .multi-select-toolbar {
+    display: none;
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    color: white;
+}
+
+body.page-works .custom-toast {
+    pointer-events: auto;
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+body.page-works #loadingSpinner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    display: none;
+}
+
+body.page-works #resultsInfo {
+    color: var(--amb-muted) !important;
+}
+
+/* The Sort button's menu */
+body.page-works #sortDropdown {
+    color: white;
+    border-color: var(--amb-muted);
+}
+
+/* The confirm button in the "are you sure" dialog */
+body.page-works #confirmActionBtn {
+    background-color: var(--amb-danger);
+    border-color: var(--amb-danger);
+}
+
+/* Image preview border */
+body.page-works .modal-content #previewImage,
+body.page-works .modal-content #uploadPreview {
+    border: 2px solid var(--amb-sidebar);
+}
+
+/* The projects a work belongs to, in its dialog */
+body.page-works #projectsList,
+body.page-works #createProjectsList {
+    border: 1px solid var(--amb-border);
+    border-radius: 8px;
+    max-height: 350px;
+    list-style-type: none;
+    margin: 15px 0;
+    overflow-y: auto;
+    padding: 0;
+    background-color: var(--amb-panel);
+}
+
+body.page-works #projectsList .list-group-item,
+body.page-works #createProjectsList .list-group-item {
+    padding: 10px 15px;
+    border-radius: 0;
+}
+
+body.page-works #projectsList .list-group-item:hover {
+    background-color: #404b57;
+}
+
+body.page-works #projectsList .badge {
+    background-color: var(--amb-accent);
+    color: white;
+}
+
+@media (max-width: 767.98px) {
+    body.page-works .multi-select-toolbar > div {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    body.page-works .work-card {
+        margin-bottom: 12px;
+    }
+
+    body.page-works .work-image {
+        height: 150px;
+    }
+
+    body.page-works .work-info {
+        padding: 10px;
+    }
+
+    body.page-works .work-title {
+        font-size: 0.95rem;
+    }
+
+    body.page-works .work-medium,
+    body.page-works .work-year {
+        font-size: 0.8rem;
+    }
+
+    body.page-works .work-badges {
+        top: 6px;
+        right: 6px;
+        gap: 3px;
+    }
+
+    body.page-works .work-badges .badge {
+        font-size: 0.65rem;
+    }
+
+    body.page-works .custom-toast {
+        min-width: 0;
         width: 100%;
     }
 
-    .logout-container {
-        padding: 0 1rem 1rem;
+    body.page-works .modal-content #previewImage,
+    body.page-works .modal-content #uploadPreview {
+        max-height: 220px;
+        object-fit: contain;
     }
 
-    .admin-container {
-        padding: 1rem;
+    body.page-works .modal-footer #deleteOrRestore {
+        margin-right: auto;
+    }
+}
+
+
+/* ======================================================================
+ * About page (body.page-about)
+ * ====================================================================== */
+/* Only what is particular to the About page; the panel, fields,
+   buttons and colours come from admin.css */
+body.page-about .content-box {
+    background-color: var(--amb-sidebar);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    padding: 20px;
+    min-height: 100px;
+}
+
+body.page-about .img-preview-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--amb-radius-sm);
+    border: 1px solid var(--amb-line);
+    background-color: var(--amb-sidebar);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+}
+
+body.page-about .img-preview-container img {
+    max-width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+}
+
+body.page-about textarea.form-control {
+    min-height: 200px;
+    resize: vertical;
+}
+
+body.page-about .image-filename {
+    font-size: 0.9rem;
+    color: var(--amb-muted);
+    margin-top: 5px;
+}
+
+body.page-about .custom-toast {
+    min-width: 250px;
+}
+
+body.page-about .preview-section {
+    margin-top: 20px;
+}
+
+body.page-about .preview-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1rem;
+    color: var(--amb-highlight);
+    font-weight: 400;
+    margin-bottom: 10px;
+}
+
+body.page-about .no-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--amb-muted);
+    font-size: 1.1rem;
+    height: 300px;
+}
+
+body.page-about .no-image-placeholder i {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+}
+
+body.page-about .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--amb-line);
+}
+
+@media (max-width: 767.98px) {
+    body.page-about .form-actions .btn {
+        width: 100%;
+    }
+}
+
+
+/* ======================================================================
+ * Newsletter page (body.page-newsletter)
+ * ====================================================================== */
+/* Newsletter admin: only what is particular to this page. The sidebar,
+   panel, fields, buttons, dialogs and colours come from admin.css. */
+
+/* ---------- The subscribers table ---------- */
+body.page-newsletter .table {
+    background-color: var(--amb-inset);
+    color: var(--amb-text);
+    border-radius: var(--amb-radius-sm);
+    overflow: hidden;
+    margin-top: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+body.page-newsletter .table thead th {
+    background-color: var(--amb-sidebar);
+    color: var(--amb-highlight);
+    border-bottom: 1px solid var(--amb-border);
+    border-top: none;
+    padding: 12px 15px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+body.page-newsletter .table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+body.page-newsletter .table-hover tbody tr:hover {
+    background-color: var(--amb-inset-hover);
+    color: var(--amb-text);
+}
+
+body.page-newsletter .table td,
+body.page-newsletter .table th {
+    vertical-align: middle;
+    border-top: 1px solid var(--amb-line);
+    padding: 12px 15px;
+}
+
+body.page-newsletter .badge {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+}
+
+/* ---------- Pagination ---------- */
+body.page-newsletter .pagination {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+body.page-newsletter .pagination .page-link {
+    background-color: var(--amb-inset);
+    border-color: var(--amb-border);
+    color: var(--amb-text);
+    transition: all 0.2s ease;
+}
+
+body.page-newsletter .pagination .page-link:hover {
+    background-color: var(--amb-inset-hover);
+    color: var(--amb-text);
+}
+
+body.page-newsletter .pagination .page-item.active .page-link {
+    background-color: var(--amb-accent);
+    border-color: var(--amb-accent);
+    color: #fff;
+}
+
+body.page-newsletter .pagination .page-item.disabled .page-link {
+    background-color: transparent;
+    border-color: var(--amb-border);
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* The copy-paste list of addresses */
+body.page-newsletter #emailListText {
+    font-family: monospace;
+    font-size: 14px;
+    padding: 12px;
+}
+
+/* ---------- New subscribers since the last visit ---------- */
+body.page-newsletter .new-subscribers-container {
+    background-color: rgba(141, 228, 255, 0.07);
+    border: 1px solid rgba(141, 228, 255, 0.3);
+    border-radius: var(--amb-radius-sm);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+body.page-newsletter .new-subscribers-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--amb-line);
+}
+
+body.page-newsletter .new-subscribers-header h2 {
+    margin: 0 15px;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+body.page-newsletter .pulse-icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: var(--amb-accent);
+    color: var(--amb-highlight);
+    font-size: 1.2rem;
+}
+
+body.page-newsletter .new-subscribers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+body.page-newsletter .new-subscriber-card {
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+
+body.page-newsletter .new-subscriber-card:hover {
+    border-color: rgba(141, 228, 255, 0.35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    background-color: var(--amb-inset-hover);
+}
+
+body.page-newsletter .email-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(141, 228, 255, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 1.1rem;
+    color: var(--amb-highlight);
+}
+
+body.page-newsletter .subscriber-details {
+    flex: 1;
+    min-width: 0;
+}
+
+body.page-newsletter .subscriber-email {
+    font-weight: 700;
+    margin-bottom: 5px;
+    word-break: break-all;
+}
+
+body.page-newsletter .subscriber-time {
+    font-size: 0.8rem;
+    color: var(--amb-muted);
+    margin-bottom: 5px;
+}
+
+body.page-newsletter .subscriber-status {
+    font-size: 0.85rem;
+}
+
+body.page-newsletter .status-active {
+    color: var(--amb-good-text);
+}
+
+body.page-newsletter .status-inactive {
+    color: var(--amb-bad-text);
+}
+
+body.page-newsletter .subscriber-actions {
+    display: flex;
+    gap: 5px;
+}
+
+/* A new subscriber's row in the table */
+body.page-newsletter .new-subscriber-row {
+    background-color: rgba(141, 228, 255, 0.08) !important;
+}
+
+/* The "welcome back" window */
+body.page-newsletter .welcome-icon {
+    font-size: 3.5rem;
+    color: var(--amb-highlight);
+}
+
+/* ---------- Phones: the table becomes one card per subscriber ---------- */
+@media (max-width: 767.98px) {
+    body.page-newsletter .table thead {
+        display: none;
     }
 
-    /* Cards are a fixed fraction of the screen on desktop, which is far too
-       narrow on a phone; let them fill the column instead. */
-    .card,
-    .maxMinWidth15vw {
-        min-width: 0;
-        max-width: 100%;
+    body.page-newsletter .table,
+    body.page-newsletter .table tbody,
+    body.page-newsletter .table tr,
+    body.page-newsletter .table td {
+        display: block;
+        width: 100%;
     }
 
-    .display-1 {
-        font-size: 2.5rem;
+    body.page-newsletter .table tr {
+        margin-bottom: 12px;
+        border-bottom: 2px solid var(--amb-panel);
     }
 
-    .display-4 {
-        font-size: 2rem;
+    body.page-newsletter .table td {
+        text-align: right;
+        padding-left: 38%;
+        position: relative;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    body.page-newsletter .table td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: 32%;
+        text-align: left;
+        font-weight: 700;
+        color: var(--amb-muted);
+    }
+
+    body.page-newsletter .table td[colspan] {
+        padding-left: 15px;
+        text-align: center;
+    }
+
+    body.page-newsletter .new-subscribers-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body.page-newsletter .new-subscribers-container {
+        padding: 12px;
+    }
+
+    body.page-newsletter .new-subscribers-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    body.page-newsletter .new-subscribers-header h2 {
+        margin: 0;
+        font-size: 1.05rem;
+    }
+
+    body.page-newsletter .new-subscriber-card {
+        padding: 10px;
+    }
+
+    body.page-newsletter .email-icon {
+        margin-right: 10px;
+    }
+}
+
+
+/* ======================================================================
+ * Navbar page (body.page-navbar)
+ * ====================================================================== */
+/* Only what is particular to the Navbar page; the sidebar, panel,
+   fields, buttons and dialogs come from admin.css */
+body.page-navbar #navbarLinks {
+    margin: 0;
+    padding: 0;
+}
+
+body.page-navbar .nav-item-card {
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    margin-bottom: 10px;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: grab;
+}
+
+body.page-navbar .nav-item-card .form-control {
+    background-color: var(--amb-sidebar);
+}
+
+body.page-navbar .nav-item-card:hover {
+    background-color: var(--amb-inset-hover);
+}
+
+body.page-navbar .nav-item-card.dragging {
+    background-color: rgba(59, 122, 87, 0.3) !important;
+    box-shadow: 0 0 15px rgba(59, 122, 87, 0.5) !important;
+    border: 1px dashed var(--amb-accent) !important;
+    z-index: 1000 !important;
+    cursor: grabbing !important;
+}
+
+body.page-navbar .nav-item-card[draggable=true] {
+    user-select: none;
+    -webkit-user-drag: element;
+}
+
+body.page-navbar .nav-item-card.dragNavBar {
+    transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+/* The handle only shows where to grab; the whole row drags */
+body.page-navbar .drag-handle {
+    color: var(--amb-muted);
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+body.page-navbar .nav-item-card:hover .drag-handle {
+    opacity: 1;
+}
+
+body.page-navbar .nav-item-card input,
+body.page-navbar .nav-item-card .input-group-text {
+    cursor: auto;
+}
+
+body.page-navbar .nav-item-card button {
+    cursor: pointer;
+}
+
+body.page-navbar .text-warning {
+    color: var(--amb-warning) !important;
+}
+
+body.page-navbar .nav-item-card .row.align-items-center {
+    min-height: 38px;
+    row-gap: 8px;
+}
+
+body.page-navbar .nav-item-card .col-auto {
+    display: flex;
+    align-items: center;
+}
+
+body.page-navbar .loading-spinner {
+    display: none;
+    margin-left: 10px;
+}
+
+body.page-navbar .save-success {
+    animation: successHighlight 2s ease-out;
+}
+
+@keyframes successHighlight {
+    0%, 100% { background-color: var(--amb-inset); }
+    30% { background-color: rgba(59, 122, 87, 0.45); }
+}
+
+body.page-navbar #searchLinks {
+    width: 240px;
+    max-width: 100%;
+}
+
+@media (max-width: 767.98px) {
+    body.page-navbar #searchLinks {
+        width: 100%;
+    }
+
+    body.page-navbar .page-title-row > div {
+        flex: 1 1 100%;
+    }
+}
+
+
+/* ======================================================================
+ * Shop page (body.page-shop)
+ * ====================================================================== */
+/* The shop admin page. Its own stylesheet (the page doesn't use Bootstrap),
+   on top of admin.css, which gives it the top bar, the sidebar and panel and
+   the colours every admin page shares. Class names all start with sa-.
+   The names below are this page's own, set from admin.css's colours. */
+
+body.page-shop {
+  --ink: var(--amb-text);
+  --text: rgba(255, 255, 255, 0.9);
+  --muted: var(--amb-muted);
+  --line: rgba(255, 255, 255, 0.14);
+  --paper: var(--amb-inset);
+  --field: var(--amb-sidebar);
+  --blue: var(--amb-highlight);
+  --green: var(--amb-good-text);
+  --yellow: #ffd27a;
+  --red: var(--amb-bad-text);
+  color-scheme: dark;
+}
+
+body.page-shop * { box-sizing: border-box; }
+
+body.page-shop {
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.page-shop h1,
+body.page-shop h2,
+body.page-shop h3 {
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+body.page-shop h2 { font-size: 1.4rem; }
+body.page-shop h3 { font-size: 1.1rem; }
+
+body.page-shop a { color: var(--blue); }
+
+/* The way to the public shop, in the sidebar (where the Works page has
+   "Add New Work") */
+body.page-shop .sidebar-actions .sa-button {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+/* The sections are the sidebar's view options (their look is admin.css's) */
+body.page-shop #tabs .section-title { flex: 1 1 100%; }
+body.page-shop .sa-tabs button { white-space: nowrap; }
+
+body.page-shop .sa-back {
+  font-size: 0.9rem;
+  text-decoration: none;
+  color: var(--muted);
+}
+
+body.page-shop .sa-back:hover { color: var(--ink); }
+
+body.page-shop .sa-muted { color: var(--muted); }
+body.page-shop .sa-small { font-size: 0.86rem; }
+
+/* ---------- Buttons and fields ---------- */
+body.page-shop .sa-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: 1px solid var(--amb-accent);
+  border-radius: 6px;
+  background: var(--amb-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+body.page-shop .sa-button:hover { background: var(--amb-accent-hover); border-color: var(--amb-accent-hover); color: #fff; }
+body.page-shop .sa-button:disabled { opacity: 0.5; cursor: default; }
+
+body.page-shop .sa-button.sa-quiet {
+  background: transparent;
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+body.page-shop .sa-button.sa-quiet:hover { border-color: var(--ink); background: rgba(255, 255, 255, 0.12); }
+
+/* Light, like Bootstrap's btn-light on the other admin pages */
+body.page-shop .sa-button.sa-light {
+  background: #f8f9fa;
+  border-color: #f8f9fa;
+  color: var(--amb-sidebar);
+}
+
+body.page-shop .sa-button.sa-light:hover { background: #e2e6ea; border-color: #e2e6ea; color: var(--amb-sidebar); }
+
+body.page-shop .sa-button.sa-danger {
+  background: transparent;
+  color: var(--red);
+  border-color: rgba(231, 76, 60, 0.55);
+  font-weight: 400;
+}
+
+body.page-shop .sa-button.sa-danger:hover { border-color: var(--amb-danger); background: rgba(231, 76, 60, 0.15); }
+
+body.page-shop .sa-button:focus-visible,
+body.page-shop .sa-chip:focus-visible {
+  outline: 2px solid var(--amb-highlight);
+  outline-offset: 2px;
+}
+
+body.page-shop .sa-button.sa-small { padding: 6px 14px; font-size: 0.84rem; }
+
+body.page-shop .sa-field { margin-bottom: 20px; }
+
+body.page-shop .sa-field > label,
+body.page-shop .sa-label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+
+body.page-shop .sa-hint {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--muted);
+  margin: 0 0 6px;
+  font-weight: 400;
+}
+
+body.page-shop input[type="text"],
+body.page-shop input[type="email"],
+body.page-shop input[type="search"],
+body.page-shop input[type="date"],
+body.page-shop textarea,
+body.page-shop select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--amb-border);
+  border-radius: 6px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+}
+
+body.page-shop input::placeholder,
+body.page-shop textarea::placeholder { color: var(--muted); opacity: 1; }
+
+body.page-shop input:focus,
+body.page-shop textarea:focus,
+body.page-shop select:focus {
+  outline: none;
+  border-color: var(--amb-accent);
+  box-shadow: 0 0 0 0.25rem rgba(59, 122, 87, 0.35);
+}
+
+body.page-shop input[type="checkbox"],
+body.page-shop input[type="radio"] { accent-color: var(--amb-accent); }
+
+body.page-shop textarea { min-height: 110px; resize: vertical; }
+
+body.page-shop .sa-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin: 6px 0;
+}
+
+body.page-shop .sa-check input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; }
+
+/* ---------- What's left to set up ---------- */
+body.page-shop .sa-setup {
+  border: 1px solid rgba(243, 156, 18, 0.45);
+  background: rgba(243, 156, 18, 0.1);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 22px;
+}
+
+body.page-shop .sa-setup.is-info {
+  border-color: rgba(141, 228, 255, 0.3);
+  background: rgba(141, 228, 255, 0.07);
+}
+
+body.page-shop .sa-setup h3 { margin-bottom: 6px; }
+body.page-shop .sa-setup ul { margin: 6px 0 0; padding-left: 20px; }
+body.page-shop .sa-setup li { margin-bottom: 4px; }
+body.page-shop .sa-setup code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.86em;
+}
+
+/* ---------- Counts and filters ---------- */
+body.page-shop .sa-count {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 7px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--amb-danger);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+body.page-shop .sa-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+body.page-shop .sa-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+body.page-shop .sa-chip {
+  padding: 7px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+body.page-shop .sa-chip.is-current { background: var(--amb-accent); border-color: var(--amb-accent); color: #fff; }
+body.page-shop .sa-chip:not(.is-current):not(:disabled):hover { border-color: var(--ink); }
+body.page-shop .sa-chip:disabled { color: rgba(255, 255, 255, 0.35); cursor: default; }
+
+/* (how many are under each filter) */
+body.page-shop .sa-chip-count { margin-left: 2px; font-size: 0.82em; opacity: 0.6; }
+
+body.page-shop .sa-list-note { margin: -6px 0 6px; }
+
+body.page-shop .sa-empty {
+  padding: 46px 20px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+
+/* ---------- Status labels ---------- */
+body.page-shop .sa-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+body.page-shop .sa-pill.is-live,
+body.page-shop .sa-pill.is-shipped { background: rgba(59, 122, 87, 0.45); color: #b5f0cd; }
+body.page-shop .sa-pill.is-paid { background: rgba(239, 127, 174, 0.22); color: #ffb8d4; }
+body.page-shop .sa-pill.is-sold,
+body.page-shop .sa-pill.is-refunded { background: rgba(231, 76, 60, 0.22); color: #ffaaa0; }
+body.page-shop .sa-pill.is-processing,
+body.page-shop .sa-pill.is-test,
+body.page-shop .sa-pill.is-reserved { background: rgba(243, 156, 18, 0.22); color: #ffd27a; }
+
+/* ---------- Items ---------- */
+body.page-shop .sa-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+body.page-shop .sa-item-picture {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--paper) center / cover no-repeat;
+  border: 1px solid var(--line);
+}
+
+body.page-shop .sa-item-main { flex: 1 1 auto; min-width: 0; }
+
+body.page-shop .sa-item-name {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.page-shop .sa-item-actions { display: flex; gap: 6px; flex: none; align-items: center; }
+
+body.page-shop .sa-move {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+body.page-shop .sa-move:disabled { opacity: 0.3; cursor: default; }
+body.page-shop .sa-move:not(:disabled):hover { border-color: var(--ink); }
+
+/* ---------- The item editor ---------- */
+body.page-shop .sa-editor { max-width: 680px; }
+
+/* The way back to the list: a quiet link above the title, where a "back"
+   belongs, rather than a button beside it competing with Save */
+body.page-shop .sa-crumb {
+  display: inline-block;
+  margin: -6px 0 14px;
+  padding: 6px 0;
+}
+
+body.page-shop .sa-editor-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+body.page-shop .sa-editor-head h2 { line-height: 1.15; }
+
+body.page-shop .sa-kicker {
+  margin: 0 0 2px;
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amb-highlight);
+}
+
+body.page-shop .sa-section {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 6px;
+}
+
+body.page-shop .sa-pictures { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+
+body.page-shop .sa-picture {
+  position: relative;
+  width: 110px;
+}
+
+body.page-shop .sa-picture img {
+  display: block;
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+body.page-shop .sa-picture:first-child img { outline: 3px solid var(--amb-accent); outline-offset: 1px; }
+
+body.page-shop .sa-picture-tools {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
+body.page-shop .sa-picture-tools button {
+  border: none;
+  background: none;
+  padding: 2px 0;
+  font: inherit;
+  color: var(--blue);
+  cursor: pointer;
+}
+
+body.page-shop .sa-picture-tools .is-remove { color: var(--red); }
+
+body.page-shop .sa-row { display: flex; gap: 12px; flex-wrap: wrap; }
+body.page-shop .sa-row > * { flex: 1 1 180px; }
+
+body.page-shop .sa-option {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+body.page-shop .sa-option label { font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 2px; }
+
+body.page-shop .sa-remove {
+  width: 40px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--red);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+body.page-shop .sa-save-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 14px 0;
+  margin-top: 26px;
+  background: var(--amb-panel);
+  border-top: 1px solid var(--line);
+}
+
+body.page-shop .sa-save-bar .sa-spacer { flex: 1 1 auto; }
+
+/* ---------- Orders ---------- */
+body.page-shop .sa-order {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+body.page-shop .sa-order-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+body.page-shop .sa-order-head strong { font-size: 1.05rem; color: var(--ink); }
+body.page-shop .sa-order-total { margin-left: auto; font-weight: 700; color: var(--ink); }
+
+body.page-shop .sa-order-body {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+  padding: 16px 18px;
+}
+
+body.page-shop .sa-lines { list-style: none; margin: 0; padding: 0; }
+
+body.page-shop .sa-lines li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+body.page-shop .sa-lines img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+body.page-shop .sa-lines .sa-line-price { margin-left: auto; white-space: nowrap; }
+
+body.page-shop .sa-order h4 {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amb-highlight);
+}
+
+body.page-shop .sa-order address { font-style: normal; margin-bottom: 8px; white-space: pre-line; }
+
+body.page-shop .sa-order-foot {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--line);
+}
+
+body.page-shop .sa-order-foot input[type="text"] { flex: 1 1 220px; width: auto; }
+
+body.page-shop .sa-note { padding: 0 18px 16px; }
+body.page-shop .sa-note textarea { min-height: 60px; }
+
+/* ---------- Delivery ---------- */
+body.page-shop .sa-zone {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+body.page-shop .sa-zone-head { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+body.page-shop .sa-zone-head input { flex: 1 1 auto; font-weight: 700; }
+
+body.page-shop .sa-zone-countries {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+body.page-shop .sa-money { position: relative; }
+body.page-shop .sa-money span {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+body.page-shop .sa-money input { padding-left: 34px; }
+body.page-shop .sa-money.is-wide input { padding-left: 50px; }
+
+/* ---------- Promo codes ---------- */
+body.page-shop .sa-code {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.page-shop .sa-code::placeholder { letter-spacing: 0; text-transform: none; }
+
+body.page-shop .sa-switch { flex: none; margin: 0; white-space: nowrap; }
+
+body.page-shop .sa-amount { display: flex; gap: 8px; }
+body.page-shop .sa-amount input { flex: 1 1 70px; min-width: 0; }
+body.page-shop .sa-amount select { flex: 0 0 auto; width: auto; }
+
+body.page-shop .sa-promo-state { margin: 12px 0 0; }
+
+/* ---------- Overlay (work picker, country picker) ---------- */
+body.page-shop .sa-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3vh 3vw;
+}
+
+body.page-shop .sa-overlay[hidden] { display: none; }
+
+body.page-shop .sa-sheet {
+  background: var(--amb-panel);
+  border: 1px solid var(--amb-sidebar);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  width: min(760px, 100%);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.page-shop .sa-sheet-head,
+body.page-shop .sa-sheet-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--amb-sidebar);
+}
+
+body.page-shop .sa-sheet-foot { border-bottom: none; border-top: 1px solid var(--amb-sidebar); }
+body.page-shop .sa-sheet-foot[hidden] { display: none; }
+body.page-shop .sa-sheet-body { padding: 16px 20px; overflow-y: auto; }
+
+/* ---------- Emails ---------- */
+body.page-shop .sa-email {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 24px;
+}
+
+body.page-shop .sa-email h3 { margin-bottom: 4px; }
+body.page-shop .sa-email > .sa-hint { margin-bottom: 12px; }
+body.page-shop .sa-email textarea { min-height: 150px; }
+body.page-shop .sa-email textarea.sa-short { min-height: 70px; }
+
+body.page-shop .sa-hint code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+body.page-shop .sa-email-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; }
+
+/* The email itself stays light: it's what the buyer sees */
+body.page-shop .sa-email-preview {
+  display: block;
+  width: 100%;
+  height: 70vh;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf8;
+  color-scheme: light;
+}
+
+body.page-shop .sa-work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+body.page-shop .sa-work {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  text-align: center;
+}
+
+body.page-shop .sa-work:hover { border-color: var(--ink); }
+
+body.page-shop .sa-work img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-bottom: 4px;
+}
+
+body.page-shop .sa-country-list {
+  columns: 3 170px;
+  column-gap: 18px;
+  margin-top: 14px;
+}
+
+body.page-shop .sa-country-list label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 0;
+  break-inside: avoid;
+  cursor: pointer;
+}
+
+body.page-shop .sa-country-list input { width: 18px; height: 18px; flex: none; }
+body.page-shop .sa-country-list label.is-taken { color: rgba(255, 255, 255, 0.35); }
+
+/* ---------- Messages (bottom right, like the other admin pages') ---------- */
+body.page-shop .sa-toasts {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  width: min(92vw, 420px);
+  pointer-events: none;
+}
+
+body.page-shop .sa-toast {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border-left: 5px solid var(--amb-accent);
+  background: var(--amb-inset);
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+}
+
+body.page-shop .sa-toast.is-error { background: var(--amb-danger); border-left-color: #a93226; }
+
+@media (max-width: 767.98px) {
+  body.page-shop .sidebar-actions .sa-button { margin-bottom: 0; }
+  body.page-shop .sa-toasts { left: 10px; right: 10px; bottom: 10px; width: auto; align-items: stretch; }
+}
+
+@media (max-width: 720px) {
+  body.page-shop .sa-order-body { grid-template-columns: 1fr; }
+  body.page-shop .sa-option { grid-template-columns: 1fr 1fr; }
+  body.page-shop .sa-item { flex-wrap: wrap; }
+  body.page-shop .sa-item-actions { width: 100%; justify-content: flex-end; }
+  body.page-shop .sa-overlay { padding: 0; }
+  body.page-shop .sa-sheet { max-height: 100vh; height: 100%; border-radius: 0; }
+}
+
+body.page-shop [hidden] { display: none !important; }
+
+
+/* ======================================================================
+ * Projects page (body.page-projects)
+ * ====================================================================== */
+/* Only what is particular to the Projects page; the sidebar, panel,
+   fields, buttons and dialogs come from admin.css */
+body.page-projects {
+    --primary-color: #3498db;
+    --success-color: var(--amb-accent);
+    --danger-color: var(--amb-danger);
+    --warning-color: var(--amb-warning);
+}
+
+body.page-projects .project-card {
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    color: var(--amb-text);
+    cursor: pointer;
+    margin-bottom: 0;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+body.page-projects .project-card:hover {
+    background-color: var(--amb-inset-hover);
+    border-color: rgba(141, 228, 255, 0.35);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+body.page-projects .project-card .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+body.page-projects .project-card .card-body {
+    padding: 0;
+}
+
+body.page-projects .project-card .card-text {
+    color: var(--amb-muted);
+    margin-bottom: 10px;
+}
+
+body.page-projects .project-card .card-text strong {
+    color: var(--amb-text);
+    font-weight: 700;
+    margin-right: 5px;
+}
+
+body.page-projects .project-card .badge {
+    font-size: 0.85rem;
+    margin-right: 5px;
+    padding: 5px 10px;
+}
+
+body.page-projects .modal-footer {
+    padding: 15px 20px;
+}
+
+/* Works list in the project's dialog */
+body.page-projects #worksList {
+    border: 1px solid var(--amb-border);
+    border-radius: 8px;
+    height: 400px;
+    list-style-type: none;
+    margin: 15px 0;
+    overflow-y: auto;
+    padding: 0;
+    background-color: var(--amb-sidebar);
+}
+
+body.page-projects #worksList li {
+    align-items: center;
+    border-bottom: 1px solid var(--amb-border);
+    display: flex;
+    padding: 10px 15px;
+    transition: background-color 0.2s;
+}
+
+body.page-projects #worksList li:hover {
+    background-color: var(--amb-inset);
+}
+
+body.page-projects #worksList li:last-child {
+    border-bottom: none;
+}
+
+body.page-projects .work-item-content {
+    align-items: center;
+    display: flex;
+    flex: 1;
+}
+
+body.page-projects .work-item-checkbox {
+    margin-right: 15px;
+    transform: scale(1.2);
+}
+
+body.page-projects .work-item-thumbnail {
+    border-radius: 5px;
+    height: 40px;
+    margin-right: 15px;
+    object-fit: cover;
+    width: 40px;
+}
+
+body.page-projects .work-item-name {
+    flex: 1;
+    font-weight: 400;
+}
+
+body.page-projects .work-search-container {
+    margin-bottom: 15px;
+    position: relative;
+}
+
+body.page-projects .work-search-container i {
+    color: var(--amb-muted);
+    left: 15px;
+    position: absolute;
+    top: 11px;
+}
+
+body.page-projects #workSearch {
+    border-radius: 20px;
+    padding-left: 40px;
+}
+
+body.page-projects .project-info {
+    background-color: var(--amb-panel);
+    border-radius: 4px;
+    color: var(--amb-muted);
+    font-size: 0.8rem;
+    margin-left: 10px;
+    padding: 2px 8px;
+}
+
+/* This page's own little messages (they slide in from the right) */
+body.page-projects .toast {
+    margin-bottom: 10px;
+    max-width: 350px;
+    opacity: 0;
+    padding: 15px 20px;
+    transform: translateX(100%);
+    transition: all 0.3s ease-in-out;
+}
+
+/* (Bootstrap 5 hides a .toast without .show; these slide instead) */
+body.page-projects .toast:not(.show) {
+    display: block;
+}
+
+body.page-projects .toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+body.page-projects .toast.success {
+    border-left: 5px solid var(--success-color);
+}
+
+body.page-projects .toast.error {
+    border-left: 5px solid var(--danger-color);
+}
+
+body.page-projects .toast.info {
+    border-left: 5px solid var(--primary-color);
+}
+
+body.page-projects .badge-active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+body.page-projects .badge-inactive {
+    background-color: var(--warning-color);
+    color: #212529;
+}
+
+body.page-projects .badge-deleted {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+body.page-projects .badge-current {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* The coloured edge on each project: its status */
+body.page-projects .status-indicator {
+    border-left: 5px solid #ccc;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-radius: 8px 0 0 8px;
+}
+
+body.page-projects .status-active {
+    border-color: var(--success-color);
+}
+
+body.page-projects .status-inactive {
+    border-color: var(--warning-color);
+}
+
+body.page-projects .status-deleted {
+    border-color: var(--danger-color);
+}
+
+body.page-projects .status-current {
+    border-color: var(--primary-color);
+}
+
+body.page-projects #confirmationModal .modal-body {
+    padding: 30px 20px;
+    text-align: center;
+}
+
+body.page-projects #confirmationModal .confirmation-icon {
+    color: var(--danger-color);
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+/* Works count bubble beside a project's name */
+body.page-projects .works-count {
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    color: white;
+    display: inline-block;
+    font-size: 0.8rem;
+    height: 25px;
+    line-height: 25px;
+    margin-left: 10px;
+    text-align: center;
+    width: 25px;
+}
+
+body.page-projects #projectTabContent {
+    border-color: var(--amb-border) !important;
+}
+
+/* Putting projects and works in order */
+body.page-projects .order-hint {
+    color: var(--amb-muted);
+    margin-bottom: 15px;
+}
+
+body.page-projects .order-controls {
+    align-items: center;
+    border-top: 1px solid var(--amb-border);
+    display: flex;
+    gap: 6px;
+    margin-top: 15px;
+    padding-top: 10px;
+}
+
+body.page-projects .order-controls .order-position {
+    color: var(--amb-muted);
+    flex: 1;
+    font-size: 0.85rem;
+}
+
+body.page-projects .drag-handle {
+    color: var(--amb-muted);
+    cursor: grab;
+    padding: 4px;
+}
+
+body.page-projects .btn-move {
+    align-items: center;
+    background: transparent;
+    border: 1px solid #6c757d;
+    border-radius: 5px;
+    color: #f8f9fa;
+    cursor: pointer;
+    display: inline-flex;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+}
+
+body.page-projects .btn-move:not(:disabled):hover {
+    border-color: #f8f9fa;
+}
+
+body.page-projects .btn-move:disabled {
+    cursor: default;
+    opacity: 0.3;
+}
+
+body.page-projects .is-dragging {
+    opacity: 0.4;
+}
+
+/* Moving projects while a search hides some would be confusing */
+body.page-projects .is-searching .order-controls {
+    display: none;
+}
+
+body.page-projects .arrange-group-title {
+    color: var(--amb-muted);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+body.page-projects .arrange-list {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    list-style: none;
+    margin: 0 0 15px;
+    padding: 0;
+}
+
+body.page-projects .arrange-item {
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-border);
+    border-radius: 8px;
+    cursor: grab;
+    padding: 8px;
+}
+
+body.page-projects .arrange-item img {
+    background-color: var(--amb-sidebar);
+    border-radius: 5px;
+    display: block;
+    height: 100px;
+    object-fit: contain;
+    width: 100%;
+}
+
+body.page-projects .arrange-item .arrange-name {
+    font-size: 0.85rem;
+    margin: 6px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.page-projects .arrange-item .arrange-moves {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    justify-content: space-between;
+}
+
+body.page-projects .arrange-item .order-position {
+    color: var(--amb-muted);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 767.98px) {
+    body.page-projects .project-card {
+        padding: 15px;
     }
 }

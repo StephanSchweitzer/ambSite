@@ -13,8 +13,13 @@ var filteredWorks = [];
 // between the two never matches.
 var editingProjectId = null;    // project open in the edit window
 var worksLoadedFor = null;      // project whose works list finished loading
-var savedWorkIds = [];          // that project's works as stored in the database
+var savedWorkIds = [];          // that project's works as stored in the database, in order
 var selectedWorkIds = new Set(); // what is ticked, kept apart from what is on screen
+var workOrder = [];             // what is ticked, in the order the project shows it
+
+// Whether each project can keep its own order of works yet: that needs
+// database/projectWorkOrder.sql to have been run (manageProjects.php checks)
+var workOrderReady = window.AMB_WORK_ORDER_READY === true;
 
 function toIdList(ids) {
     return (Array.isArray(ids) ? ids : []).map(String);
@@ -42,6 +47,37 @@ $(document).ready(function () {
         });
     });
 
+    // Projects: drag a card to move it (on the Active list, not while searching)
+    makeSortable(document.getElementById('existingPostInformation'), '.project-slot', 'data-project-id',
+        function () { return canOrderProjects() && !$('#projectSearch').val(); },
+        function (ids) { setProjectOrder(ids); });
+
+    $('#existingPostInformation').on('click', '.js-move-project', function (e) {
+        e.stopPropagation();
+        moveProject($(this).closest('.project-slot').attr('data-project-id'), Number($(this).attr('data-step')));
+    });
+
+    // Works inside the open project
+    makeSortable(document.getElementById('arrangeArea'), '.arrange-item', 'data-work-id',
+        function () { return true; },
+        function (ids) { workOrder = ids; drawArrangeList(); });
+
+    // An arrow moves a work one place within its year group
+    $('#arrangeArea').on('click', '.js-move-work', function () {
+        const id = $(this).closest('.arrange-item').attr('data-work-id');
+        const groups = arrangeGroups();
+        const group = groups.find(g => g.ids.includes(id));
+        if (!group) return;
+        const from = group.ids.indexOf(id);
+        const to = from + Number($(this).attr('data-step'));
+        if (to < 0 || to >= group.ids.length) return;
+        group.ids.splice(to, 0, group.ids.splice(from, 1)[0]);
+        workOrder = [].concat(...groups.map(g => g.ids));
+        drawArrangeList();
+    });
+
+    $('#arrange-tab').on('shown.bs.tab', drawArrangeList);
+
     // Forget the open project when the edit window closes, so a slow
     // response for it can't land in the next project's window
     $('#projectUpdateModal').on('hidden.bs.modal', function() {
@@ -50,8 +86,8 @@ $(document).ready(function () {
     });
 
     // Set active button state
-    $('.btn-group button').on('click', function() {
-        $('.btn-group button').removeClass('active');
+    $('#activeBtn, #inactiveBtn, #deletedBtn').on('click', function() {
+        $('#activeBtn, #inactiveBtn, #deletedBtn').removeClass('active');
         $(this).addClass('active');
     });
 });
@@ -61,7 +97,7 @@ function getProjects(activity) {
     $('#existingPostInformation').html(`
         <div class="col-12 text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
             <p class="mt-3">Loading projects...</p>
         </div>
@@ -71,7 +107,7 @@ function getProjects(activity) {
     var activityData = {activity: activity};
 
     // Set active button
-    $('.btn-group button').removeClass('active');
+    $('#activeBtn, #inactiveBtn, #deletedBtn').removeClass('active');
     if (activity === 'active') {
         $('#activeBtn').addClass('active');
     } else if (activity === 'inactive') {
@@ -151,7 +187,10 @@ function insertData(data) {
         return;
     }
 
-    items.forEach(function (item) {
+    const canOrder = canOrderProjects() && items.length > 1;
+    $('#projectOrderHint').toggle(canOrder);
+
+    items.forEach(function (item, index) {
         let id = item.id;
         let title = item.title;
         let description = item.description;
@@ -188,9 +227,22 @@ function insertData(data) {
         const worksCount = allProjects.find(p => p.id === id)?.works?.length || 0;
         const worksCountBadge = `<span class="works-count" title="${worksCount} works associated">${worksCount}</span>`;
 
+        // Its place on the Works page, with arrows to move it
+        const orderControls = canOrder ? `
+                        <div class="order-controls">
+                            <i class="fas fa-grip-vertical drag-handle" title="Drag to move" aria-hidden="true"></i>
+                            <span class="order-position">${index + 1} of ${items.length}</span>
+                            <button type="button" class="btn-move js-move-project" data-step="-1" aria-label="Move earlier" title="Move earlier"${index === 0 ? ' disabled' : ''}>
+                                <i class="fas fa-arrow-up d-md-none"></i><i class="fas fa-arrow-left d-none d-md-inline"></i>
+                            </button>
+                            <button type="button" class="btn-move js-move-project" data-step="1" aria-label="Move later" title="Move later"${index === items.length - 1 ? ' disabled' : ''}>
+                                <i class="fas fa-arrow-down d-md-none"></i><i class="fas fa-arrow-right d-none d-md-inline"></i>
+                            </button>
+                        </div>` : '';
+
         // Create the card HTML
         const cardHtml = `
-            <div class="col-md-4 mb-4">
+            <div class="col-md-4 mb-4 project-slot" data-project-id="${id}"${canOrder ? ' draggable="true"' : ''}>
                 <div class="card project-card shadow-grow position-relative" data-id="${id}">
                     <div class="status-indicator ${statusClass}"></div>
                     <div class="card-body">
@@ -199,10 +251,10 @@ function insertData(data) {
                             ${statusBadge} ${currentBadge}
                         </div>
                         <p class="card-text"><strong>ID:</strong> ${id}</p>
-                        <p class="card-text"><strong>Order:</strong> ${orderOfDisplay}</p>
                         <button class="btn btn-sm btn-outline-light mt-2 edit-project-btn">
                             <i class="fas fa-edit"></i> Edit Project
                         </button>
+                        ${orderControls}
                     </div>
                 </div>
             </div>
@@ -214,7 +266,8 @@ function insertData(data) {
         // Add click event to the card
         $(`[data-id="${id}"]`).click(function(e) {
             if (!$(e.target).hasClass('edit-project-btn') &&
-                !$(e.target).parent().hasClass('edit-project-btn')) {
+                !$(e.target).parent().hasClass('edit-project-btn') &&
+                !$(e.target).closest('.order-controls').length) {
                 openProjectInfo(id, title, description, active, orderOfDisplay, deleted, isCurrentProject);
             }
         });
@@ -228,6 +281,9 @@ function insertData(data) {
 }
 
 function filterProjects(searchTerm) {
+    // Moving projects while some are hidden would be confusing
+    $('#existingPostInformation').toggleClass('is-searching', !!searchTerm);
+
     if (!searchTerm) {
         // If search is empty, show all projects
         $('.project-card').parent().show();
@@ -256,12 +312,14 @@ function openProjectInfo(id, title, description, active, orderOfDisplay, deleted
     worksLoadedFor = null;
     savedWorkIds = [];
     selectedWorkIds = new Set();
+    workOrder = [];
+    drawArrangeList();
 
     // Show loading state in works list
     $('#worksList').html(`
         <div class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading works...</span>
+                <span class="visually-hidden">Loading works...</span>
             </div>
         </div>
     `);
@@ -289,7 +347,6 @@ function openProjectInfo(id, title, description, active, orderOfDisplay, deleted
     $('#projectId').val(id);
     $('#editProjectTitle').val(title);
     $('#editProjectDescription').val(description);
-    $('#editOrderOfDisplay').val(orderOfDisplay);
 
     // Set radio buttons
     if (active == 1) {
@@ -325,8 +382,10 @@ function loadWorksForProject(projectId) {
         // The window was closed or another project opened meanwhile
         if (editingProjectId !== projectId) return;
 
-        savedWorkIds = toIdList(associatedResponse[0]);
+        // In the order the Works page shows them
+        savedWorkIds = toIdList(associatedResponse[0]).filter((id, i, all) => all.indexOf(id) === i);
         selectedWorkIds = new Set(savedWorkIds);
+        workOrder = savedWorkIds.slice();
 
         const project = allProjects.find(p => p.id === projectId);
         if (project) {
@@ -343,9 +402,15 @@ function loadWorksForProject(projectId) {
 
         worksLoadedFor = projectId;
         filterWorks($('#workSearch').val().toLowerCase());
+        drawArrangeList();
     }, function(xhr, status, error) {
         if (editingProjectId !== projectId) return;
         console.error('Error fetching works:', error);
+        $('#arrangeArea').html(`
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> Failed to load works. The order will not be changed when you save.
+            </div>
+        `);
         $('#worksList').html(`
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-circle"></i> Failed to load works: ${error || status}.
@@ -362,7 +427,6 @@ function openPostForm() {
     // Default values
     $('#activeYesPost').prop('checked', true);
     $('#currentNoPost').prop('checked', true);
-    $('#postOrderOfDisplay').val(1);
 
     // Show the modal
     $('#projectPostModal').modal('show');
@@ -396,7 +460,6 @@ function createProject() {
     postData.append('title', $('#titlePostName').val());
     postData.append('description', $('#projectDescription').val());
     postData.append('active', projectInt);
-    postData.append('orderOfDisplay', $('#postOrderOfDisplay').val());
     postData.append('isCurrentProject', isCurrentProjectInt);
 
     // Disable the button to prevent multiple submissions
@@ -455,7 +518,6 @@ function updateWork() {
         id: projectId,
         title: $('#editProjectTitle').val(),
         description: $('#editProjectDescription').val(),
-        orderOfDisplay: $('#editOrderOfDisplay').val(),
         active: activeInt,
         isCurrentProject: isCurrentProjectInt,
     };
@@ -585,7 +647,6 @@ function restoreWork() {
         id: $('#projectId').val(),
         title: $('#editProjectTitle').val(),
         description: $('#editProjectDescription').val(),
-        orderOfDisplay: $('#editOrderOfDisplay').val(),
         active: activeInt,
         isCurrentProject: isCurrentProjectInt,
         restore: 'restore'
@@ -637,7 +698,11 @@ function filterWorks(searchTerm) {
     populateWorksList(filteredWorks);
 }
 
-function addWorksToProject() {
+// Saves the open project's works (which ones, and their order). Called by
+// the "Save Associated Works" and "Save Order" buttons.
+function addWorksToProject(button) {
+    const $saveButton = $(button || '#works .btn-primary');
+    const label = $saveButton.html();
     const projectId = String($('#projectId').val());
     const workIds = getWorksToSave(projectId);
 
@@ -647,25 +712,26 @@ function addWorksToProject() {
     }
 
     if (!worksHaveChanged(workIds)) {
-        showToast('No changes in associated works.', 'info');
+        showToast('Nothing has changed since the last save.', 'info');
         return;
     }
 
-    const $saveButton = $('#works .btn-primary');
     $saveButton.prop('disabled', true).html(`
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         Saving...
     `);
 
-    return postWorksProjectsDB(projectId, workIds, $saveButton).then(function() {
-        showToast('Works successfully associated with project!', 'success');
+    return postWorksProjectsDB(projectId, workIds).then(function() {
+        showToast('The project\'s works are saved!', 'success');
     }, function() {
-        showToast('Failed to update associated works. Nothing was removed.', 'error');
+        showToast('Failed to save the project\'s works. Nothing was changed.', 'error');
+    }).always(function() {
+        $saveButton.prop('disabled', false).html(label);
     });
 }
 
 
-function postWorksProjectsDB(projectId, workIds, $button) {
+function postWorksProjectsDB(projectId, workIds) {
     projectId = String(projectId);
     workIds = toIdList(workIds);
 
@@ -689,13 +755,6 @@ function postWorksProjectsDB(projectId, workIds, $button) {
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log("An error occurred: " + textStatus + ", " + errorThrown);
-        },
-        complete: function() {
-            if ($button) {
-                $button.prop('disabled', false).html(`
-                    <i class="fas fa-save"></i> Save Associated Works
-                `);
-            }
         }
     });
 }
@@ -751,7 +810,7 @@ function appendProjectInfo(workId, listItem, excludeProjectId = null) {
         small.textContent = 'Also in: ';
         projects.forEach(p => {
             const badge = document.createElement('span');
-            badge.className = 'badge badge-info mr-1';
+            badge.className = 'badge bg-info me-1';
             badge.textContent = p.title;
             small.appendChild(badge);
         });
@@ -816,7 +875,7 @@ function createListItem(work) {
     nameSpan.textContent = work.name;
     if (work.visible == 0 || work.isSelectWork != 1) {
         const note = document.createElement('small');
-        note.className = 'text-muted ml-2';
+        note.className = 'text-muted ms-2';
         note.textContent = work.visible == 0 ? '(deleted, hidden from visitors)' : '(not in Select Works)';
         nameSpan.appendChild(note);
     }
@@ -849,16 +908,14 @@ function showToast(message, type = 'info') {
 
     toast.innerHTML = `
         <div class="d-flex align-items-center">
-            <i class="fas fa-${icon} mr-2"></i>
+            <i class="fas fa-${icon} me-2"></i>
             <div>${message}</div>
         </div>
-        <button type="button" class="close ml-2" data-dismiss="toast" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
     `;
 
     // Add close button event
-    const closeBtn = toast.querySelector('.close');
+    const closeBtn = toast.querySelector('.btn-close');
     closeBtn.addEventListener('click', function() {
         toast.classList.remove('show');
         setTimeout(() => {
@@ -939,22 +996,295 @@ function updateAllProjectCounts() {
     });
 }
 
+// A newly ticked work goes at the end of the project's order
 function setWorkSelected(workId, isSelected) {
+    workId = String(workId);
     if (isSelected) {
-        selectedWorkIds.add(String(workId));
+        selectedWorkIds.add(workId);
+        if (!workOrder.includes(workId)) workOrder.push(workId);
     } else {
-        selectedWorkIds.delete(String(workId));
+        selectedWorkIds.delete(workId);
+        workOrder = workOrder.filter(id => id !== workId);
     }
     updateSelectAllCheckbox();
 }
 
+// The works to save, in order, or null if the list hasn't loaded
 function getWorksToSave(projectId) {
     if (worksLoadedFor !== projectId) {
         return null;
     }
-    return Array.from(selectedWorkIds).sort();
+    return workOrder.slice();
 }
 
+// Before the database can keep an order, only which works matters
 function worksHaveChanged(workIds) {
-    return JSON.stringify(savedWorkIds.slice().sort()) !== JSON.stringify(workIds);
+    if (!workOrderReady) {
+        return JSON.stringify(savedWorkIds.slice().sort()) !== JSON.stringify(workIds.slice().sort());
+    }
+    return JSON.stringify(savedWorkIds) !== JSON.stringify(workIds);
+}
+
+// ---------- Putting projects and works in order ----------
+
+// Only the Active list is shown on the Works page, so only it is ordered
+function canOrderProjects() {
+    return pageNumber === 'active';
+}
+
+function moveProject(id, step) {
+    const ids = allProjects.map(p => p.id);
+    const from = ids.indexOf(String(id));
+    const to = from + step;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    setProjectOrder(ids);
+    // Keep the keyboard on the moved project's arrow
+    $(`.project-slot[data-project-id="${id}"] .js-move-project[data-step="${step}"]:not(:disabled)`).trigger('focus');
+}
+
+// Redraws the projects in this order and saves it
+function setProjectOrder(ids) {
+    allProjects.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+    insertData(allProjects);
+    filterProjects(($('#projectSearch').val() || '').toLowerCase());
+
+    const postData = new FormData();
+    postData.append('action', 'order');
+    postData.append('ids', JSON.stringify(ids));
+
+    // A quiet note beside the hint rather than a toast for every move
+    const $status = $('#projectOrderStatus').text('Saving...');
+
+    $.ajax({
+        url: '../actions/projectsAPI.php',
+        type: 'POST',
+        data: postData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function () {
+            $status.html('<i class="fas fa-check text-success"></i> Saved.');
+        },
+        error: function () {
+            $status.text('');
+            showToast('The new order could not be saved. Showing the order as it was.', 'error');
+            getProjects(pageNumber);
+        }
+    });
+}
+
+// The "Order of Works" tab: the ticked works as tiles, in order
+function drawArrangeList() {
+    const $area = $('#arrangeArea');
+
+    if (!workOrderReady) {
+        $area.html(`
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i>
+                Putting the works of a project in order needs a one-time update to the website first, which Stephan does.
+                Until then, works appear in the order set on each painting.
+            </div>
+        `);
+        return;
+    }
+
+    if (worksLoadedFor === null || worksLoadedFor !== editingProjectId) {
+        $area.html(`
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading works...</span>
+                </div>
+            </div>
+        `);
+        return;
+    }
+
+    if (workOrder.length === 0) {
+        $area.html(`
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i> This project has no works yet. Tick some in Associated Works.
+            </div>
+        `);
+        return;
+    }
+
+    // Keep the keyboard where it was across the redraw
+    const active = document.activeElement;
+    const focused = active && active.closest ? active.closest('.arrange-item') : null;
+    const focusedId = focused ? focused.getAttribute('data-work-id') : null;
+    const focusedStep = focused ? active.getAttribute('data-step') : null;
+
+    const byId = new Map(allWorks.map(work => [work.id, work]));
+    const groups = arrangeGroups();
+    const grouped = groups.length > 1;
+
+    // One list per year group, as the Works page shows them; a work only
+    // moves inside its own group
+    const sections = groups.map(group => {
+        const $section = $('<div class="arrange-group">');
+        if (grouped) {
+            $section.append($('<h6 class="arrange-group-title">').text(group.label || 'Without a year'));
+        }
+        const list = document.createElement('ul');
+        list.className = 'arrange-list';
+        group.ids.forEach((id, index) => list.appendChild(arrangeItem(byId.get(id), id, index, group.ids.length)));
+        return $section.append(list);
+    });
+
+    $area.empty().append(
+        $('<p class="order-hint">').html('<i class="fas fa-grip-vertical me-1"></i> Drag the works, or use the arrows, into the order you want them on your Works page. Works you tick later go at the end.' +
+            (grouped ? ' Your Works page shows this project in groups of years, so each work moves within its own group.' : '')),
+        sections,
+        $('<div class="text-end">').append(
+            $('<button type="button" class="btn btn-primary">').html('<i class="fas fa-save"></i> Save Order')
+                .on('click', function () { addWorksToProject(this); })
+        )
+    );
+
+    if (focusedId && focusedStep) {
+        $(`.arrange-item[data-work-id="${focusedId}"] .js-move-work[data-step="${focusedStep}"]:not(:disabled)`).trigger('focus');
+    }
+}
+
+// One work's tile: its picture, name, and arrows to move it within its group
+function arrangeItem(work, id, index, count) {
+    work = work || { name: 'Work ' + id, location: '' };
+    const item = document.createElement('li');
+    item.className = 'arrange-item';
+    item.draggable = true;
+    item.setAttribute('data-work-id', id);
+
+    const img = document.createElement('img');
+    img.src = '../thumbnails/' + work.location;
+    img.alt = '';
+    img.draggable = false;
+    img.onerror = function () {
+        this.onerror = null;
+        this.style.visibility = 'hidden';
+    };
+
+    const name = document.createElement('div');
+    name.className = 'arrange-name';
+    name.textContent = work.name;
+    name.title = work.name;
+
+    const moves = document.createElement('div');
+    moves.className = 'arrange-moves';
+    moves.innerHTML = `
+        <button type="button" class="btn-move js-move-work" data-step="-1" aria-label="Move earlier" title="Move earlier"${index === 0 ? ' disabled' : ''}>
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <span class="order-position">${index + 1}</span>
+        <button type="button" class="btn-move js-move-work" data-step="1" aria-label="Move later" title="Move later"${index === count - 1 ? ' disabled' : ''}>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    `;
+
+    item.append(img, name, moves);
+    return item;
+}
+
+// The open project's ticked works (ids) as its Works page groups them: by
+// year bands, newest first, for the projects the page groups that way, with
+// works without a year last. Any other project, or one whose works all fall
+// in one group, is a single group. The bands and the project names come from
+// publicPageFunctions.php (window.AMB_YEAR_GROUPS); how works are sorted into
+// them mirrors ambWorkGroups() there and workGroups() in photoFunctions.js.
+function arrangeGroups() {
+    const config = window.AMB_YEAR_GROUPS || { bands: [], projects: [] };
+    const project = allProjects.find(p => p.id === editingProjectId);
+    const title = project ? String(project.title).replace(/\s+/g, '').toLowerCase() : '';
+    const single = [{ label: '', ids: workOrder.slice() }];
+    if (!config.projects.includes(title)) {
+        return single;
+    }
+
+    const byId = new Map(allWorks.map(work => [work.id, work]));
+    const groups = [];
+    const byLabel = {};
+    workOrder.forEach(id => {
+        const work = byId.get(id);
+        const found = String(work && work.creationYear != null ? work.creationYear : '').match(/\d{4}/);
+        let year = found ? Number(found[0]) : null;
+        if (year !== null && (year < 1900 || year > 2100)) year = null;
+
+        let label = '';
+        let from = -1; // works without a year go last
+        if (year !== null) {
+            label = String(year);
+            from = year;
+            const band = config.bands.find(b => year >= b[0] && year <= b[1]);
+            if (band) {
+                label = band[0] === band[1] ? String(band[0]) : band[0] + '–' + band[1];
+                from = band[0];
+            }
+        }
+        if (!byLabel.hasOwnProperty(label)) {
+            byLabel[label] = { label: label, from: from, ids: [] };
+            groups.push(byLabel[label]);
+        }
+        byLabel[label].ids.push(id);
+    });
+
+    return groups.length < 2 ? single : groups.sort((a, b) => b.from - a.from);
+}
+
+// Lets the items of a list be dragged into a new order. canDrag() says
+// whether dragging is allowed right now; onDrop(ids) runs after a drag that
+// changed the order, with the items' ids in their new order.
+function makeSortable(container, itemSelector, idAttribute, canDrag, onDrop) {
+    let dragged = null;
+    let orderBefore = '';
+
+    const currentIds = () => Array.from(container.querySelectorAll(itemSelector))
+        .map(el => el.getAttribute(idAttribute));
+
+    container.addEventListener('dragstart', function (e) {
+        const item = e.target.closest ? e.target.closest(itemSelector) : null;
+        if (!item || !canDrag()) {
+            e.preventDefault();
+            return;
+        }
+        dragged = item;
+        orderBefore = currentIds().join(',');
+        item.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.getAttribute(idAttribute));
+    });
+
+    container.addEventListener('dragover', function (e) {
+        if (!dragged) return;
+        e.preventDefault();
+        // Only among its own list (a year group, for works)
+        const target = e.target.closest ? e.target.closest(itemSelector) : null;
+        if (!target || target === dragged || target.parentElement !== dragged.parentElement) return;
+
+        // Items side by side: the left or right half of the one under the
+        // pointer; items one per row (a phone): its top or bottom half
+        const box = target.getBoundingClientRect();
+        const oneColumn = box.width > container.clientWidth * 0.6;
+        const after = oneColumn
+            ? e.clientY > box.top + box.height / 2
+            : e.clientX > box.left + box.width / 2;
+        if (after) {
+            target.after(dragged);
+        } else {
+            target.before(dragged);
+        }
+    });
+
+    container.addEventListener('drop', function (e) {
+        if (dragged) e.preventDefault();
+    });
+
+    container.addEventListener('dragend', function () {
+        if (!dragged) return;
+        dragged.classList.remove('is-dragging');
+        dragged = null;
+        const ids = currentIds();
+        if (ids.join(',') !== orderBefore) {
+            onDrop(ids);
+        }
+    });
 }

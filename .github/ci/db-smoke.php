@@ -129,6 +129,17 @@ check('projects load with their works', function () use ($conn) {
     return count($works) === 2 ? true : 'expected 2 works in the project, got ' . count($works);
 });
 
+// The fixtures leave sortOrder empty: a project that was never arranged
+check('works in a project can keep their own order', function () use ($conn) {
+    return ambProjectOrderReady($conn) ? true : 'worksInProjects.sortOrder is missing';
+});
+
+check('an unarranged project keeps the old order', function () use ($conn) {
+    $projects = ambGetProjectsWithWorks($conn, 'active');
+    $names = array_column($projects[0]['works'], 'name');
+    return $names === array('Fixture Two', 'Fixture One') ? true : 'got ' . implode(', ', $names);
+});
+
 check('a hidden work stays out of a project', function () use ($conn) {
     $projects = ambGetProjectsWithWorks($conn, 'active');
     foreach ($projects[0]['works'] as $work) {

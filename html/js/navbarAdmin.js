@@ -186,12 +186,12 @@ function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRe
     const handleWrapper = $('<div>').addClass('d-flex align-items-center justify-content-start');
 
     // Drag handle icon
-    const dragIcon = $('<i>').addClass('bi bi-grip-vertical me-2 drag-handle').css('cursor', 'grab');
+    const dragIcon = $('<i>').addClass('fas fa-grip-vertical me-2 drag-handle').css('cursor', 'grab');
     handleWrapper.append(dragIcon);
 
     // Lock icon if not changeable
     if (parseInt(isChangeable) === 0) {
-        const lockIcon = $('<i>').addClass('bi bi-lock-fill text-warning');
+        const lockIcon = $('<i>').addClass('fas fa-lock text-warning');
         handleWrapper.append(lockIcon);
     }
 
@@ -231,7 +231,7 @@ function createNewNavLinkRow(id = Date.now(), displayedText = "New Link", linkRe
         id: `deleteBtn_${id}`,
         class: 'btn btn-sm btn-outline-danger',
         disabled: parseInt(isChangeable) === 0
-    }).html('<i class="bi bi-trash"></i>');
+    }).html('<i class="fas fa-trash"></i>');
 
     // Set up delete confirmation
     deleteBtn.on('click', function() {
@@ -303,12 +303,12 @@ function updatePreview() {
         }).text(displayText);
 
         if (newTab) {
-            previewLink.append(' <i class="bi bi-box-arrow-up-right" style="font-size: 0.75em;"></i>');
+            previewLink.append(' <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.75em;"></i>');
         }
 
         // Add onclick indicator if it exists
         if (onClick) {
-            previewLink.append(' <i class="bi bi-code-slash text-info ms-1" title="Has onClick: ' + onClick + '"></i>');
+            previewLink.append(' <i class="fas fa-code text-info ms-1" title="Has onClick: ' + onClick + '"></i>');
         }
 
         previewItem.append(previewLink);
@@ -322,7 +322,7 @@ function updatePreview() {
                 $('<div>').addClass('attached-div-preview mt-1 ps-3 border-start border-info')
                     .append(
                         $('<small>').addClass('text-muted').html(
-                            `<i class="bi bi-braces"></i> Attached Div: <code>${divId}</code> <span class="text-info">[${divClass}]</span>`
+                            `<i class="fas fa-code"></i> Attached Div: <code>${divId}</code> <span class="text-info">[${divClass}]</span>`
                         )
                     )
             );
@@ -559,7 +559,7 @@ function showToast(message, type = 'info') {
         <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body">
-                    <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
