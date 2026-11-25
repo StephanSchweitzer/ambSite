@@ -170,6 +170,18 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   flex-direction: row;
 }
 
+/* On phones the bar is a real box, not a zero-height strip with the bar
+   overflowing out of it. iPhone Safari decides what sits at the top edge of
+   the screen (for its status bar and for painting the blurred bar at all)
+   from the fixed element's own box; with a height of 0 it found nothing
+   there and let the page's content show above the bar until something else
+   (opening a painting) made it look again. */
+.headerNoMove:has(> .blockForHeaderMobile) {
+  bottom: auto;
+  height: auto;
+  pointer-events: auto;
+}
+
 /* The logo is the page's main heading; the h1 itself adds no styling */
 .site-title {
   flex: 1 1 auto;
