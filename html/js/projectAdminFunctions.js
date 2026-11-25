@@ -62,12 +62,17 @@ $(document).ready(function () {
         function () { return true; },
         function (ids) { workOrder = ids; drawArrangeList(); });
 
+    // An arrow moves a work one place within its year group
     $('#arrangeArea').on('click', '.js-move-work', function () {
         const id = $(this).closest('.arrange-item').attr('data-work-id');
-        const from = workOrder.indexOf(id);
+        const groups = arrangeGroups();
+        const group = groups.find(g => g.ids.includes(id));
+        if (!group) return;
+        const from = group.ids.indexOf(id);
         const to = from + Number($(this).attr('data-step'));
-        if (from < 0 || to < 0 || to >= workOrder.length) return;
-        workOrder.splice(to, 0, workOrder.splice(from, 1)[0]);
+        if (to < 0 || to >= group.ids.length) return;
+        group.ids.splice(to, 0, group.ids.splice(from, 1)[0]);
+        workOrder = [].concat(...groups.map(g => g.ids));
         drawArrangeList();
     });
 
@@ -1113,50 +1118,26 @@ function drawArrangeList() {
     const focusedStep = focused ? active.getAttribute('data-step') : null;
 
     const byId = new Map(allWorks.map(work => [work.id, work]));
-    const list = document.createElement('ul');
-    list.id = 'arrangeList';
+    const groups = arrangeGroups();
+    const grouped = groups.length > 1;
 
-    workOrder.forEach((id, index) => {
-        const work = byId.get(id) || { name: 'Work ' + id, location: '' };
-        const item = document.createElement('li');
-        item.className = 'arrange-item';
-        item.draggable = true;
-        item.setAttribute('data-work-id', id);
-
-        const img = document.createElement('img');
-        img.src = '../thumbnails/' + work.location;
-        img.alt = '';
-        img.draggable = false;
-        img.onerror = function () {
-            this.onerror = null;
-            this.style.visibility = 'hidden';
-        };
-
-        const name = document.createElement('div');
-        name.className = 'arrange-name';
-        name.textContent = work.name;
-        name.title = work.name;
-
-        const moves = document.createElement('div');
-        moves.className = 'arrange-moves';
-        moves.innerHTML = `
-            <button type="button" class="btn-move js-move-work" data-step="-1" aria-label="Move earlier" title="Move earlier"${index === 0 ? ' disabled' : ''}>
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <span class="order-position">${index + 1}</span>
-            <button type="button" class="btn-move js-move-work" data-step="1" aria-label="Move later" title="Move later"${index === workOrder.length - 1 ? ' disabled' : ''}>
-                <i class="fas fa-arrow-right"></i>
-            </button>
-        `;
-
-        item.append(img, name, moves);
-        list.appendChild(item);
+    // One list per year group, as the Works page shows them; a work only
+    // moves inside its own group
+    const sections = groups.map(group => {
+        const $section = $('<div class="arrange-group">');
+        if (grouped) {
+            $section.append($('<h6 class="arrange-group-title">').text(group.label || 'Without a year'));
+        }
+        const list = document.createElement('ul');
+        list.className = 'arrange-list';
+        group.ids.forEach((id, index) => list.appendChild(arrangeItem(byId.get(id), id, index, group.ids.length)));
+        return $section.append(list);
     });
 
     $area.empty().append(
         $('<p class="order-hint">').html('<i class="fas fa-grip-vertical mr-1"></i> Drag the works, or use the arrows, into the order you want them on your Works page. Works you tick later go at the end.' +
-            ' Where your Works page shows a project in groups of years, this order is kept inside each group.'),
-        list,
+            (grouped ? ' Your Works page shows this project in groups of years, so each work moves within its own group.' : '')),
+        sections,
         $('<div class="text-right">').append(
             $('<button type="button" class="btn btn-primary">').html('<i class="fas fa-save"></i> Save Order')
                 .on('click', function () { addWorksToProject(this); })
@@ -1166,6 +1147,89 @@ function drawArrangeList() {
     if (focusedId && focusedStep) {
         $(`.arrange-item[data-work-id="${focusedId}"] .js-move-work[data-step="${focusedStep}"]:not(:disabled)`).trigger('focus');
     }
+}
+
+// One work's tile: its picture, name, and arrows to move it within its group
+function arrangeItem(work, id, index, count) {
+    work = work || { name: 'Work ' + id, location: '' };
+    const item = document.createElement('li');
+    item.className = 'arrange-item';
+    item.draggable = true;
+    item.setAttribute('data-work-id', id);
+
+    const img = document.createElement('img');
+    img.src = '../thumbnails/' + work.location;
+    img.alt = '';
+    img.draggable = false;
+    img.onerror = function () {
+        this.onerror = null;
+        this.style.visibility = 'hidden';
+    };
+
+    const name = document.createElement('div');
+    name.className = 'arrange-name';
+    name.textContent = work.name;
+    name.title = work.name;
+
+    const moves = document.createElement('div');
+    moves.className = 'arrange-moves';
+    moves.innerHTML = `
+        <button type="button" class="btn-move js-move-work" data-step="-1" aria-label="Move earlier" title="Move earlier"${index === 0 ? ' disabled' : ''}>
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <span class="order-position">${index + 1}</span>
+        <button type="button" class="btn-move js-move-work" data-step="1" aria-label="Move later" title="Move later"${index === count - 1 ? ' disabled' : ''}>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    `;
+
+    item.append(img, name, moves);
+    return item;
+}
+
+// The open project's ticked works (ids) as its Works page groups them: by
+// year bands, newest first, for the projects the page groups that way, with
+// works without a year last. Any other project, or one whose works all fall
+// in one group, is a single group. The bands and the project names come from
+// publicPageFunctions.php (window.AMB_YEAR_GROUPS); how works are sorted into
+// them mirrors ambWorkGroups() there and workGroups() in photoFunctions.js.
+function arrangeGroups() {
+    const config = window.AMB_YEAR_GROUPS || { bands: [], projects: [] };
+    const project = allProjects.find(p => p.id === editingProjectId);
+    const title = project ? String(project.title).replace(/\s+/g, '').toLowerCase() : '';
+    const single = [{ label: '', ids: workOrder.slice() }];
+    if (!config.projects.includes(title)) {
+        return single;
+    }
+
+    const byId = new Map(allWorks.map(work => [work.id, work]));
+    const groups = [];
+    const byLabel = {};
+    workOrder.forEach(id => {
+        const work = byId.get(id);
+        const found = String(work && work.creationYear != null ? work.creationYear : '').match(/\d{4}/);
+        let year = found ? Number(found[0]) : null;
+        if (year !== null && (year < 1900 || year > 2100)) year = null;
+
+        let label = '';
+        let from = -1; // works without a year go last
+        if (year !== null) {
+            label = String(year);
+            from = year;
+            const band = config.bands.find(b => year >= b[0] && year <= b[1]);
+            if (band) {
+                label = band[0] === band[1] ? String(band[0]) : band[0] + '–' + band[1];
+                from = band[0];
+            }
+        }
+        if (!byLabel.hasOwnProperty(label)) {
+            byLabel[label] = { label: label, from: from, ids: [] };
+            groups.push(byLabel[label]);
+        }
+        byLabel[label].ids.push(id);
+    });
+
+    return groups.length < 2 ? single : groups.sort((a, b) => b.from - a.from);
 }
 
 // Lets the items of a list be dragged into a new order. canDrag() says
@@ -1194,8 +1258,9 @@ function makeSortable(container, itemSelector, idAttribute, canDrag, onDrop) {
     container.addEventListener('dragover', function (e) {
         if (!dragged) return;
         e.preventDefault();
+        // Only among its own list (a year group, for works)
         const target = e.target.closest ? e.target.closest(itemSelector) : null;
-        if (!target || target === dragged) return;
+        if (!target || target === dragged || target.parentElement !== dragged.parentElement) return;
 
         // Items side by side: the left or right half of the one under the
         // pointer; items one per row (a phone): its top or bottom half

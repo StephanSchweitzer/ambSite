@@ -594,7 +594,10 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   first by `sortOrder`, then NULLs in the old order (`w.orderOfDisplay DESC`,
   each painting's own number). Without the column everything uses the old
   order and the admin's "Order of Works" tab says it's waiting on the
-  update.
+  update. Where the Works page shows a project in year groups
+  (`ambWorkGroups()`), the order only applies within each group, so the tab
+  shows the same groups (`arrangeGroups()`, fed the bands and project names
+  by manageProjects.php) and a work only moves inside its own.
 - Deleting a painting only sets `visible = 0` (its flags are kept for
   restore); every public query must filter on `visible = 1`.
 - API responses are inconsistent: some endpoints return bare JSON arrays,

@@ -245,6 +245,10 @@ define('AMB_GALLERY_SIZES', '(max-width: 992px) 92vw, 62vw');
 // its own rather than being dropped.
 //
 // Mirrored by YEAR_BANDS / workGroups() in js/photoFunctions.js — change both.
+// The Projects admin's "Order of Works" tab shows the same groups:
+// manageProjects.php hands it the bands and project names from here, and
+// arrangeGroups() in js/projectAdminFunctions.js sorts works into them the
+// same way — keep that in step too.
 // ---------------------------------------------------------------------------
 
 // Newest first, as the Works page shows them

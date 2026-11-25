@@ -6,7 +6,11 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 }
 include '../database/pdo.php';
 include_once __DIR__ . '/../actions/projectOrderFunctions.php';
+include_once __DIR__ . '/../actions/publicPageFunctions.php';
 $workOrderReady = ambProjectOrderReady($conn);
+
+// The Works page's year groups, so "Order of Works" can show the same ones
+$yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProjects());
 ?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -17,7 +21,10 @@ $workOrderReady = ambProjectOrderReady($conn);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="admin.css">
-    <script>window.AMB_WORK_ORDER_READY = <?php echo $workOrderReady ? 'true' : 'false'; ?>;</script>
+    <script>
+        window.AMB_WORK_ORDER_READY = <?php echo $workOrderReady ? 'true' : 'false'; ?>;
+        window.AMB_YEAR_GROUPS = <?php echo json_encode($yearGroups); ?>;
+    </script>
     <script src="../js/projectAdminFunctions.js"></script>
     <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Project Admin Dashboard</title>
@@ -533,7 +540,14 @@ $workOrderReady = ambProjectOrderReady($conn);
             display: none;
         }
 
-        #arrangeList {
+        .arrange-group-title {
+            color: #adb5bd;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0 0 8px;
+        }
+
+        .arrange-list {
             display: grid;
             gap: 10px;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
