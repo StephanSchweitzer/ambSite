@@ -12,76 +12,55 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
     <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Navbar Admin</title>
     <style>
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #2ecc71;
-            --dark-color: #2c3e50;
-            --light-color: #ecf0f1;
-            --danger-color: #e74c3c;
-            --warning-color: #f39c12;
-        }
-
-        body {
-            background-color: var(--dark-color);
-            color: var(--light-color);
-        }
-
-        .admin-header {
-            background-color: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-
-        .content-section {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 20px;
+        /* Only what is particular to the Navbar page; the sidebar, panel,
+           fields, buttons and dialogs come from admin.css */
+        #navbarLinks {
+            margin: 0;
+            padding: 0;
         }
 
         .nav-item-card {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
+            background-color: var(--amb-inset);
+            border: 1px solid var(--amb-line);
+            border-radius: var(--amb-radius-sm);
             margin-bottom: 10px;
-            padding: 15px;
+            padding: 12px 15px;
             transition: all 0.3s ease;
-            border: 2px solid transparent;
             position: relative;
-            cursor: grab; /* Change to grab hand cursor */
+            cursor: grab;
         }
 
         .nav-item-card:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: var(--amb-inset-hover);
         }
 
         .nav-item-card.dragging {
-            background-color: rgba(52, 152, 219, 0.3) !important;
-            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5) !important;
-            border: 2px dashed var(--primary-color) !important;
+            background-color: rgba(59, 122, 87, 0.3) !important;
+            box-shadow: 0 0 15px rgba(59, 122, 87, 0.5) !important;
+            border: 1px dashed var(--amb-accent) !important;
             z-index: 1000 !important;
-            cursor: grabbing !important; /* Change to grabbing hand when actively dragging */
+            cursor: grabbing !important;
         }
 
-        /* The styles below are from the old implementation that worked */
         .nav-item-card[draggable=true] {
             user-select: none;
             -webkit-user-drag: element;
         }
 
-        /* Better visual feedback for dragging state */
         .nav-item-card.dragNavBar {
             transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s;
         }
 
+        /* The handle only shows where to grab; the whole row drags */
         .drag-handle {
-            color: var(--light-color);
+            color: var(--amb-muted);
             opacity: 0.7;
             transition: opacity 0.2s;
-            /* Making the drag handle just decorative, not functional for dragging */
             pointer-events: none;
         }
 
@@ -89,32 +68,25 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             opacity: 1;
         }
 
-        /* Make sure inputs and buttons show the right cursor */
         .nav-item-card input,
-        .nav-item-card button,
         .nav-item-card .input-group-text {
-            cursor: auto; /* Reset cursor for interactive elements */
+            cursor: auto;
         }
 
         .nav-item-card button {
-            cursor: pointer; /* Make buttons show pointer */
+            cursor: pointer;
         }
 
         .text-warning {
-            color: var(--warning-color) !important;
+            color: var(--amb-warning) !important;
         }
 
-        .input-group {
-            margin-bottom: 0;
+        .nav-item-card .row.align-items-center {
+            min-height: 38px;
+            row-gap: 8px;
         }
 
-        /* Ensure consistent vertical alignment */
-        .row.align-items-center {
-            min-height: 38px; /* Match height of input groups */
-        }
-
-        /* Fixed width column for handle to ensure alignment */
-        .col-auto {
+        .nav-item-card .col-auto {
             display: flex;
             align-items: center;
         }
@@ -129,87 +101,67 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
         }
 
         @keyframes successHighlight {
-            0%, 100% { background-color: rgba(255, 255, 255, 0.05); }
-            30% { background-color: rgba(46, 204, 113, 0.2); }
+            0%, 100% { background-color: var(--amb-inset); }
+            30% { background-color: rgba(59, 122, 87, 0.45); }
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        #searchLinks {
+            width: 240px;
+            max-width: 100%;
         }
 
-        .fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
+        @media (max-width: 767.98px) {
+            #searchLinks {
+                width: 100%;
+            }
 
-        body.navbar-admin-page #navbarLinks li,
-        body.navbar-admin-page #navbarLinks .nav-item-card {
-            cursor: grab !important; /* Force grab cursor with !important */
+            .page-title-row > div {
+                flex: 1 1 100%;
+            }
         }
-
-        body.navbar-admin-page #navbarLinks li.dragging,
-        body.navbar-admin-page #navbarLinks .nav-item-card.dragging {
-            cursor: grabbing !important; /* Force grabbing cursor when dragging */
-        }
-
-        /* Override for interactive elements within the list items */
-        body.navbar-admin-page #navbarLinks li input,
-        body.navbar-admin-page #navbarLinks li button,
-        body.navbar-admin-page #navbarLinks li .input-group-text,
-        body.navbar-admin-page #navbarLinks .nav-item-card input,
-        body.navbar-admin-page #navbarLinks .nav-item-card button,
-        body.navbar-admin-page #navbarLinks .nav-item-card .input-group-text {
-            cursor: auto !important; /* Reset cursor for interactive elements */
-        }
-
-        body.navbar-admin-page #navbarLinks li button,
-        body.navbar-admin-page #navbarLinks .nav-item-card button {
-            cursor: pointer !important; /* Make buttons show pointer */
-        }
-
     </style>
 </head>
 <body class="navbar-admin-page">
+<?php $ambAdminPage = 'navbar'; include __DIR__ . '/adminNav.php'; ?>
 
-<div class="container py-4">
-    <div class="admin-header text-center fade-in">
-        <h1 class="display-4">Navbar Administration</h1>
-        <p class="lead">Manage your website's navigation menu</p>
-        <a href="mainAdmin.php" class="btn btn-outline-light mb-3">
-            <i class="bi bi-arrow-left"></i> Back to Main Admin
-        </a>
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="admin-title">Navbar Admin</div>
+
+        <div class="sidebar-actions">
+            <button id="saveLinksButton" class="btn btn-light w-100 mb-2" onclick="saveLinks()">
+                <i class="bi bi-save"></i> Save Changes
+                <span class="spinner-border spinner-border-sm loading-spinner" id="saveSpinner" role="status" aria-hidden="true"></span>
+            </button>
+            <button id="createLinkButton" class="btn btn-outline-light w-100 mb-4" onclick="createNewNavLinkRow()">
+                <i class="bi bi-plus-circle"></i> Add New Link
+            </button>
+        </div>
+
+        <div class="section-title">How it works</div>
+        <p class="sidebar-note">
+            These are the links in your website's menu, in the order they appear.
+            Drag them to reorder, then press Save Changes.
+        </p>
+        <p class="sidebar-note mb-0">
+            Links marked with <i class="bi bi-lock-fill text-warning"></i> have limited editing options.
+        </p>
     </div>
 
-    <div class="row">
-        <div class="col-lg-10 mx-auto fade-in" style="animation-delay: 0.1s;">
-            <!-- Nav Items Section -->
-            <div class="content-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3><i class="bi bi-list"></i> Navigation Items</h3>
-                    <div>
-                        <input type="text" id="searchLinks" class="form-control form-control-sm" placeholder="Search links...">
-                    </div>
-                </div>
-
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <div>Drag items to reorder. Items marked with <i class="bi bi-lock-fill"></i> have limited editing options.</div>
-                </div>
-
-                <ul id="navbarLinks" class="list-unstyled">
-                    <!-- Nav items will be inserted here -->
-                </ul>
-
-                <div class="d-flex justify-content-between mt-4">
-                    <button id="createLinkButton" class="btn btn-success" onclick="createNewNavLinkRow()">
-                        <i class="bi bi-plus-circle"></i> Add New Link
-                    </button>
-                    <button id="saveLinksButton" class="btn btn-primary" onclick="saveLinks()">
-                        <i class="bi bi-save"></i> Save Changes
-                        <span class="spinner-border spinner-border-sm loading-spinner" id="saveSpinner" role="status" aria-hidden="true"></span>
-                    </button>
+    <!-- Main Content -->
+    <div class="content-area">
+        <div class="main-content">
+            <div class="page-title-row">
+                <h1 class="h3">Navbar Administration</h1>
+                <div>
+                    <input type="text" id="searchLinks" class="form-control form-control-sm" placeholder="Search links...">
                 </div>
             </div>
+
+            <ul id="navbarLinks" class="list-unstyled">
+                <!-- Nav items will be inserted here -->
+            </ul>
         </div>
     </div>
 </div>
@@ -219,10 +171,10 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title text-dark" id="deleteConfirmModalLabel">Confirm Deletion</h5>
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Deletion</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-dark">
+            <div class="modal-body">
                 Are you sure you want to delete "<span id="deleteItemName"></span>"?
             </div>
             <div class="modal-footer">
@@ -234,7 +186,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 </div>
 
 <!-- Toast Container -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+<div class="toast-container p-3"></div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>

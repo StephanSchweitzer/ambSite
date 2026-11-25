@@ -26,121 +26,11 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
 
     <style>
-        body {
-            background-color: #25252f;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .sidebar {
-            background-color: #1e1e28;
-            min-height: 100vh;
-            padding: 20px;
-            position: fixed;
-            width: 250px;
-            overflow-y: auto;
-        }
-
-        .content-area {
-            margin-left: 250px;
-            padding: 20px;
-            width: 100%;
-        }
-
-        .admin-container {
-            background-color: #2c3e50;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            margin: 30px auto;
-            max-width: 1400px;
-            padding: 30px;
-        }
-
-        .admin-title {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: white;
-        }
-
-        .nav-link {
-            color: rgba(255, 255, 255, 0.9);
-            border-radius: 5px;
-            margin-bottom: 5px;
-            transition: all 0.2s;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            background-color: rgba(255,255,255,0.1);
-            color: white;
-        }
-
-        .nav-link i {
-            width: 20px;
-            text-align: center;
-            margin-right: 8px;
-        }
-
-        .stats-card {
-            background-color: #3b7a57;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.3s;
-            cursor: pointer;
-            color: white;
-        }
-
-        .stats-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .stats-card.active {
-            box-shadow: 0 0 0 2px #8de4ff;
-        }
-
-        .stats-card:focus-visible {
-            outline: 2px solid #8de4ff;
-            outline-offset: 2px;
-        }
-
-        .stats-card i {
-            font-size: 24px;
-            margin-right: 15px;
-            color: #8de4ff;
-        }
-
-        .stats-card small {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .stats-card .count {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 0;
-        }
-
-        .section-title {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1rem;
-            color: #8de4ff;
-            font-weight: 500;
-            margin: 20px 0 10px;
-        }
-
-        .main-content {
-            background-color: #2c3e50;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            color: white;
-        }
-
+        /* Only what is particular to the Works page; the sidebar, panel,
+           fields, buttons and dialogs come from admin.css */
         .search-and-filters {
             margin-bottom: 20px;
         }
@@ -159,7 +49,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
         }
 
         .filter-tag.active {
-            background-color: #3b7a57;
+            background-color: var(--amb-accent);
             color: white;
         }
 
@@ -276,19 +166,13 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
         .multi-select-toolbar {
             display: none;
-            background-color: #2c3e50;
+            background-color: var(--amb-inset);
+            border: 1px solid var(--amb-line);
             border-radius: 8px;
             padding: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             margin-bottom: 20px;
             color: white;
-        }
-
-        .toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
         }
 
         .custom-toast {
@@ -305,310 +189,63 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
-            display: flex;
             justify-content: center;
             align-items: center;
             z-index: 9999;
             display: none;
         }
 
-        /* Improved contrast fixes */
-        .text-muted {
-            color: #a8c7e0 !important;
-        }
-
         #resultsInfo {
-            color: #a8c7e0 !important;
+            color: var(--amb-muted) !important;
         }
 
-        .form-text {
-            color: #b0d4ff !important;
-        }
-
-        .form-check-label {
-            color: white;
-        }
-
-        /* Make dropdown items more readable */
-        .dropdown-menu {
-            background-color: #2c3e50;
-        }
-
-        .dropdown-item {
-            color: white;
-        }
-
-        .dropdown-item:hover, .dropdown-item:focus {
-            background-color: #3b7a57;
-            color: white;
-        }
-
-        /* Fix select dropdown text in main content */
-        .main-content select.form-select {
-            color: white;
-            background-color: #2c3e50;
-            border-color: #495057;
-        }
-
-        .main-content select.form-select option {
-            background-color: #2c3e50;
-            color: white;
-        }
-
-        /* Fix input text in main content */
-        .main-content .form-control {
-            color: white;
-            background-color: #2c3e50;
-            border-color: #495057;
-        }
-
-        .main-content .form-control::placeholder {
-            color: #a8c7e0;
-        }
-
-        .input-group-text {
-            background-color: #3b7a57;
-            color: white;
-            border-color: #3b7a57;
-        }
-
-        /* Make sort dropdown visible on dark background */
+        /* The Sort button's menu */
         #sortDropdown {
             color: white;
-            border-color: #a8c7e0;
+            border-color: var(--amb-muted);
         }
 
-        /* Dark theme for modals */
-        .modal-content {
-            background-color: #2c3e50;
-            color: white;
-            border: 1px solid #1e1e28;
-        }
-
-        .modal-header {
-            border-bottom: 1px solid #1e1e28;
-        }
-
-        .modal-footer {
-            border-top: 1px solid #1e1e28;
-        }
-
-        .modal-content .btn-close {
-            color: white;
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
-
-        /* Form controls in modal */
-        .modal-content .form-control,
-        .modal-content .form-select {
-            background-color: #1e1e28;
-            color: white;
-            border: 1px solid #495057;
-        }
-
-        .modal-content .form-control:focus,
-        .modal-content .form-select:focus {
-            background-color: #25252f;
-            border-color: #3b7a57;
-            box-shadow: 0 0 0 0.25rem rgba(59, 122, 87, 0.25);
-        }
-
-        .modal-content .form-control::placeholder {
-            color: #a8c7e0;
-        }
-
-        /* Make form labels light in modal */
-        .modal-content .form-label {
-            color: white;
-            font-weight: 500;
-        }
-
-        /* Make radio button labels light in modal */
-        .modal-content .form-check-label {
-            color: white;
-        }
-
-        .modal-content .form-text {
-            color: #a8c7e0 !important;
-        }
-
-        /* Modal buttons */
-        .modal-footer .btn-secondary {
-            background-color: #495057;
-            border-color: #495057;
-            color: white;
-        }
-
-        .modal-footer .btn-primary {
-            background-color: #3b7a57;
-            border-color: #3b7a57;
-            color: white;
-        }
-
-        .modal-footer .btn-danger {
-            background-color: #e74c3c;
-            border-color: #e74c3c;
-            color: white;
-        }
-
-        .modal-content .dropdown-menu {
-            background-color: #2c3e50;
-        }
-
-        .modal-content .dropdown-item {
-            color: white;
-        }
-
-        .modal-content .dropdown-item:hover,
-        .modal-content .dropdown-item:focus {
-            background-color: #3b7a57;
-            color: white;
-        }
-
-        /* Override the existing modal styles */
-        .modal-content .text-muted {
-            color: #a8c7e0 !important;
-        }
-
-        /* Custom styles for badges in modal */
-        .modal-content .badge-select-works {
-            background-color: #4dabf7 !important;
-        }
-
-        .modal-content .badge-carousel {
-            background-color: #ff922b !important;
-        }
-
-        .modal-content .badge-available {
-            background-color: #51cf66 !important;
-        }
-
-        .modal-content .badge-color {
-            background-color: #cc5de8 !important;
-        }
-
-        .modal-content .badge-bw {
-            background-color: #34495e;
-        }
-
-        /* Confirmation modal specific styling */
-        #confirmationModal .modal-content {
-            background-color: #2c3e50;
-        }
-
-        #confirmationModal .modal-header {
-            border-bottom-color: #1e1e28;
-        }
-
-        #confirmationModal .modal-footer {
-            border-top-color: #1e1e28;
-        }
-
+        /* The confirm button in the "are you sure" dialog */
         #confirmActionBtn {
-            background-color: #e74c3c;
-            border-color: #e74c3c;
+            background-color: var(--amb-danger);
+            border-color: var(--amb-danger);
         }
 
         /* Image preview border */
         .modal-content #previewImage,
         .modal-content #uploadPreview {
-            border: 2px solid #1e1e28;
+            border: 2px solid var(--amb-sidebar);
         }
 
-        /* Fix badge color and font weight */
-        .badge {
-            font-weight: 600;
+        /* The projects a work belongs to, in its dialog */
+        #projectsList,
+        #createProjectsList {
+            border: 1px solid var(--amb-border);
+            border-radius: 8px;
+            max-height: 350px;
+            list-style-type: none;
+            margin: 15px 0;
+            overflow-y: auto;
+            padding: 0;
+            background-color: var(--amb-panel);
         }
 
-        /* Phones and small tablets: the sidebar sits above the works as a
-           compact panel instead of a fixed column beside them. */
+        #projectsList .list-group-item,
+        #createProjectsList .list-group-item {
+            padding: 10px 15px;
+            border-radius: 0;
+        }
+
+        #projectsList .list-group-item:hover {
+            background-color: #404b57;
+        }
+
+        #projectsList .badge {
+            background-color: var(--amb-accent);
+            color: white;
+        }
+
         @media (max-width: 767.98px) {
-            .admin-layout {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                position: static;
-                min-height: auto;
-                padding: 15px;
-            }
-
-            .admin-title {
-                font-size: 1.4rem;
-                margin-bottom: 12px;
-            }
-
-            .sidebar-actions {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }
-
-            .sidebar-actions .btn {
-                margin-bottom: 0 !important;
-                font-size: 0.95rem;
-                font-weight: 600;
-            }
-
-            .section-title {
-                margin: 15px 0 8px;
-            }
-
-            .sidebar .view-options {
-                flex-direction: row !important;
-                flex-wrap: wrap;
-                gap: 6px;
-                margin-bottom: 0 !important;
-            }
-
-            .sidebar .view-options .nav-link {
-                background-color: rgba(255,255,255,0.06);
-                margin-bottom: 0;
-                padding: 6px 12px;
-                font-size: 0.9rem;
-            }
-
-            .sidebar .view-options .nav-link.active {
-                background-color: #3b7a57;
-            }
-
-            .stats-list {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-            }
-
-            .stats-card {
-                flex-direction: column;
-                text-align: center;
-                padding: 10px 6px;
-                margin-bottom: 0;
-            }
-
-            .stats-card i {
-                font-size: 18px;
-                margin: 0 0 4px;
-            }
-
-            .stats-card .count {
-                font-size: 1.2rem;
-            }
-
-            .content-area {
-                margin-left: 0;
-                padding: 10px;
-            }
-
-            .main-content {
-                padding: 15px;
-            }
-
-            .main-content h1 {
-                font-size: 1.3rem;
-                margin-bottom: 0;
-            }
-
             .multi-select-toolbar > div {
                 flex-wrap: wrap;
                 gap: 8px;
@@ -644,12 +281,6 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                 font-size: 0.65rem;
             }
 
-            .toast-container {
-                left: 10px;
-                right: 10px;
-                bottom: 10px;
-            }
-
             .custom-toast {
                 min-width: 0;
                 width: 100%;
@@ -661,84 +292,15 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                 object-fit: contain;
             }
 
-            .modal-footer {
-                flex-wrap: wrap;
-            }
-
             .modal-footer #deleteOrRestore {
                 margin-right: auto;
             }
         }
-
-        #projectsList {
-            border: 1px solid #495057;
-            border-radius: 8px;
-            max-height: 350px;
-            list-style-type: none;
-            margin: 15px 0;
-            overflow-y: auto;
-            padding: 0;
-            background-color: #2c3e50; /* Dark background */
-        }
-
-        #projectsList .list-group-item {
-            background-color: #343a40; /* Dark grey background */
-            color: #ffffff; /* White text */
-            border-color: #495057; /* Darker border */
-            padding: 10px 15px;
-            border-radius: 0;
-        }
-
-        #projectsList .list-group-item:hover {
-            background-color: #404b57; /* Slightly lighter on hover */
-        }
-
-        #projectsList .form-check-label {
-            color: #ffffff; /* White text for checkboxes */
-        }
-
-        #projectsList .badge {
-            background-color: #3b7a57; /* Green badge */
-            color: white;
-        }
-
-        /* Project search styling */
-        .project-search-container .input-group-text {
-            background-color: #3b7a57; /* Green background */
-            color: white;
-            border-color: #3b7a57;
-        }
-
-        #projectSearch {
-            background-color: #2c3e50; /* Dark background */
-            color: white;
-            border-color: #495057;
-        }
-
-        #projectSearch::placeholder {
-            color: #a8c7e0; /* Light blue placeholder */
-        }
-
-        /* Select all checkbox */
-        .form-check-input:checked {
-            background-color: #3b7a57; /* Green when checked */
-            border-color: #3b7a57;
-        }
-
-        /* Make sure this gets applied to the modal */
-        .modal-content #projectsList .list-group-item {
-            background-color: #343a40;
-            color: #ffffff;
-        }
-
-        .dropdown-menu.border-white {
-            border: 1px solid white !important; /* Makes border thicker and ensures it overrides other styles */
-            border-radius: 2px;                 /* Slightly rounded corners */
-            box-shadow: 0 0 3px rgba(255,255,255,0.3); /* Optional: adds a subtle glow effect */
-        }
     </style>
 </head>
 <body>
+<?php $ambAdminPage = 'works'; include __DIR__ . '/adminNav.php'; ?>
+
 <!-- Loading Spinner -->
 <div id="loadingSpinner">
     <div class="spinner-border text-light" role="status">
@@ -752,10 +314,6 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
         <div class="admin-title">Works Admin</div>
 
         <div class="sidebar-actions">
-            <a href="mainAdmin.php" class="btn btn-outline-light btn-sm w-100 mb-3">
-                <i class="fas fa-arrow-left"></i> Main Admin
-            </a>
-
             <button class="btn btn-light w-100 mb-4" id="addNewWorkBtn">
                 <i class="fas fa-plus"></i> Add New Work
             </button>
@@ -809,7 +367,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
     <div class="content-area">
         <div class="main-content">
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="page-title-row">
                 <h1 class="h3">Works Administration</h1>
                 <div class="d-flex">
                     <div class="dropdown">

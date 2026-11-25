@@ -86,8 +86,8 @@ $(document).ready(function () {
     });
 
     // Set active button state
-    $('.btn-group button').on('click', function() {
-        $('.btn-group button').removeClass('active');
+    $('#activeBtn, #inactiveBtn, #deletedBtn').on('click', function() {
+        $('#activeBtn, #inactiveBtn, #deletedBtn').removeClass('active');
         $(this).addClass('active');
     });
 });
@@ -107,7 +107,7 @@ function getProjects(activity) {
     var activityData = {activity: activity};
 
     // Set active button
-    $('.btn-group button').removeClass('active');
+    $('#activeBtn, #inactiveBtn, #deletedBtn').removeClass('active');
     if (activity === 'active') {
         $('#activeBtn').addClass('active');
     } else if (activity === 'inactive') {

@@ -52,47 +52,60 @@ $newSubscribersCount = count($newSubscribers);
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <link rel="stylesheet" href="admin.css">
-    <link rel="stylesheet" href="newsletterAdmin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
+    <link rel="stylesheet" href="newsletterAdmin.css?v=<?php echo filemtime(__DIR__ . '/newsletterAdmin.css'); ?>">
     <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
     <title>Newsletter Admin Page</title>
 </head>
 <body>
+<?php $ambAdminPage = 'newsletter'; include __DIR__ . '/adminNav.php'; ?>
 
-<div class="admin-container" style="align-content: center;">
-    <div class="container">
-        <br>
-        <h1 class="display-1" style="text-align:center; color: white;">Newsletter Admin</h1>
-        <br>
-        <a href="mainAdmin.php"><button type="button" class="btn btn-info">Main Admin Page</button></a>
-        <br>
-        <br>
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="admin-title">Newsletter Admin</div>
+
+        <div class="sidebar-actions">
+            <button id="exportEmailList" class="btn btn-light w-100 mb-2">
+                <i class="fas fa-copy"></i> Export Email List
+            </button>
+            <button id="exportCSV" class="btn btn-outline-light w-100 mb-4">
+                <i class="fas fa-file-export"></i> Export to CSV
+            </button>
+        </div>
+
+        <div class="section-title">Statistics</div>
+        <div class="stats-list">
+            <div class="stats-card">
+                <i class="fas fa-users"></i>
+                <div>
+                    <small>Total Subscribers</small>
+                    <p class="count" id="totalSubscribers">0</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <small>Active</small>
+                    <p class="count" id="activeSubscribers">0</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <i class="fas fa-pause-circle"></i>
+                <div>
+                    <small>Inactive</small>
+                    <p class="count" id="inactiveSubscribers">0</p>
+                </div>
+            </div>
+        </div>
     </div>
-    <br>
-    <div class="newsletter-body">
-        <div class="content-box newsletter-content">
 
-            <!-- Dashboard Stats -->
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="stat-card">
-                        <h3 id="totalSubscribers">0</h3>
-                        <p>Total Subscribers</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card">
-                        <h3 id="activeSubscribers">0</h3>
-                        <p>Active Subscribers</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card">
-                        <h3 id="inactiveSubscribers">0</h3>
-                        <p>Inactive Subscribers</p>
-                    </div>
-                </div>
+    <!-- Main Content -->
+    <div class="content-area">
+        <div class="main-content">
+            <div class="page-title-row">
+                <h1 class="h3">Newsletter Administration</h1>
             </div>
 
             <!-- New Subscribers Section -->
@@ -102,7 +115,7 @@ $newSubscribersCount = count($newSubscribers);
                         <div class="pulse-icon">
                             <i class="fas fa-bell"></i>
                         </div>
-                        <h3>New Subscribers Since Your Last Visit</h3>
+                        <h2>New Subscribers Since Your Last Visit</h2>
                         <span class="badge badge-pill badge-primary"><?php echo $newSubscribersCount; ?></span>
                     </div>
 
@@ -129,11 +142,11 @@ $newSubscribersCount = count($newSubscribers);
                                 <div class="subscriber-actions">
                                     <button class="btn btn-sm btn-info edit-subscriber" data-id="<?php echo $subscriber['id']; ?>"
                                             data-email="<?php echo htmlspecialchars($subscriber['email']); ?>"
-                                            data-active="<?php echo $subscriber['active']; ?>">
+                                            data-active="<?php echo $subscriber['active']; ?>" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button class="btn btn-sm btn-danger delete-subscriber" data-id="<?php echo $subscriber['id']; ?>"
-                                            data-email="<?php echo htmlspecialchars($subscriber['email']); ?>">
+                                            data-email="<?php echo htmlspecialchars($subscriber['email']); ?>" title="Delete">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -144,8 +157,8 @@ $newSubscribersCount = count($newSubscribers);
             <?php endif; ?>
 
             <!-- Search and Filter Controls -->
-            <div class="row mb-3">
-                <div class="col-md-6">
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -153,7 +166,7 @@ $newSubscribersCount = count($newSubscribers);
                         <input type="text" id="searchInput" class="form-control" placeholder="Search emails...">
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 mb-3">
                     <select id="statusFilter" class="form-control">
                         <option value="all">All Subscribers</option>
                         <option value="active">Active Only</option>
@@ -163,7 +176,7 @@ $newSubscribersCount = count($newSubscribers);
                         <?php endif; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 mb-3">
                     <select id="sortFilter" class="form-control">
                         <option value="email_asc">Email (A-Z)</option>
                         <option value="email_desc">Email (Z-A)</option>
@@ -193,20 +206,10 @@ $newSubscribersCount = count($newSubscribers);
 
             <!-- Pagination -->
             <nav aria-label="Subscription pagination">
-                <ul id="pagination" class="pagination justify-content-center">
+                <ul id="pagination" class="pagination justify-content-center mb-0">
                     <!-- Pagination will be populated by JavaScript -->
                 </ul>
             </nav>
-
-            <!-- Export Button -->
-            <div class="mt-3 text-right">
-                <button id="exportEmailList" class="btn btn-info mr-2">
-                    <i class="fas fa-copy"></i> Export Email List (Copy/Paste Format)
-                </button>
-                <button id="exportCSV" class="btn btn-success">
-                    <i class="fas fa-file-export"></i> Export to CSV
-                </button>
-            </div>
         </div>
     </div>
 </div>
@@ -322,7 +325,7 @@ $newSubscribersCount = count($newSubscribers);
 <?php endif; ?>
 
 <!-- Toast Container for Notifications -->
-<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+<div id="toastContainer"></div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>

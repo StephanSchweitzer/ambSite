@@ -1,59 +1,54 @@
-/* The shop admin page. Its own stylesheet (the page doesn't use Bootstrap):
-   light, roomy, and usable on a phone. Class names all start with sa-. */
+/* The shop admin page. Its own stylesheet (the page doesn't use Bootstrap),
+   on top of admin.css, which gives it the top bar, the sidebar and panel and
+   the colours every admin page shares. Class names all start with sa-.
+   The names below are this page's own, set from admin.css's colours. */
 
 :root {
-  --ink: #1d1d1b;
-  --text: #2a2a28;
-  --muted: #75756f;
-  --line: #e4e1da;
-  --paper: #fbfaf8;
-  --blue: #2f5fd0;
-  --pink: #ef7fae;
-  --green: #2e9e4f;
-  --yellow: #dfae12;
-  --red: #c0392b;
+  --ink: var(--amb-text);
+  --text: rgba(255, 255, 255, 0.9);
+  --muted: var(--amb-muted);
+  --line: rgba(255, 255, 255, 0.14);
+  --paper: var(--amb-inset);
+  --field: var(--amb-sidebar);
+  --blue: var(--amb-highlight);
+  --pink: var(--amb-accent);
+  --green: #6fd39a;
+  --yellow: #ffd27a;
+  --red: #ff8a7d;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  margin: 0;
-  background: #212529;
-  color: var(--text);
-  font: 16px/1.5 'Lato', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-.sa-page {
-  max-width: 980px;
-  margin: 4vh auto;
-  padding: 26px 30px 60px;
-  background: #fff;
-  border-radius: 14px;
-  min-height: 80vh;
-}
-
 h1, h2, h3 {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--amb-font);
   font-weight: 600;
   color: var(--ink);
   margin: 0;
 }
 
-h1 { font-size: 2.4rem; }
-h2 { font-size: 1.7rem; }
-h3 { font-size: 1.25rem; }
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.1rem; }
 
 a { color: var(--blue); }
 
-.sa-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+/* The way to the public shop, in the sidebar (where the Works page has
+   "Add New Work") */
+.sidebar-actions .sa-button {
+  width: 100%;
+  margin-bottom: 1.5rem;
 }
+
+/* The sections are the sidebar's view options (their look is admin.css's) */
+#tabs .section-title { flex: 1 1 100%; }
+.sa-tabs button { white-space: nowrap; }
 
 .sa-back {
   font-size: 0.9rem;
@@ -73,9 +68,9 @@ a { color: var(--blue); }
   justify-content: center;
   gap: 6px;
   padding: 10px 20px;
-  border: 1px solid var(--ink);
-  border-radius: 999px;
-  background: var(--ink);
+  border: 1px solid var(--amb-accent);
+  border-radius: 6px;
+  background: var(--amb-accent);
   color: #fff;
   font: inherit;
   font-size: 0.92rem;
@@ -85,26 +80,35 @@ a { color: var(--blue); }
   transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
-.sa-button:hover { background: #3a3a37; }
+.sa-button:hover { background: var(--amb-accent-hover); border-color: var(--amb-accent-hover); color: #fff; }
 .sa-button:disabled { opacity: 0.5; cursor: default; }
 
 .sa-button.sa-quiet {
-  background: #fff;
+  background: transparent;
   color: var(--ink);
-  border-color: var(--line);
+  border-color: rgba(255, 255, 255, 0.5);
   font-weight: 400;
 }
 
-.sa-button.sa-quiet:hover { border-color: var(--ink); background: #fff; }
+.sa-button.sa-quiet:hover { border-color: var(--ink); background: rgba(255, 255, 255, 0.12); }
+
+/* Light, like Bootstrap's btn-light on the other admin pages */
+.sa-button.sa-light {
+  background: #f8f9fa;
+  border-color: #f8f9fa;
+  color: var(--amb-sidebar);
+}
+
+.sa-button.sa-light:hover { background: #e2e6ea; border-color: #e2e6ea; color: var(--amb-sidebar); }
 
 .sa-button.sa-danger {
-  background: #fff;
+  background: transparent;
   color: var(--red);
-  border-color: #ecc8c3;
+  border-color: rgba(231, 76, 60, 0.55);
   font-weight: 400;
 }
 
-.sa-button.sa-danger:hover { border-color: var(--red); background: #fff; }
+.sa-button.sa-danger:hover { border-color: var(--amb-danger); background: rgba(231, 76, 60, 0.15); }
 
 .sa-button.sa-small { padding: 6px 14px; font-size: 0.84rem; }
 
@@ -134,18 +138,24 @@ textarea,
 select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #cfccc4;
-  border-radius: 8px;
-  background: #fff;
-  color: var(--text);
+  border: 1px solid var(--amb-border);
+  border-radius: 6px;
+  background: var(--field);
+  color: var(--ink);
   font: inherit;
 }
 
+input::placeholder,
+textarea::placeholder { color: var(--muted); opacity: 1; }
+
 input:focus, textarea:focus, select:focus {
-  outline: 2px solid var(--blue);
-  outline-offset: 1px;
-  border-color: var(--blue);
+  outline: none;
+  border-color: var(--amb-accent);
+  box-shadow: 0 0 0 0.25rem rgba(59, 122, 87, 0.35);
 }
+
+input[type="checkbox"],
+input[type="radio"] { accent-color: var(--amb-accent); }
 
 textarea { min-height: 110px; resize: vertical; }
 
@@ -161,63 +171,36 @@ textarea { min-height: 110px; resize: vertical; }
 
 /* ---------- What's left to set up ---------- */
 .sa-setup {
-  border: 1px solid #ead9a6;
-  background: #fdf8e7;
+  border: 1px solid rgba(243, 156, 18, 0.45);
+  background: rgba(243, 156, 18, 0.1);
   border-radius: 10px;
   padding: 16px 20px;
   margin-bottom: 22px;
 }
 
 .sa-setup.is-info {
-  border-color: #cfdcf7;
-  background: #f3f6fd;
+  border-color: rgba(141, 228, 255, 0.3);
+  background: rgba(141, 228, 255, 0.07);
 }
 
 .sa-setup h3 { margin-bottom: 6px; }
 .sa-setup ul { margin: 6px 0 0; padding-left: 20px; }
 .sa-setup li { margin-bottom: 4px; }
 .sa-setup code {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.1);
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 0.86em;
 }
 
-/* ---------- Tabs ---------- */
-.sa-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 26px;
-  overflow-x: auto;
-}
-
-.sa-tabs button {
-  padding: 12px 18px;
-  border: none;
-  border-bottom: 3px solid transparent;
-  background: none;
-  font: inherit;
-  color: var(--muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.sa-tabs button:hover { color: var(--ink); }
-
-.sa-tabs button.is-current {
-  color: var(--ink);
-  font-weight: 700;
-  border-bottom-color: var(--pink);
-}
-
+/* ---------- Counts and filters ---------- */
 .sa-count {
   display: inline-block;
   min-width: 22px;
   padding: 1px 7px;
   margin-left: 4px;
   border-radius: 999px;
-  background: var(--pink);
+  background: var(--amb-danger);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -239,16 +222,16 @@ textarea { min-height: 110px; resize: vertical; }
   padding: 7px 16px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: transparent;
   font: inherit;
   font-size: 0.9rem;
   color: var(--text);
   cursor: pointer;
 }
 
-.sa-chip.is-current { background: var(--ink); border-color: var(--ink); color: #fff; }
+.sa-chip.is-current { background: var(--amb-accent); border-color: var(--amb-accent); color: #fff; }
 .sa-chip:not(.is-current):not(:disabled):hover { border-color: var(--ink); }
-.sa-chip:disabled { color: #b5b3ac; cursor: default; }
+.sa-chip:disabled { color: rgba(255, 255, 255, 0.35); cursor: default; }
 
 /* (how many are under each filter) */
 .sa-chip-count { margin-left: 2px; font-size: 0.82em; opacity: 0.6; }
@@ -270,15 +253,15 @@ textarea { min-height: 110px; resize: vertical; }
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
-  background: #eeece7;
+  background: rgba(255, 255, 255, 0.1);
   color: var(--muted);
   white-space: nowrap;
 }
 
-.sa-pill.is-live, .sa-pill.is-shipped { background: #e3f3e7; color: #1f7a3a; }
-.sa-pill.is-paid { background: #fde6ef; color: #b93a71; }
-.sa-pill.is-sold, .sa-pill.is-refunded { background: #f7e3e0; color: var(--red); }
-.sa-pill.is-processing, .sa-pill.is-test, .sa-pill.is-reserved { background: #fdf3d0; color: #8a6a00; }
+.sa-pill.is-live, .sa-pill.is-shipped { background: rgba(59, 122, 87, 0.45); color: #b5f0cd; }
+.sa-pill.is-paid { background: rgba(239, 127, 174, 0.22); color: #ffb8d4; }
+.sa-pill.is-sold, .sa-pill.is-refunded { background: rgba(231, 76, 60, 0.22); color: #ffaaa0; }
+.sa-pill.is-processing, .sa-pill.is-test, .sa-pill.is-reserved { background: rgba(243, 156, 18, 0.22); color: #ffd27a; }
 
 /* ---------- Items ---------- */
 .sa-item {
@@ -315,7 +298,7 @@ textarea { min-height: 110px; resize: vertical; }
   height: 36px;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: #fff;
+  background: transparent;
   cursor: pointer;
   font-size: 1rem;
   color: var(--ink);
@@ -352,7 +335,7 @@ textarea { min-height: 110px; resize: vertical; }
   font-size: 0.74rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--amb-highlight);
 }
 
 .sa-section {
@@ -377,7 +360,7 @@ textarea { min-height: 110px; resize: vertical; }
   border: 1px solid var(--line);
 }
 
-.sa-picture:first-child img { outline: 3px solid var(--pink); outline-offset: 1px; }
+.sa-picture:first-child img { outline: 3px solid var(--amb-accent); outline-offset: 1px; }
 
 .sa-picture-tools {
   display: flex;
@@ -415,7 +398,7 @@ textarea { min-height: 110px; resize: vertical; }
   height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: transparent;
   color: var(--red);
   font-size: 1.1rem;
   cursor: pointer;
@@ -430,7 +413,7 @@ textarea { min-height: 110px; resize: vertical; }
   align-items: center;
   padding: 14px 0;
   margin-top: 26px;
-  background: #fff;
+  background: var(--amb-panel);
   border-top: 1px solid var(--line);
 }
 
@@ -439,7 +422,7 @@ textarea { min-height: 110px; resize: vertical; }
 /* ---------- Orders ---------- */
 .sa-order {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   margin-bottom: 18px;
   overflow: hidden;
 }
@@ -489,7 +472,7 @@ textarea { min-height: 110px; resize: vertical; }
   font-size: 0.78rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--amb-highlight);
 }
 
 .sa-order address { font-style: normal; margin-bottom: 8px; white-space: pre-line; }
@@ -511,7 +494,7 @@ textarea { min-height: 110px; resize: vertical; }
 /* ---------- Delivery ---------- */
 .sa-zone {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 16px 18px;
   margin-bottom: 14px;
 }
@@ -560,7 +543,7 @@ textarea { min-height: 110px; resize: vertical; }
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(20, 20, 18, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -570,8 +553,10 @@ textarea { min-height: 110px; resize: vertical; }
 .sa-overlay[hidden] { display: none; }
 
 .sa-sheet {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--amb-panel);
+  border: 1px solid var(--amb-sidebar);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   width: min(760px, 100%);
   max-height: 94vh;
   display: flex;
@@ -585,10 +570,10 @@ textarea { min-height: 110px; resize: vertical; }
   justify-content: space-between;
   gap: 12px;
   padding: 14px 20px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--amb-sidebar);
 }
 
-.sa-sheet-foot { border-bottom: none; border-top: 1px solid var(--line); }
+.sa-sheet-foot { border-bottom: none; border-top: 1px solid var(--amb-sidebar); }
 .sa-sheet-foot[hidden] { display: none; }
 .sa-sheet-body { padding: 16px 20px; overflow-y: auto; }
 
@@ -605,13 +590,14 @@ textarea { min-height: 110px; resize: vertical; }
 .sa-email textarea.sa-short { min-height: 70px; }
 
 .sa-hint code {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.1);
   padding: 0 4px;
   border-radius: 4px;
 }
 
 .sa-email-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; }
 
+/* The email itself stays light: it's what the buyer sees */
 .sa-email-preview {
   display: block;
   width: 100%;
@@ -619,6 +605,7 @@ textarea { min-height: 110px; resize: vertical; }
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfaf8;
+  color-scheme: light;
 }
 
 .sa-work-grid {
@@ -631,7 +618,7 @@ textarea { min-height: 110px; resize: vertical; }
 .sa-work {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--paper);
   padding: 6px;
   cursor: pointer;
   font: inherit;
@@ -667,39 +654,40 @@ textarea { min-height: 110px; resize: vertical; }
 }
 
 .sa-country-list input { width: 18px; height: 18px; flex: none; }
-.sa-country-list label.is-taken { color: #b5b3ac; }
+.sa-country-list label.is-taken { color: rgba(255, 255, 255, 0.35); }
 
-/* ---------- Messages ---------- */
+/* ---------- Messages (bottom right, like the other admin pages') ---------- */
 .sa-toasts {
   position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
+  right: 20px;
+  bottom: 20px;
   z-index: 2000;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: center;
-  width: min(92vw, 520px);
+  align-items: flex-end;
+  width: min(92vw, 420px);
   pointer-events: none;
 }
 
 .sa-toast {
   padding: 12px 20px;
-  border-radius: 10px;
-  background: var(--ink);
+  border-radius: 8px;
+  border-left: 5px solid var(--amb-accent);
+  background: var(--amb-inset);
   color: #fff;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.25);
-  text-align: center;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
 }
 
-.sa-toast.is-error { background: var(--red); }
+.sa-toast.is-error { background: var(--amb-danger); border-left-color: #a93226; }
+
+@media (max-width: 767.98px) {
+  h1 { font-size: 1.3rem; }
+  .sidebar-actions .sa-button { margin-bottom: 0; }
+  .sa-toasts { left: 10px; right: 10px; bottom: 10px; width: auto; align-items: stretch; }
+}
 
 @media (max-width: 720px) {
-  .sa-page { margin: 0; border-radius: 0; padding: 18px 16px 60px; min-height: 100vh; }
-  h1 { font-size: 2rem; }
-  .sa-top { justify-content: flex-start; }
-  .sa-top h1 { order: -1; width: 100%; }
   .sa-order-body { grid-template-columns: 1fr; }
   .sa-option { grid-template-columns: 1fr 1fr; }
   .sa-item { flex-wrap: wrap; }

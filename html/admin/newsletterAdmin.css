@@ -1,148 +1,62 @@
-/* Newsletter Admin Styles */
+/* Newsletter admin: only what is particular to this page. The sidebar,
+   panel, fields, buttons, dialogs and colours come from admin.css. */
 
-/* Stat Cards */
-.stat-card {
-    background-color: rgba(52, 73, 94, 0.7);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
-}
-
-.stat-card h3 {
-    font-size: 32px;
-    margin-bottom: 5px;
-    color: #3498db;
-    font-weight: 700;
-}
-
-.stat-card p {
-    color: #ecf0f1;
-    margin: 0;
-    font-size: 16px;
-}
-
-/* Table Styling */
+/* ---------- The subscribers table ---------- */
 .table {
-    background-color: rgba(52, 73, 94, 0.6);
-    color: white;
-    border-radius: 8px;
+    background-color: var(--amb-inset);
+    color: var(--amb-text);
+    border-radius: var(--amb-radius-sm);
     overflow: hidden;
-    margin-top: 20px;
+    margin-top: 4px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .table thead th {
-    background-color: rgba(44, 62, 80, 0.7);
-    color: white;
-    border-bottom: 2px solid #2c3e50;
+    background-color: var(--amb-sidebar);
+    color: var(--amb-highlight);
+    border-bottom: 1px solid var(--amb-border);
     border-top: none;
     padding: 12px 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.05rem;
+    text-transform: uppercase;
 }
 
 .table tbody tr {
     transition: background-color 0.2s ease;
 }
 
-.table tbody tr:hover td,
-.table tbody tr:hover th {
-    color: white !important; /* Force white text on hover */
-}
-
-/* Fix for table hover styling */
-.table tbody tr:hover {
-    background-color: rgba(44, 62, 80, 0.8); /* Dark background on hover */
-    color: white !important; /* Force white text on hover */
-}
-
-/* Make sure links in table stay visible on hover */
-.table tbody tr:hover a {
-    color: #3498db !important; /* Keep links blue on hover */
+.table-hover tbody tr:hover {
+    background-color: var(--amb-inset-hover);
+    color: var(--amb-text);
 }
 
 .table td, .table th {
     vertical-align: middle;
-    border-top: 1px solid rgba(236, 240, 241, 0.1);
+    border-top: 1px solid var(--amb-line);
     padding: 12px 15px;
 }
 
-/* Badges */
 .badge {
     padding: 6px 10px;
     font-size: 0.8rem;
 }
 
 .badge-success {
-    background-color: #2ecc71;
+    background-color: var(--amb-accent);
 }
 
 .badge-secondary {
     background-color: #7f8c8d;
 }
 
-/* Form Elements */
-.form-control {
-    background-color: rgba(52, 73, 94, 0.6);
-    border: 1px solid #34495e;
-    color: white;
-    transition: all 0.3s ease;
+.badge-primary,
+.badge-info {
+    background-color: var(--amb-info);
 }
 
-.form-control:focus {
-    background-color: rgba(52, 73, 94, 0.8);
-    border-color: #3498db;
-    color: white;
-    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-}
-
-.form-control::placeholder {
-    color: rgba(236, 240, 241, 0.6);
-}
-
-.input-group-text {
-    background-color: #34495e;
-    border: 1px solid #34495e;
-    color: white;
-}
-
-/* Buttons */
-.btn-primary {
-    background-color: #3498db;
-    border-color: #2980b9;
-}
-
-.btn-primary:hover {
-    background-color: #2980b9;
-    border-color: #2573a7;
-}
-
-.btn-danger {
-    background-color: #e74c3c;
-    border-color: #c0392b;
-}
-
-.btn-danger:hover {
-    background-color: #c0392b;
-    border-color: #a93226;
-}
-
-.btn-success {
-    background-color: #2ecc71;
-    border-color: #27ae60;
-}
-
-.btn-success:hover {
-    background-color: #27ae60;
-    border-color: #219d54;
-}
-
-/* Pagination */
+/* ---------- Pagination ---------- */
 .pagination {
     margin-top: 20px;
     flex-wrap: wrap;
@@ -150,157 +64,48 @@
 }
 
 .pagination .page-link {
-    background-color: rgba(52, 73, 94, 0.7);
-    border-color: #2c3e50;
-    color: white;
+    background-color: var(--amb-inset);
+    border-color: var(--amb-border);
+    color: var(--amb-text);
     transition: all 0.2s ease;
 }
 
 .pagination .page-link:hover {
-    background-color: rgba(52, 73, 94, 0.9);
-    color: white;
+    background-color: var(--amb-inset-hover);
+    color: var(--amb-text);
 }
 
 .pagination .page-item.active .page-link {
-    background-color: #3498db;
-    border-color: #2980b9;
-    color: white;
+    background-color: var(--amb-accent);
+    border-color: var(--amb-accent);
+    color: #fff;
 }
 
 .pagination .page-item.disabled .page-link {
-    background-color: rgba(44, 62, 80, 0.5);
-    border-color: #2c3e50;
-    color: rgba(236, 240, 241, 0.4);
+    background-color: transparent;
+    border-color: var(--amb-border);
+    color: rgba(255, 255, 255, 0.35);
 }
 
-/* Modal Styling */
-.modal-content {
-    background-color: #34495e;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    border-bottom: 1px solid rgba(236, 240, 241, 0.1);
-    padding: 15px 20px;
-}
-
-.modal-footer {
-    border-top: 1px solid rgba(236, 240, 241, 0.1);
-    padding: 15px 20px;
-}
-
-.close {
-    color: white;
-    text-shadow: none;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.close:hover {
-    color: white;
-    opacity: 1;
-}
-
-/* Additional fix for the email list textarea */
+/* The copy-paste list of addresses */
 #emailListText {
-    background-color: #2c3e50 !important;  /* Dark blue background */
-    color: #ecf0f1 !important;             /* Light text color */
-    border: 1px solid #3498db !important;  /* Blue border for better visibility */
-    font-family: monospace !important;     /* Monospace font for better readability of emails */
-    padding: 12px !important;              /* More padding for comfort */
-    font-size: 14px !important;            /* Slightly larger font */
+    font-family: monospace;
+    font-size: 14px;
+    padding: 12px;
 }
 
-/* Force textarea to maintain color even when focused/active */
-#emailListText:focus,
-#emailListText:hover,
-#emailListText:active {
-    background-color: #2c3e50 !important;
-    color: #ecf0f1 !important;
-    border-color: #3498db !important;
-}
-
-/* Custom Switch */
-.custom-control-input:checked ~ .custom-control-label::before {
-    background-color: #3498db;
-    border-color: #2980b9;
-}
-
-.custom-control-label::before {
-    background-color: rgba(52, 73, 94, 0.6);
-    border-color: #2c3e50;
-}
-
+/* BS4 switch in the edit dialog */
 .custom-switch .custom-control-label::after {
     background-color: #ecf0f1;
 }
 
-/* Toast Notifications */
-.toast {
-    background-color: #34495e;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.toast .toast-header {
-    border-bottom: 1px solid rgba(236, 240, 241, 0.1);
-}
-
-.toast .toast-body {
-    padding: 12px 15px;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .stat-card {
-        margin-bottom: 15px;
-    }
-
-    .table thead {
-        display: none;
-    }
-
-    .table, .table tbody, .table tr, .table td {
-        display: block;
-        width: 100%;
-    }
-
-    .table tr {
-        margin-bottom: 15px;
-        border-bottom: 2px solid #2c3e50;
-    }
-
-    .table td {
-        text-align: right;
-        padding-left: 50%;
-        position: relative;
-    }
-
-    .table td:before {
-        content: attr(data-label);
-        position: absolute;
-        left: 15px;
-        width: 45%;
-        text-align: left;
-        font-weight: 600;
-    }
-}
-
-/* Add these to your newsletterAdmin.css file */
-
-/* New Subscribers Section */
+/* ---------- New subscribers since the last visit ---------- */
 .new-subscribers-container {
-    background: linear-gradient(135deg, rgba(41, 128, 185, 0.2), rgba(52, 152, 219, 0.2));
-    border-radius: 10px;
+    background-color: rgba(141, 228, 255, 0.07);
+    border: 1px solid rgba(141, 228, 255, 0.3);
+    border-radius: var(--amb-radius-sm);
     padding: 20px;
-    border: 1px solid rgba(41, 128, 185, 0.4);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .new-subscribers-header {
@@ -308,81 +113,67 @@
     align-items: center;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid var(--amb-line);
 }
 
-.new-subscribers-header h3 {
+.new-subscribers-header h2 {
     margin: 0 15px;
-    color: #e0e0e0;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
 }
 
 .pulse-icon {
-    font-size: 1.8rem;
-    color: #3498db;
-    animation: pulse-blue 2s infinite;
+    flex: none;
     width: 40px;
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background-color: rgba(52, 152, 219, 0.2);
-}
-
-@keyframes pulse-blue {
-    0% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
-    }
-    70% {
-        transform: scale(1);
-        box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
-    }
-    100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
-    }
+    background-color: var(--amb-accent);
+    color: var(--amb-highlight);
+    font-size: 1.2rem;
 }
 
 .new-subscribers-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
+    gap: 16px;
 }
 
 .new-subscriber-card {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
     padding: 15px;
     display: flex;
     align-items: center;
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
 }
 
 .new-subscriber-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    background-color: var(--amb-inset-hover);
 }
 
 .email-icon {
+    flex-shrink: 0;
     width: 40px;
     height: 40px;
-    background-color: rgba(52, 152, 219, 0.3);
+    background-color: rgba(141, 228, 255, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 15px;
-    font-size: 1.2rem;
-    color: #3498db;
+    font-size: 1.1rem;
+    color: var(--amb-highlight);
 }
 
 .subscriber-details {
     flex: 1;
+    min-width: 0;
 }
 
 .subscriber-email {
@@ -393,7 +184,7 @@
 
 .subscriber-time {
     font-size: 0.8rem;
-    color: rgba(224, 224, 224, 0.7);
+    color: var(--amb-muted);
     margin-bottom: 5px;
 }
 
@@ -402,11 +193,11 @@
 }
 
 .status-active {
-    color: #2ecc71;
+    color: #6fd39a;
 }
 
 .status-inactive {
-    color: #e74c3c;
+    color: #ff8a7d;
 }
 
 .subscriber-actions {
@@ -414,99 +205,49 @@
     gap: 5px;
 }
 
-/* New subscriber row highlight in main table */
+/* A new subscriber's row in the table */
 .new-subscriber-row {
-    animation: highlight-row 2s ease-in-out infinite alternate;
-    background-color: rgba(52, 152, 219, 0.15) !important;
+    background-color: rgba(141, 228, 255, 0.08) !important;
 }
 
-@keyframes highlight-row {
-    from { background-color: rgba(52, 152, 219, 0.15) !important; }
-    to { background-color: rgba(52, 152, 219, 0.25) !important; }
-}
-
-/* Welcome Modal Styling */
+/* The "welcome back" window */
 .welcome-icon {
-    font-size: 4rem;
-    color: #3498db;
+    font-size: 3.5rem;
+    color: var(--amb-highlight);
 }
 
-.welcome-icon i {
-    animation: bounce 2s ease infinite;
-}
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-    40% {transform: translateY(-20px);}
-    60% {transform: translateY(-10px);}
-}
-
-/* Responsive fixes */
-@media (max-width: 768px) {
-    .new-subscribers-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .new-subscribers-header {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .new-subscribers-header h3 {
-        margin: 10px 0;
-    }
-
-    .pulse-icon {
-        margin-bottom: 10px;
-    }
-}
-
-/* Main content area (was inline styles on the page) */
-.newsletter-body {
-    max-width: 85vw;
-    margin: 0 auto;
-}
-
-.newsletter-content {
-    color: white;
-    padding: 20px;
-}
-
-/* Phones: drop the stacked side padding so the content gets the width */
+/* ---------- Phones: the table becomes one card per subscriber ---------- */
 @media (max-width: 767.98px) {
-    .newsletter-body {
-        max-width: none;
+    .table thead {
+        display: none;
     }
 
-    .newsletter-content {
-        padding: 0;
+    .table, .table tbody, .table tr, .table td {
+        display: block;
+        width: 100%;
     }
 
-    .new-subscribers-container {
-        padding: 12px;
-    }
-
-    .new-subscriber-card {
-        padding: 10px;
-    }
-
-    .email-icon {
-        flex-shrink: 0;
-        margin-right: 10px;
-    }
-
-    .subscriber-details {
-        min-width: 0;
+    .table tr {
+        margin-bottom: 12px;
+        border-bottom: 2px solid var(--amb-panel);
     }
 
     .table td {
+        text-align: right;
         padding-left: 38%;
+        position: relative;
         word-break: break-word;
         overflow-wrap: anywhere;
     }
 
     .table td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
         width: 32%;
+        text-align: left;
+        font-weight: 600;
+        color: var(--amb-muted);
     }
 
     .table td[colspan] {
@@ -514,18 +255,29 @@
         text-align: center;
     }
 
-    .stat-card {
-        margin-bottom: 10px;
+    .new-subscribers-grid {
+        grid-template-columns: 1fr;
     }
 
-    #exportEmailList,
-    #exportCSV {
-        display: block;
-        width: 100%;
-        margin: 0 0 8px 0 !important;
+    .new-subscribers-container {
+        padding: 12px;
     }
 
-    .modal-footer {
+    .new-subscribers-header {
         flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .new-subscribers-header h2 {
+        margin: 0;
+        font-size: 1.05rem;
+    }
+
+    .new-subscriber-card {
+        padding: 10px;
+    }
+
+    .email-icon {
+        margin-right: 10px;
     }
 }

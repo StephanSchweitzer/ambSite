@@ -1,364 +1,971 @@
+/* The admin pages' shared look, taken from the Works page.
+ *
+ * Every admin page (and the sign-in page) loads this file. It holds:
+ *   1. the colours and type, as variables (change them here, not on a page)
+ *   2. the bar across the top (admin/adminNav.php)
+ *   3. the page holder: a sidebar beside one panel, as on the Works page
+ *   4. Bootstrap's pieces (fields, buttons, dialogs, tabs...) in these colours.
+ *      Some pages use Bootstrap 4 and some 5, so both sets of names are here.
+ *   5. the dashboard and sign-in pages
+ * A page's own <style> or stylesheet keeps only what is particular to it.
+ */
+
+/* ---------- 1. Colours and type ---------- */
+:root {
+    --amb-bg: #25252f;          /* behind everything */
+    --amb-sidebar: #1e1e28;     /* sidebar, top bar, fields in dialogs */
+    --amb-panel: #2c3e50;       /* the main panel, dialogs */
+    --amb-inset: #253546;       /* a box or card sitting on the panel */
+    --amb-inset-hover: #2f4256;
+    --amb-border: #495057;
+    --amb-line: rgba(255, 255, 255, 0.1);
+    --amb-text: #ffffff;
+    --amb-soft: rgba(255, 255, 255, 0.85);
+    --amb-muted: #a8c7e0;
+    --amb-accent: #3b7a57;      /* green: the main action, what's chosen */
+    --amb-accent-hover: #46906a;
+    --amb-highlight: #8de4ff;   /* light blue: section titles, focus */
+    --amb-danger: #e74c3c;
+    --amb-danger-hover: #cf3f30;
+    --amb-warning: #f39c12;
+    --amb-info: #4a86b4;
+    --amb-radius: 10px;
+    --amb-radius-sm: 8px;
+    --amb-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    --amb-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --amb-topbar-h: 56px;
+    --amb-sidebar-w: 250px;
+    color-scheme: dark;
+}
+
 body {
-    background-color: #212529; /* Dark background for the whole page */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    padding: 0;
-/*    height: 100vh;
+    background-color: var(--amb-bg);
+    color: var(--amb-text);
+    font-family: var(--amb-font);
+}
+
+a {
+    color: var(--amb-highlight);
+}
+
+a:hover {
+    color: #c2f1ff;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--amb-text);
+}
+
+/* ---------- 2. The bar across the top ---------- */
+.amb-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;               /* under dialogs, dropdowns and the shop's picker */
     display: flex;
-    justify-content: center;
-    align-items: center;*/
+    align-items: center;
+    gap: 16px;
+    min-height: var(--amb-topbar-h);
+    padding: 0 20px;
+    background-color: var(--amb-sidebar);
+    border-bottom: 1px solid var(--amb-line);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    font-family: var(--amb-font);
 }
 
-
-.admin-container {
-  background: linear-gradient(135deg, #0a2941 0%, #0f4261 100%); /* Darker navy blue gradient */
-  border-radius: 15px;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* This remains the same as it was */
-  padding: 2rem;
-  margin: auto;
-  max-width: 90vw;
-}
-.admin-header {
-    font-size: 2.5rem;
-    color: #e0e0e0; /* Soft white for contrast and visibility */
-    margin-bottom: 1rem;
+.amb-topbar-brand {
+    flex: none;
+    color: var(--amb-text);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
-.btn-outline-primary {
-    border-color: #e0e0e0;
-    color: #e0e0e0;
+.amb-topbar-brand:hover {
+    color: var(--amb-text);
+}
+
+.amb-topbar-brand span {
+    margin-left: 4px;
+    color: var(--amb-highlight);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
+}
+
+.amb-topbar-links,
+.amb-topbar-end {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    align-self: stretch;
+}
+
+.amb-topbar-links {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.amb-topbar-end form {
+    display: flex;
+    margin: 0;
+}
+
+.amb-topbar-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-top: 3px solid transparent;
+    background: none;
+    color: rgba(255, 255, 255, 0.75);
+    font: inherit;
+    font-size: 0.92rem;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.amb-topbar-link:hover {
+    color: var(--amb-text);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.amb-topbar-link:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: -2px;
+}
+
+.amb-topbar-link.is-current {
+    color: var(--amb-text);
+    font-weight: 600;
+    border-bottom-color: var(--amb-accent);
+}
+
+.amb-topbar-link i {
+    width: 16px;
+    text-align: center;
+    color: var(--amb-highlight);
+}
+
+.amb-topbar-logout i {
+    color: #ff8a7d;
+}
+
+.amb-topbar-count {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background-color: var(--amb-danger);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+}
+
+/* Narrower screens: icons only for the end links, then the page links get
+   a row of their own that scrolls sideways */
+.amb-topbar-links {
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.amb-topbar-links::-webkit-scrollbar {
+    display: none;
+}
+
+@media (max-width: 1199.98px) {
+    .amb-topbar-end .amb-topbar-link span,
+    .amb-topbar-brand span {
+        display: none;
+    }
+
+    .amb-topbar-link {
+        padding: 0 9px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    /* The bar takes two rows here, so it scrolls away with the page and
+       the sidebar sticks to the very top instead */
+    :root {
+        --amb-topbar-h: 0px;
+    }
+
+    .amb-topbar {
+        position: static;
+        flex-wrap: wrap;
+        gap: 0;
+        padding: 0;
+    }
+
+    .amb-topbar-brand {
+        padding: 12px 16px;
+        flex: 1 1 auto;
+    }
+
+    .amb-topbar-end {
+        padding-right: 6px;
+    }
+
+    .amb-topbar-links {
+        order: 3;
+        flex: 1 1 100%;
+        overflow-x: auto;
+        border-top: 1px solid var(--amb-line);
+        scrollbar-width: none;
+    }
+
+    .amb-topbar-links::-webkit-scrollbar {
+        display: none;
+    }
+
+    .amb-topbar-links .amb-topbar-link {
+        padding: 10px 12px 8px;
+    }
+}
+
+/* ---------- 3. The page holder (as on the Works page) ---------- */
+.admin-layout {
+    display: flex;
+    align-items: flex-start;
+}
+
+.sidebar {
+    position: sticky;
+    top: var(--amb-topbar-h);
+    flex: 0 0 var(--amb-sidebar-w);
+    width: var(--amb-sidebar-w);
+    height: calc(100vh - var(--amb-topbar-h));
+    padding: 20px;
+    overflow-y: auto;
+    background-color: var(--amb-sidebar);
+}
+
+.content-area {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 20px;
+}
+
+/* A page without a sidebar keeps its panel to a readable width */
+.content-area.is-narrow {
+    max-width: 1240px;
+    margin: 0 auto;
+}
+
+.main-content {
+    background-color: var(--amb-panel);
+    border-radius: var(--amb-radius);
+    box-shadow: var(--amb-shadow);
+    padding: 20px;
+    color: var(--amb-text);
+}
+
+.admin-title {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: var(--amb-text);
+}
+
+/* The page's title and the tools beside it, at the top of the panel */
+.page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.page-title-row h1 {
+    margin: 0;
+}
+
+.page-subtitle {
+    margin: 4px 0 0;
+    color: var(--amb-muted);
+}
+
+.section-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1rem;
+    color: var(--amb-highlight);
+    font-weight: 500;
+    margin: 20px 0 10px;
+}
+
+/* A short explanation in the sidebar */
+.sidebar-note {
+    color: var(--amb-muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.sidebar .nav-link,
+.sidebar .view-options > button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    margin-bottom: 5px;
+    border: none;
+    border-radius: 5px;
+    background: none;
+    color: rgba(255, 255, 255, 0.9);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active,
+.sidebar .view-options > button:hover,
+.sidebar .view-options > button.is-current {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--amb-text);
+}
+
+.sidebar .nav-link i,
+.sidebar .view-options > button i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+.sidebar-actions .btn {
+    font-weight: 600;
+}
+
+/* Numbers in the sidebar. Only the ones that filter (role="button") lift
+   and point when hovered. */
+.stats-card {
+    display: flex;
+    align-items: center;
+    background-color: var(--amb-accent);
+    border-radius: var(--amb-radius-sm);
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    color: var(--amb-text);
+}
+
+.stats-card[role="button"] {
+    cursor: pointer;
+}
+
+.stats-card[role="button"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.stats-card.active {
+    box-shadow: 0 0 0 2px var(--amb-highlight);
+}
+
+.stats-card:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: 2px;
+}
+
+.stats-card i {
+    font-size: 24px;
+    margin-right: 15px;
+    color: var(--amb-highlight);
+}
+
+.stats-card small {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.stats-card .count {
+    font-size: 1.5rem;
     font-weight: bold;
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
+    margin-bottom: 0;
 }
 
-.btn-outline-primary:hover {
-    background-color: #e0e0e0;
-    color: #1f4037; /* Dark green from the gradient for a cohesive look */
+/* A box sitting on the panel (a card, a group of fields) */
+.panel-box {
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.panel-box-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 15px;
+    color: var(--amb-text);
+}
+
+.panel-box-title i {
+    color: var(--amb-highlight);
+    margin-right: 8px;
+}
+
+/* Waiting and nothing-to-show messages */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--amb-muted);
+}
+
+/* ---------- 4. Bootstrap's pieces, in these colours ---------- */
+.text-muted {
+    color: var(--amb-muted) !important;
+}
+
+.form-text,
+small.form-text {
+    color: var(--amb-muted) !important;
+}
+
+label,
+.form-label,
+.form-check-label,
+.custom-control-label {
+    color: var(--amb-text);
+}
+
+.form-label,
+.form-group > label {
+    font-weight: 500;
+}
+
+/* Fields */
+.form-control,
+.form-select,
+.custom-select,
+.custom-file-label {
+    background-color: var(--amb-sidebar);
+    color: var(--amb-text);
+    border: 1px solid var(--amb-border);
+}
+
+.main-content .form-control,
+.main-content .form-select {
+    background-color: var(--amb-panel);
+}
+
+.main-content .panel-box .form-control,
+.main-content .panel-box .form-select,
+.signin-box .form-control,
+.modal-content .form-control,
+.modal-content .form-select {
+    background-color: var(--amb-sidebar);
+}
+
+.form-control:focus,
+.form-select:focus,
+.custom-select:focus,
+.main-content .form-control:focus,
+.modal-content .form-control:focus,
+.modal-content .form-select:focus {
+    background-color: var(--amb-bg);
+    color: var(--amb-text);
+    border-color: var(--amb-accent);
+    box-shadow: 0 0 0 0.25rem rgba(59, 122, 87, 0.35);
+}
+
+.form-control::placeholder {
+    color: var(--amb-muted);
+    opacity: 1;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* A light arrow on dark dropdowns */
+.form-select,
+select.form-control {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a8c7e0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.25rem;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+select option {
+    background-color: var(--amb-panel);
+    color: var(--amb-text);
+}
+
+.input-group-text {
+    background-color: var(--amb-accent);
+    color: var(--amb-text);
+    border-color: var(--amb-accent);
+}
+
+.form-check-input:checked,
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--amb-accent);
+    border-color: var(--amb-accent);
+}
+
+.form-check-input:focus,
+.custom-control-input:focus ~ .custom-control-label::before {
+    border-color: var(--amb-accent);
+    box-shadow: 0 0 0 0.25rem rgba(59, 122, 87, 0.35);
+}
+
+.custom-control-label::before {
+    background-color: var(--amb-sidebar);
+    border-color: var(--amb-border);
+}
+
+.custom-file-label::after {
+    background-color: var(--amb-accent);
+    color: var(--amb-text);
+    border-color: var(--amb-accent);
+}
+
+/* Buttons: green for the main action, red to delete, grey to cancel */
+.btn-primary,
+.btn-success {
+    background-color: var(--amb-accent);
+    border-color: var(--amb-accent);
+    color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active {
+    background-color: var(--amb-accent-hover) !important;
+    border-color: var(--amb-accent-hover) !important;
+    color: #fff;
 }
 
 .btn-danger {
-    transition: all 0.3s ease;
+    background-color: var(--amb-danger);
+    border-color: var(--amb-danger);
+    color: #fff;
 }
 
-.d-grid {
-display: flex;
-justify-content: center;
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active {
+    background-color: var(--amb-danger-hover) !important;
+    border-color: var(--amb-danger-hover) !important;
+    color: #fff;
 }
 
+.btn-secondary {
+    background-color: var(--amb-border);
+    border-color: var(--amb-border);
+    color: #fff;
+}
 
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background-color: #5a6169;
+    border-color: #5a6169;
+    color: #fff;
+}
+
+.btn-info {
+    background-color: var(--amb-info);
+    border-color: var(--amb-info);
+    color: #fff;
+}
+
+.btn-info:hover,
+.btn-info:focus {
+    background-color: #5795c4;
+    border-color: #5795c4;
+    color: #fff;
+}
+
+.btn-outline-secondary,
 .btn-outline-light {
-  color: #e0e0e0; /* Button text color */
-  border-color: #e0e0e0; /* Button border color */
-  font-weight: bold;
-  font-size: 1.2rem;
-  transition: all 0.3s ease;
+    color: var(--amb-text);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
+.btn-outline-secondary:hover,
 .btn-outline-light:hover {
-  background-color: #e0e0e0;
-  color: #1f4037; /* Dark green from the gradient */
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--amb-text);
+    color: var(--amb-text);
 }
 
-.button-group .btn {
-  margin-right: 10px; /* Spacing between buttons */
+.btn-light {
+    color: #1e1e28;
 }
 
-.custom-select-lg {
-  font-size: 1.25rem;
-  height: auto;
-  padding: 0.5rem 1rem;
+/* Dialogs (as the Works page's) */
+.modal-content {
+    background-color: var(--amb-panel);
+    color: var(--amb-text);
+    border: 1px solid var(--amb-sidebar);
+    border-radius: var(--amb-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-.photo-grid {
-  justify-content: start;
-  align-items: stretch;
+.modal-header {
+    background-color: transparent;
+    border-bottom: 1px solid var(--amb-sidebar);
+    color: var(--amb-text);
 }
 
-.card
-{
-  max-width: 20vw;
-  min-width: 20vw;
+.modal-footer {
+    border-top: 1px solid var(--amb-sidebar);
 }
 
-.d-inline-flex
-{
-  justify-content: center;
+.modal-title {
+    color: var(--amb-text);
 }
 
-.projectCardContainer
-{
-  display: flex;
-  justify-content: space-evenly;
-  flex-wrap: wrap;
+.modal-content .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
-/* General styling for select dropdowns */
-select {
-  width: 100%;        /* Full width of its container */
-  padding: 0.5rem;    /* Padding inside the select box */
-  font-size: 1rem;    /* Text size inside the select box */
-  border-radius: 5px; /* Rounded corners for the select box */
-  border: 1px solid #ced4da; /* Border color for the select box */
-  color: #495057;     /* Text color */
-  background-color: #fff; /* Background color */
-
+.close,
+.close:hover {
+    color: var(--amb-text);
+    text-shadow: none;
+    opacity: 0.75;
 }
 
-/* Focus and hover states for select dropdowns */
-select:focus {
-  outline: none;       /* Removes the default focus outline */
-  box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.25); /* Custom focus shadow */
-  border-color: #80bdff; /* Custom focus border color */
+.close:hover {
+    opacity: 1;
 }
 
-/* If your select has a specific class */
-.custom-select-lg {
-  width: 300px; /* or 100% for full width */
-  padding: 1rem; /* Larger padding for a larger dropdown */
-  font-size: 1.2rem; /* Larger text */
-  /* ... other styles ... */
+/* Tabs inside dialogs and panels */
+.nav-tabs {
+    border-bottom-color: var(--amb-border);
 }
 
-/*!* If your select has a specific id *!*/
-/*#projectsDropdown {*/
-/*  width: 300px; !* or 100% for full width *!*/
-/*  padding: 1rem; !* Larger padding for a larger dropdown *!*/
-/*  font-size: 1.2rem; !* Larger text *!*/
-/*  !* ... other styles ... *!*/
-/*}*/
-
-
-#navbarLinks li:last-child {
-  border-bottom: none; /* Removes border from the last item */
+.nav-tabs .nav-link {
+    color: var(--amb-soft);
+    border-color: transparent;
 }
 
-#navbarLinks {
-  list-style-type: none; /* Removes bullet points */
-  padding: 0;
-  background: #003366; /* Dark blue background for the navbar */
-  width: 100%; /* Adjust width as needed */
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin: 0;
+.nav-tabs .nav-link:hover {
+    color: var(--amb-text);
+    border-color: var(--amb-border) var(--amb-border) transparent;
 }
 
-#navbarLinks li {
-  cursor: pointer;
-  padding: 12px 20px;
-  margin: 10px; /* Adjust margin as needed */
-  background-color: #0055A2; /* Dark blue background */
-  color: #fff; /* White text */
-  border: none;
-  border-radius: 4px; /* Rounded corners */
-  text-align: center; /* Centered text */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
-  transition: background-color 0.3s, box-shadow 0.3s, transform 0.1s; /* Smooth transitions for the effects */
+.nav-tabs .nav-link.active {
+    background-color: var(--amb-panel);
+    color: var(--amb-text);
+    font-weight: 600;
+    border-color: var(--amb-border) var(--amb-border) var(--amb-panel);
+    box-shadow: inset 0 -3px 0 var(--amb-accent);
 }
 
-#navbarLinks li:hover {
-  background-color: #66B2FF; /* Light blue background on hover */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* More pronounced shadow on hover */
-  transform: translateY(-2px); /* Slight raise effect */
+/* Dropdown menus */
+.dropdown-menu {
+    background-color: var(--amb-panel);
+    border: 1px solid var(--amb-border);
 }
 
-#navbarLinks li.no-hover:hover {
-  background-color: initial; /* Return to default or specify a different color if desired */
-  box-shadow: none; /* Remove the shadow */
-  transform: none; /* Remove the transformation */
+.dropdown-item {
+    color: var(--amb-text);
 }
 
-#navbarLinks li.dragging, #navbar li.dragging:hover {
-  background-color: #0055A2; /* Dark blue background */
-  box-shadow: none;  /* No shadow during dragging */
-  transform: none;  /* No transformation during dragging */
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--amb-accent);
+    color: var(--amb-text);
 }
 
-#navbarLinks li:hover:not(.dragging) {
-  background-color: #66B2FF; /* Light blue background on hover */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px); /* Slight raise effect */
+/* Lists */
+.list-group-item {
+    background-color: #343a40;
+    color: var(--amb-text);
+    border-color: var(--amb-border);
 }
 
-
-
-
-.maxMinWidth15vw
-{
-    max-width: 15vw; !important;
-    min-width: 15vw; !important;
+/* Messages in the page */
+.alert-info {
+    background-color: rgba(141, 228, 255, 0.1);
+    border-color: rgba(141, 228, 255, 0.3);
+    color: var(--amb-text);
 }
 
-/* Modern admin dashboard additions - add these to your existing admin.css file */
+.alert-danger {
+    background-color: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.45);
+    color: #ffd2cc;
+}
+
+.alert-success {
+    background-color: rgba(59, 122, 87, 0.25);
+    border-color: rgba(59, 122, 87, 0.6);
+    color: var(--amb-text);
+}
+
+.badge {
+    font-weight: 600;
+}
+
+.spinner-border.text-primary {
+    color: var(--amb-highlight) !important;
+}
+
+/* Little messages ("Saved") in the bottom right corner, on every page */
+.toast-container,
+#toastContainer {
+    position: fixed;
+    top: auto;
+    right: 20px;
+    bottom: 20px;
+    left: auto;
+    z-index: 1100;
+}
+
+.toast {
+    background-color: var(--amb-panel);
+    color: var(--amb-text);
+    border: none;
+    border-radius: var(--amb-radius-sm);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.toast-header {
+    border-bottom: 1px solid var(--amb-line);
+}
+
+/* ---------- 5. Dashboard ---------- */
+.admin-welcome {
+    margin: 0;
+    color: var(--amb-text);
+}
+
+.admin-date {
+    color: var(--amb-muted);
+    margin: 4px 0 0;
+}
 
 .admin-dashboard {
-    padding: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
 }
 
 .admin-card {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
     height: 100%;
+    padding: 20px;
+    background-color: var(--amb-inset);
+    border: 1px solid var(--amb-line);
+    border-radius: var(--amb-radius-sm);
+    color: var(--amb-text);
+    text-decoration: none;
+    transition: all 0.3s;
 }
 
 .admin-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
-    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-3px);
+    background-color: var(--amb-inset-hover);
+    border-color: rgba(141, 228, 255, 0.35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    color: var(--amb-text);
+}
+
+.admin-card:focus-visible {
+    outline: 2px solid var(--amb-highlight);
+    outline-offset: 2px;
 }
 
 .admin-card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    color: #e0e0e0;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--amb-accent);
+    color: var(--amb-highlight);
+    font-size: 1.3rem;
 }
 
 .admin-card-title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #e0e0e0;
+    margin-bottom: 4px;
 }
 
 .admin-card-description {
-    color: rgba(224, 224, 224, 0.7);
+    color: var(--amb-muted);
     font-size: 0.9rem;
-}
-
-.admin-header-wrapper {
-    position: relative;
-    padding-bottom: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .badge-notification {
     position: absolute;
-    top: -10px;
-    right: -10px;
-    background-color: #ff4757;
-    color: white;
-    border-radius: 50%;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-    min-width: 1.5rem;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7);
-    }
-    70% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
-    }
-}
-
-.logout-container {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    z-index: 999;
-}
-
-.btn-logout {
-    background-color: rgba(220, 53, 69, 0.8);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-    color: white;
-    font-weight: 500;
-}
-
-.btn-logout:hover {
-    background-color: rgb(220, 53, 69);
-    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
-    transform: translateY(-2px);
-}
-
-.admin-welcome {
-    color: #e0e0e0;
-    font-weight: 300;
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    top: 12px;
+    right: 12px;
+    min-width: 1.6rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background-color: var(--amb-danger);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
     text-align: center;
 }
 
-.admin-date {
-    color: rgba(224, 224, 224, 0.7);
-    font-size: 0.9rem;
-    margin-bottom: 2rem;
+/* ---------- 5b. Sign in ---------- */
+.signin-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.signin-box {
+    width: 100%;
+    max-width: 420px;
+    padding: 30px;
+}
+
+.signin-box .admin-title {
     text-align: center;
 }
 
-/* Smooth page transitions */
-body {
-    animation: fadeIn 0.5s ease;
+.signin-brand {
+    margin-bottom: 6px;
+    color: var(--amb-highlight);
+    font-size: 0.85rem;
+    letter-spacing: 0.1rem;
+    text-align: center;
+    text-transform: uppercase;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+/* ---------- Phones and small tablets: the sidebar sits above the panel ---------- */
+@media (max-width: 767.98px) {
+    .admin-layout {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .admin-card {
+    .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        flex: none;
+        padding: 15px;
+    }
+
+    .admin-title {
+        font-size: 1.4rem;
+        margin-bottom: 12px;
+    }
+
+    .sidebar-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 8px;
+    }
+
+    .sidebar-actions .btn,
+    .sidebar-actions .sa-button {
+        margin-bottom: 0 !important;
+        font-size: 0.95rem;
+    }
+
+    .section-title {
+        margin: 15px 0 8px;
+    }
+
+    .sidebar .view-options {
+        display: flex;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 0 !important;
+    }
+
+    .sidebar .view-options .nav-link,
+    .sidebar .view-options > button {
+        width: auto;
+        background-color: rgba(255, 255, 255, 0.06);
+        margin-bottom: 0;
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+
+    .sidebar .view-options .nav-link.active,
+    .sidebar .view-options > button.is-current {
+        background-color: var(--amb-accent);
+    }
+
+    .stats-list {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .stats-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 10px 6px;
+        margin-bottom: 0;
+    }
+
+    .stats-card i {
+        font-size: 18px;
+        margin: 0 0 4px;
+    }
+
+    .stats-card .count {
+        font-size: 1.2rem;
+    }
+
+    .content-area {
+        padding: 10px;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .main-content h1 {
+        font-size: 1.3rem;
+    }
+
+    .page-title-row {
         margin-bottom: 1rem;
     }
 
-    .admin-header {
-        font-size: 2rem;
+    .panel-box {
+        padding: 15px;
     }
 
-    .logout-container {
-        position: static;
-        margin-top: 2rem;
-        text-align: center;
+    .toast-container,
+    #toastContainer {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
     }
 
-    .btn-logout {
-        width: 100%;
-    }
-
-    .logout-container {
-        padding: 0 1rem 1rem;
-    }
-
-    .admin-container {
-        padding: 1rem;
-    }
-
-    /* Cards are a fixed fraction of the screen on desktop, which is far too
-       narrow on a phone; let them fill the column instead. */
-    .card,
-    .maxMinWidth15vw {
-        min-width: 0;
-        max-width: 100%;
-    }
-
-    .display-1 {
-        font-size: 2.5rem;
-    }
-
-    .display-4 {
-        font-size: 2rem;
+    .modal-footer {
+        flex-wrap: wrap;
     }
 }

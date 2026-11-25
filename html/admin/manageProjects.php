@@ -18,9 +18,9 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
     <script>
         window.AMB_WORK_ORDER_READY = <?php echo $workOrderReady ? 'true' : 'false'; ?>;
         window.AMB_YEAR_GROUPS = <?php echo json_encode($yearGroups); ?>;
@@ -30,89 +30,35 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
     <title>Project Admin Dashboard</title>
 
     <style>
+        /* Only what is particular to the Projects page; the sidebar, panel,
+           fields, buttons and dialogs come from admin.css */
         :root {
             --primary-color: #3498db;
-            --secondary-color: #2c3e50;
-            --success-color: #2ecc71;
-            --danger-color: #e74c3c;
-            --warning-color: #f39c12;
-            --light-color: #343a40;
-            --dark-color: #212529;
-        }
-
-        body {
-            background-color: #212529;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #f8f9fa;
-        }
-
-        .admin-container {
-            background-color: #2c3e50;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            margin: 30px auto;
-            max-width: 1400px;
-            padding: 30px;
-        }
-
-        .page-header {
-            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
-            border-radius: 8px;
-            color: white;
-            margin-bottom: 30px;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .control-panel {
-            background-color: #343a40;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            padding: 20px;
-        }
-
-        .btn-action {
-            border-radius: 5px;
-            font-weight: 600;
-            margin: 5px;
-            padding: 10px 20px;
-            transition: all 0.3s;
-        }
-
-        .btn-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-outline-secondary {
-            color: #e9ecef;
-            border-color: #6c757d;
-        }
-
-        .create-btn {
-            background-color: var(--success-color);
-            color: white;
+            --success-color: var(--amb-accent);
+            --danger-color: var(--amb-danger);
+            --warning-color: var(--amb-warning);
         }
 
         .project-card {
-            background-color: #343a40;
-            border: none;
-            border-radius: 10px;
+            background-color: var(--amb-inset);
+            border: 1px solid var(--amb-line);
+            border-radius: var(--amb-radius-sm);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            color: var(--amb-text);
             cursor: pointer;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             padding: 20px;
             transition: all 0.3s ease;
         }
 
         .project-card:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            background-color: var(--amb-inset-hover);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
             transform: translateY(-5px);
         }
 
         .project-card .card-title {
-            color: var(--secondary-color);
-            font-size: 1.4rem;
+            font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 15px;
         }
@@ -122,13 +68,12 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .project-card .card-text {
-            color: #e2e2e2;
+            color: var(--amb-muted);
             margin-bottom: 10px;
-            font-weight: 500;
         }
 
         .project-card .card-text strong {
-            color: #ffffff;
+            color: var(--amb-text);
             font-weight: 600;
             margin-right: 5px;
         }
@@ -139,69 +84,32 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             padding: 5px 10px;
         }
 
-        .modal-content {
-            background-color: #343a40;
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            color: #f8f9fa;
-        }
-
-        .modal-header {
-            background-color: var(--secondary-color);
-            border-radius: 10px 10px 0 0;
-            color: white;
-            padding: 15px 20px;
-        }
-
         .modal-footer {
-            border-top: 1px solid #eee;
             padding: 15px 20px;
         }
 
-        .form-control {
-            background-color: #495057;
-            border: 1px solid #6c757d;
-            border-radius: 5px;
-            color: #f8f9fa;
-            padding: 10px 15px;
-        }
-
-        .form-control:focus {
-            background-color: #495057;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-            color: #f8f9fa;
-        }
-
-        .form-group label {
-            color: #f8f9fa;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        /* Works list styling */
+        /* Works list in the project's dialog */
         #worksList {
-            border: 1px solid #495057;
+            border: 1px solid var(--amb-border);
             border-radius: 8px;
             height: 400px;
             list-style-type: none;
             margin: 15px 0;
             overflow-y: auto;
             padding: 0;
-            background-color: #343a40;
+            background-color: var(--amb-sidebar);
         }
 
         #worksList li {
             align-items: center;
-            border-bottom: 1px solid #495057;
+            border-bottom: 1px solid var(--amb-border);
             display: flex;
             padding: 10px 15px;
             transition: background-color 0.2s;
         }
 
         #worksList li:hover {
-            background-color: #495057;
+            background-color: var(--amb-inset);
         }
 
         #worksList li:last-child {
@@ -238,10 +146,10 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .work-search-container i {
-            color: #aaa;
+            color: var(--amb-muted);
             left: 15px;
             position: absolute;
-            top: 13px;
+            top: 11px;
         }
 
         #workSearch {
@@ -250,7 +158,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .project-info {
-            background-color: #2c3e50;
+            background-color: var(--amb-panel);
             border-radius: 4px;
             color: #adb5bd;
             font-size: 0.8rem;
@@ -258,18 +166,8 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             padding: 2px 8px;
         }
 
-        .toast-container {
-            position: fixed;
-            right: 20px;
-            top: 20px;
-            z-index: 9999;
-        }
-
+        /* This page's own little messages (they slide in from the right) */
         .toast {
-            background-color: #343a40;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            color: #f8f9fa;
             margin-bottom: 10px;
             max-width: 350px;
             opacity: 0;
@@ -298,31 +196,26 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         .badge-active {
             background-color: var(--success-color);
             color: white;
-            font-weight: 600;
         }
 
         .badge-inactive {
             background-color: var(--warning-color);
             color: #212529;
-            font-weight: 600;
         }
 
         .badge-deleted {
             background-color: var(--danger-color);
             color: white;
-            font-weight: 600;
         }
 
         .badge-current {
             background-color: var(--primary-color);
             color: white;
-            font-weight: 600;
         }
 
-        /* Loading spinner */
         .loading-spinner {
             align-items: center;
-            background-color: rgba(255, 255, 255, 0.7);
+            background-color: rgba(0, 0, 0, 0.4);
             border-radius: 5px;
             display: flex;
             height: 100%;
@@ -334,20 +227,14 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             z-index: 1000;
         }
 
-        .spinner-border {
-            color: var(--primary-color);
-            height: 3rem;
-            width: 3rem;
-        }
-
-        /* Status colors for projects */
+        /* The coloured edge on each project: its status */
         .status-indicator {
             border-left: 5px solid #ccc;
             height: 100%;
             position: absolute;
             left: 0;
             top: 0;
-            border-radius: 10px 0 0 10px;
+            border-radius: 8px 0 0 8px;
         }
 
         .status-active {
@@ -366,76 +253,9 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             border-color: var(--primary-color);
         }
 
-        /* Project counts */
-        .project-counts {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .count-card {
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            padding: 15px;
-            width: 30%;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            color: #f8f9fa;
-        }
-
-        .count-card:hover {
-            transform: translateY(-5px);
-        }
-
-        /* Specific color styling for each type of count card */
-        /* Active Projects - blue */
-        .count-card:nth-child(1) {
-            background-color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-        }
-
-        /* Inactive Projects - yellow/orange */
-        .count-card:nth-child(2) {
-            background-color: var(--warning-color);
-            border: 1px solid var(--warning-color);
-            color: #212529; /* Dark text for better contrast on yellow */
-        }
-
-        /* Deleted Projects - red */
-        .count-card:nth-child(3) {
-            background-color: var(--danger-color);
-            border: 1px solid var(--danger-color);
-        }
-
-        /* Adjust text color for better contrast */
-        .count-card:nth-child(2) .count-number,
-        .count-card:nth-child(2) .count-label {
-            color: #212529;
-        }
-
-        .count-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .count-number {
-            font-size: 2rem;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #f8f9fa;
-        }
-
-        .count-label {
-            color: #adb5bd;
-            font-weight: 500;
-        }
-
-        /* Confirmation modal */
         #confirmationModal .modal-body {
             padding: 30px 20px;
             text-align: center;
-            background-color: #343a40;
-            color: #f8f9fa;
         }
 
         #confirmationModal .confirmation-icon {
@@ -444,7 +264,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             margin-bottom: 20px;
         }
 
-        /* Works count badge */
+        /* Works count bubble beside a project's name */
         .works-count {
             background-color: var(--primary-color);
             border-radius: 50%;
@@ -458,39 +278,19 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             width: 25px;
         }
 
-        .nav-tabs .nav-link {
-            color: #ffffff; /* White text for better contrast on dark background */
-            font-weight: 500; /* Slightly bolder font */
-        }
-
-        /* Style for inactive tabs */
-        .nav-tabs .nav-link:not(.active) {
-            color: #e0e0e0; /* Light grey for inactive tabs */
-        }
-
-        /* Style for active tab */
-        .nav-tabs .nav-link.active {
-            background-color: #343a40; /* Darker grey background */
-            color: #ffc107; /* Yellow/gold color for the active tab text */
-            border-color: #495057 #495057 #343a40; /* Matching border colors */
-            font-weight: 600; /* Make active tab text bolder */
-        }
-
-        /* Hover state for better interactivity */
-        .nav-tabs .nav-link:hover:not(.active) {
-            color: #ffc107; /* Same as active color on hover */
-            border-color: #636b74 #636b74 #495057; /* Slightly lighter borders on hover */
+        #projectTabContent {
+            border-color: var(--amb-border) !important;
         }
 
         /* Putting projects and works in order */
         .order-hint {
-            color: #adb5bd;
+            color: var(--amb-muted);
             margin-bottom: 15px;
         }
 
         .order-controls {
             align-items: center;
-            border-top: 1px solid #495057;
+            border-top: 1px solid var(--amb-border);
             display: flex;
             gap: 6px;
             margin-top: 15px;
@@ -557,15 +357,15 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
         }
 
         .arrange-item {
-            background-color: #2c3e50;
-            border: 1px solid #495057;
+            background-color: var(--amb-inset);
+            border: 1px solid var(--amb-border);
             border-radius: 8px;
             cursor: grab;
             padding: 8px;
         }
 
         .arrange-item img {
-            background-color: #212529;
+            background-color: var(--amb-sidebar);
             border-radius: 5px;
             display: block;
             height: 100px;
@@ -593,48 +393,7 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
             font-size: 0.85rem;
         }
 
-        /* Phones and small tablets */
         @media (max-width: 767.98px) {
-            .admin-container {
-                margin: 10px;
-                padding: 12px;
-            }
-
-            .page-header {
-                padding: 18px;
-                margin-bottom: 15px;
-            }
-
-            .page-header .lead {
-                font-size: 1rem;
-                margin-bottom: 0;
-            }
-
-            .control-panel {
-                padding: 10px;
-                margin-bottom: 15px;
-            }
-
-            .control-panel .text-right {
-                text-align: left !important;
-            }
-
-            .control-panel .btn-action {
-                display: block;
-                width: 100%;
-                margin: 5px 0;
-            }
-
-            .project-counts {
-                gap: 8px;
-            }
-
-            .filter-controls .btn-action {
-                margin: 0;
-                padding: 8px 6px;
-                font-size: 0.85rem;
-            }
-
             .project-card {
                 padding: 15px;
             }
@@ -642,86 +401,89 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
     </style>
 </head>
 <body>
-<div class="admin-container">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="display-4">Project Admin Dashboard</h1>
-        <p class="lead">Manage your projects and associated works</p>
-    </div>
+<?php $ambAdminPage = 'projects'; include __DIR__ . '/adminNav.php'; ?>
 
-    <!-- Main Navigation & Controls -->
-    <div class="control-panel">
-        <div class="row">
-            <div class="col-md-6">
-                <a href="mainAdmin.php" class="btn btn-outline-secondary btn-action">
-                    <i class="fas fa-arrow-left"></i> Back to Main Admin
-                </a>
-            </div>
-            <div class="col-md-6 text-right">
-                <button type="button" class="btn btn-success btn-action create-btn" onclick="openPostForm()">
-                    <i class="fas fa-plus"></i> Create Project
-                </button>
-            </div>
-        </div>
-    </div>
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="admin-title">Projects Admin</div>
 
-    <!-- Project Counts Section -->
-    <div class="project-counts">
-        <div class="count-card" onclick="getProjects('active')">
-            <div class="count-number" id="activeCount">-</div>
-            <div class="count-label">Active Projects</div>
+        <div class="sidebar-actions">
+            <button type="button" class="btn btn-light w-100 mb-4" onclick="openPostForm()">
+                <i class="fas fa-plus"></i> Create Project
+            </button>
         </div>
-        <div class="count-card" onclick="getProjects('inactive')">
-            <div class="count-number" id="inactiveCount">-</div>
-            <div class="count-label">Inactive Projects</div>
-        </div>
-        <div class="count-card" onclick="getProjects('deleted')">
-            <div class="count-number" id="deletedCount">-</div>
-            <div class="count-label">Deleted Projects</div>
-        </div>
-    </div>
 
-    <!-- Filter Controls -->
-    <div class="filter-controls mb-4">
-        <div class="btn-group w-100">
-            <button type="button" class="btn btn-outline-primary btn-action" onclick="getProjects('active')" id="activeBtn">
+        <div class="section-title">View Options</div>
+        <nav class="nav flex-column mb-4 view-options">
+            <button type="button" class="nav-link active" onclick="getProjects('active')" id="activeBtn">
                 <i class="fas fa-check-circle"></i> Active Projects
             </button>
-            <button type="button" class="btn btn-outline-warning btn-action" onclick="getProjects('inactive')" id="inactiveBtn">
+            <button type="button" class="nav-link" onclick="getProjects('inactive')" id="inactiveBtn">
                 <i class="fas fa-pause-circle"></i> Inactive Projects
             </button>
-            <button type="button" class="btn btn-outline-danger btn-action" onclick="getProjects('deleted')" id="deletedBtn">
+            <button type="button" class="nav-link" onclick="getProjects('deleted')" id="deletedBtn">
                 <i class="fas fa-trash-alt"></i> Deleted Projects
             </button>
+        </nav>
+
+        <div class="section-title">Statistics</div>
+        <div class="stats-list">
+            <div class="stats-card" role="button" tabindex="0" title="Show active projects" onclick="getProjects('active')">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <small>Active</small>
+                    <p class="count" id="activeCount">-</p>
+                </div>
+            </div>
+            <div class="stats-card" role="button" tabindex="0" title="Show inactive projects" onclick="getProjects('inactive')">
+                <i class="fas fa-pause-circle"></i>
+                <div>
+                    <small>Inactive</small>
+                    <p class="count" id="inactiveCount">-</p>
+                </div>
+            </div>
+            <div class="stats-card" role="button" tabindex="0" title="Show deleted projects" onclick="getProjects('deleted')">
+                <i class="fas fa-trash-alt"></i>
+                <div>
+                    <small>Deleted</small>
+                    <p class="count" id="deletedCount">-</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Projects Search Bar -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="input-group">
+    <!-- Main Content -->
+    <div class="content-area">
+        <div class="main-content">
+            <div class="page-title-row">
+                <h1 class="h3">Projects Administration</h1>
+            </div>
+
+            <!-- Projects Search Bar -->
+            <div class="input-group mb-3">
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                 </div>
                 <input type="text" class="form-control" id="projectSearch" placeholder="Search projects...">
             </div>
-        </div>
-    </div>
 
-    <p class="order-hint" id="projectOrderHint">
-        <i class="fas fa-grip-vertical mr-1"></i>
-        Drag a project, or use its arrows, to change where it appears on your Works page. The new order is saved straight away.
-        <span class="ml-1" id="projectOrderStatus" role="status"></span>
-    </p>
+            <p class="order-hint" id="projectOrderHint">
+                <i class="fas fa-grip-vertical mr-1"></i>
+                Drag a project, or use its arrows, to change where it appears on your Works page. The new order is saved straight away.
+                <span class="ml-1" id="projectOrderStatus" role="status"></span>
+            </p>
 
-    <!-- Projects Display Area -->
-    <div class="row" id="existingPostInformation">
-        <!-- Project cards will be inserted here by JavaScript -->
-        <div class="col-12 text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading...</span>
+            <!-- Projects Display Area -->
+            <div class="row" id="existingPostInformation">
+                <!-- Project cards will be inserted here by JavaScript -->
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-3">Loading projects...</p>
+                </div>
             </div>
-            <p class="mt-3">Loading projects...</p>
         </div>
     </div>
 </div>
@@ -942,6 +704,15 @@ $yearGroups = array('bands' => ambYearBands(), 'projects' => ambYearGroupedProje
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
 
+<script>
+    // The statistics cards are buttons: Enter or Space opens their list too
+    $(document).on('keydown', '.stats-card[role="button"]', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            this.click();
+        }
+    });
+</script>
 <script src="../js/adminSession.js"></script>
 </body>
 </html>
