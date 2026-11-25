@@ -99,6 +99,15 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
 
+        .stats-card.active {
+            box-shadow: 0 0 0 2px #8de4ff;
+        }
+
+        .stats-card:focus-visible {
+            outline: 2px solid #8de4ff;
+            outline-offset: 2px;
+        }
+
         .stats-card i {
             font-size: 24px;
             margin-right: 15px;
@@ -770,7 +779,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
         <div class="section-title">Statistics</div>
         <div class="stats-list">
-        <div class="stats-card d-flex align-items-center" id="totalWorksCard">
+        <div class="stats-card d-flex align-items-center" id="totalWorksCard" role="button" tabindex="0" title="Show all works">
             <i class="fas fa-photo-film"></i>
             <div>
                 <small>Total Works</small>
@@ -778,7 +787,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             </div>
         </div>
 
-        <div class="stats-card d-flex align-items-center" id="selectWorksCard">
+        <div class="stats-card d-flex align-items-center" id="selectWorksCard" role="button" tabindex="0" title="Show Select Works">
             <i class="fas fa-star"></i>
             <div>
                 <small>Select Works</small>
@@ -786,7 +795,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             </div>
         </div>
 
-        <div class="stats-card d-flex align-items-center" id="carouselWorksCard">
+        <div class="stats-card d-flex align-items-center" id="carouselWorksCard" role="button" tabindex="0" title="Show works in the carousel">
             <i class="fas fa-film"></i>
             <div>
                 <small>In Carousel</small>

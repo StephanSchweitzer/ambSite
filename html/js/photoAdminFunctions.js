@@ -307,6 +307,17 @@ function initializeEventListeners() {
     getAllWorks(pageNumber);
   });
 
+  // The statistics cards are filters too: each shows the works it counts
+  $('#totalWorksCard').click(function() { showStatView('everything'); });
+  $('#selectWorksCard').click(function() { showStatView('Select Works'); });
+  $('#carouselWorksCard').click(function() { showStatView('carousel'); });
+  $('.stats-card').on('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      $(this).click();
+    }
+  });
+
   // Add new work button
   $('#addNewWorkBtn').click(function() {
     openPostForm();
@@ -432,6 +443,21 @@ function setActiveNavItem(element) {
   $(element).addClass('active');
 }
 
+// Show the works a statistics card counts. Select Works and Carousel are the
+// same lists as their View Options; Total is every work that isn't deleted.
+function showStatView(view) {
+  setActiveNavItem(view === 'Select Works' ? '#viewSelectWorks'
+      : view === 'carousel' ? '#viewCarouselWorks' : null);
+  getAllWorks(view);
+}
+
+// Light up the statistics card whose list is on screen
+function highlightStatCard() {
+  $('#totalWorksCard').toggleClass('active', pageNumber === 'everything');
+  $('#selectWorksCard').toggleClass('active', pageNumber === 'Select Works');
+  $('#carouselWorksCard').toggleClass('active', pageNumber === 'carousel');
+}
+
 // Enable multi-select mode
 function enableMultiSelect() {
   $('#multiSelectToolbar').show();
@@ -480,7 +506,12 @@ function getAllWorks(theYear) {
     data: yearData,
     dataType: "json",
     success: function(data) {
+      // 'everything' also holds deleted works; the Total card counts only the rest
+      if (theYear === 'everything') {
+        data = data.filter(work => work.visible == 1);
+      }
       console.log("Loaded works:", data.length);
+      highlightStatCard();
       currentWorks = data;
       originalWorks = [...data]; // Store a copy of the original dataset
       insertData(data);
