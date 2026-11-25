@@ -13,14 +13,8 @@ var preparedPhoto = null; // promise of the picked photo, made ready to upload (
 function setupEventListeners() {
     // Handle file input change
     $('#aboutMePhoto').on('change', function() {
-        let fileName = $(this).val().split('\\').pop();
-        if (fileName) {
-            $(this).next('.custom-file-label').html(fileName);
-            newPhotoSelected = true;
-        } else {
-            $(this).next('.custom-file-label').html('Choose file...');
-            newPhotoSelected = false;
-        }
+        // The file box shows the chosen name itself (Bootstrap 5)
+        newPhotoSelected = !!$(this).val();
     });
 
     // Preview text button
@@ -49,7 +43,6 @@ function setupEventListeners() {
 // Reset photo input and preview
 function resetPhotoInput() {
     $('#aboutMePhoto').val('');
-    $('#aboutMePhoto').next('.custom-file-label').html('Choose file...');
     $('#newPhotoPreview').hide().empty();
     $('#cancelPhotoButton').hide();
     newPhotoSelected = false;
@@ -92,7 +85,7 @@ function updateAboutMe() {
         return;
     }
 
-    $('#updateAboutMeButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Updating...');
+    $('#updateAboutMeButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Updating...');
 
     const photoReady = newPhotoSelected && preparedPhoto ? preparedPhoto : Promise.resolve(null);
 
@@ -100,7 +93,7 @@ function updateAboutMe() {
         sendAboutMe(description, photo);
     }, function(error) {
         showToast(error.message, 'error');
-        $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Update About Me');
+        $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save me-1"></i> Update About Me');
     });
 }
 
@@ -138,7 +131,7 @@ function sendAboutMe(description, photo) {
                 console.error('Error parsing response:', e);
                 showToast('Error processing server response', 'error');
             }
-            $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Update About Me');
+            $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save me-1"></i> Update About Me');
         },
         error: function(xhr, status, error) {
             console.error('AJAX error:', status, error);
@@ -157,7 +150,7 @@ function sendAboutMe(description, photo) {
             }
 
             showToast('Error updating About Me: ' + errorMessage, 'error');
-            $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Update About Me');
+            $('#updateAboutMeButton').prop('disabled', false).html('<i class="fas fa-save me-1"></i> Update About Me');
         }
     });
 }
@@ -231,12 +224,10 @@ function showToast(message, type) {
     };
 
     const toastHtml = `
-    <div id="${toastId}" class="toast custom-toast ${toastClasses[type] || 'bg-dark'}" role="alert" aria-live="assertive" aria-atomic="true" data-delay="5000">
+    <div id="${toastId}" class="toast custom-toast ${toastClasses[type] || 'bg-dark'}" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
       <div class="toast-header">
-        <strong class="mr-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
       <div class="toast-body text-white">
         ${message}

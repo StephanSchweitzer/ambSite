@@ -10,20 +10,13 @@ if (($_SESSION["ambar"] ?? null) != "connected")
 // js/shopAdminFunctions.js from actions/shopAdminAPI.php.
 ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" data-bs-theme="dark">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
-  <title>Shop - Admin</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
-  <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
-  <link rel="stylesheet" href="shopAdmin.css?v=<?php echo filemtime(__DIR__ . '/shopAdmin.css'); ?>">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
-  <script src="../js/imagePrep.js"></script>
+    <?php $ambBootstrap = false; $ambPageTitle = 'Shop Administration'; include __DIR__ . '/adminHead.php'; ?>
+  <script src="../js/imagePrep.js?v=<?php echo filemtime(__DIR__ . '/../js/imagePrep.js'); ?>"></script>
   <script src="../js/shopAdminFunctions.js?v=<?php echo filemtime(__DIR__ . '/../js/shopAdminFunctions.js'); ?>"></script>
 </head>
-<body>
+<body class="page-shop">
 <?php $ambAdminPage = 'shop'; include __DIR__ . '/adminNav.php'; ?>
 
 <div class="admin-layout">
@@ -77,6 +70,5 @@ if (($_SESSION["ambar"] ?? null) != "connected")
 
 <div id="toasts" class="sa-toasts" aria-live="polite"></div>
 
-<script src="../js/adminSession.js"></script>
 </body>
 </html>

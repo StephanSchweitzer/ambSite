@@ -46,19 +46,11 @@ try {
 $newSubscribersCount = count($newSubscribers);
 ?>
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
-    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
-    <link rel="stylesheet" href="newsletterAdmin.css?v=<?php echo filemtime(__DIR__ . '/newsletterAdmin.css'); ?>">
-    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
-    <title>Newsletter Admin Page</title>
+    <?php $ambPageTitle = 'Newsletter Administration'; include __DIR__ . '/adminHead.php'; ?>
 </head>
-<body>
+<body class="page-newsletter">
 <?php $ambAdminPage = 'newsletter'; include __DIR__ . '/adminNav.php'; ?>
 
 <div class="admin-layout">
@@ -116,7 +108,7 @@ $newSubscribersCount = count($newSubscribers);
                             <i class="fas fa-bell"></i>
                         </div>
                         <h2>New Subscribers Since Your Last Visit</h2>
-                        <span class="badge badge-pill badge-primary"><?php echo $newSubscribersCount; ?></span>
+                        <span class="badge rounded-pill bg-primary"><?php echo $newSubscribersCount; ?></span>
                     </div>
 
                     <div class="new-subscribers-grid">
@@ -160,14 +152,12 @@ $newSubscribersCount = count($newSubscribers);
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <div class="input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        </div>
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
                         <input type="text" id="searchInput" class="form-control" placeholder="Search emails..." aria-label="Search emails">
                     </div>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <select id="statusFilter" class="form-control" aria-label="Which subscribers">
+                    <select id="statusFilter" class="form-select" aria-label="Which subscribers">
                         <option value="all">All Subscribers</option>
                         <option value="active">Active Only</option>
                         <option value="inactive">Inactive Only</option>
@@ -177,7 +167,7 @@ $newSubscribersCount = count($newSubscribers);
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <select id="sortFilter" class="form-control" aria-label="Sort by">
+                    <select id="sortFilter" class="form-select" aria-label="Sort by">
                         <option value="email_asc">Email (A-Z)</option>
                         <option value="email_desc">Email (Z-A)</option>
                         <option value="date_desc">Newest First</option>
@@ -220,27 +210,25 @@ $newSubscribersCount = count($newSubscribers);
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editModalLabel">Edit Subscriber</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="editForm">
                     <input type="hidden" id="editId">
-                    <div class="form-group">
+                    <div class="mb-3">
                         <label for="editEmail">Email Address</label>
                         <input type="email" class="form-control" id="editEmail" required>
                     </div>
-                    <div class="form-group">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="editActive">
-                            <label class="custom-control-label" for="editActive">Active</label>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="editActive">
+                            <label class="form-check-label" for="editActive">Active</label>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="saveEdit">Save Changes</button>
             </div>
         </div>
@@ -253,9 +241,7 @@ $newSubscribersCount = count($newSubscribers);
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this subscription?</p>
@@ -263,7 +249,7 @@ $newSubscribersCount = count($newSubscribers);
                 <input type="hidden" id="deleteId">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
             </div>
         </div>
@@ -275,18 +261,16 @@ $newSubscribersCount = count($newSubscribers);
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="emailListModalLabel">Copy-Paste Email List</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Below is a comma-separated list of all subscriber emails. Click "Copy to Clipboard" to copy this list.</p>
-                <div class="form-group">
+                <div class="mb-3">
                     <textarea id="emailListText" class="form-control" rows="8" readonly></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" id="copyToClipboard">
                     <i class="fas fa-clipboard"></i> Copy to Clipboard
                 </button>
@@ -305,9 +289,7 @@ $newSubscribersCount = count($newSubscribers);
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Welcome Back!</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-center">
                     <div class="welcome-icon mb-3">
@@ -317,7 +299,7 @@ $newSubscribersCount = count($newSubscribers);
                     <p class="text-muted">New sign-ups since your last visit on <?php echo date('F j, Y \a\t g:i A', strtotime($lastVisit)); ?></p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">View New Subscribers</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">View New Subscribers</button>
                 </div>
             </div>
         </div>
@@ -326,9 +308,6 @@ $newSubscribersCount = count($newSubscribers);
 
 <!-- Toast Container for Notifications -->
 <div id="toastContainer"></div>
-
-<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
 
 <script>
     // Subscribers who joined since the last visit; newsletterAdmin.js marks
@@ -349,8 +328,6 @@ $newSubscribersCount = count($newSubscribers);
     });
 </script>
 
-<script src="../js/newsletterAdmin.js"></script>
-
-<script src="../js/adminSession.js"></script>
+<script src="../js/newsletterAdmin.js?v=<?php echo filemtime(__DIR__ . '/../js/newsletterAdmin.js'); ?>"></script>
 </body>
 </html>

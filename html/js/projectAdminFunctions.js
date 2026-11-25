@@ -97,7 +97,7 @@ function getProjects(activity) {
     $('#existingPostInformation').html(`
         <div class="col-12 text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
             <p class="mt-3">Loading projects...</p>
         </div>
@@ -319,7 +319,7 @@ function openProjectInfo(id, title, description, active, orderOfDisplay, deleted
     $('#worksList').html(`
         <div class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading works...</span>
+                <span class="visually-hidden">Loading works...</span>
             </div>
         </div>
     `);
@@ -810,7 +810,7 @@ function appendProjectInfo(workId, listItem, excludeProjectId = null) {
         small.textContent = 'Also in: ';
         projects.forEach(p => {
             const badge = document.createElement('span');
-            badge.className = 'badge badge-info mr-1';
+            badge.className = 'badge bg-info me-1';
             badge.textContent = p.title;
             small.appendChild(badge);
         });
@@ -875,7 +875,7 @@ function createListItem(work) {
     nameSpan.textContent = work.name;
     if (work.visible == 0 || work.isSelectWork != 1) {
         const note = document.createElement('small');
-        note.className = 'text-muted ml-2';
+        note.className = 'text-muted ms-2';
         note.textContent = work.visible == 0 ? '(deleted, hidden from visitors)' : '(not in Select Works)';
         nameSpan.appendChild(note);
     }
@@ -908,16 +908,14 @@ function showToast(message, type = 'info') {
 
     toast.innerHTML = `
         <div class="d-flex align-items-center">
-            <i class="fas fa-${icon} mr-2"></i>
+            <i class="fas fa-${icon} me-2"></i>
             <div>${message}</div>
         </div>
-        <button type="button" class="close ml-2" data-dismiss="toast" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
     `;
 
     // Add close button event
-    const closeBtn = toast.querySelector('.close');
+    const closeBtn = toast.querySelector('.btn-close');
     closeBtn.addEventListener('click', function() {
         toast.classList.remove('show');
         setTimeout(() => {
@@ -1095,7 +1093,7 @@ function drawArrangeList() {
         $area.html(`
             <div class="text-center py-4">
                 <div class="spinner-border text-primary" role="status">
-                    <span class="sr-only">Loading works...</span>
+                    <span class="visually-hidden">Loading works...</span>
                 </div>
             </div>
         `);
@@ -1135,10 +1133,10 @@ function drawArrangeList() {
     });
 
     $area.empty().append(
-        $('<p class="order-hint">').html('<i class="fas fa-grip-vertical mr-1"></i> Drag the works, or use the arrows, into the order you want them on your Works page. Works you tick later go at the end.' +
+        $('<p class="order-hint">').html('<i class="fas fa-grip-vertical me-1"></i> Drag the works, or use the arrows, into the order you want them on your Works page. Works you tick later go at the end.' +
             (grouped ? ' Your Works page shows this project in groups of years, so each work moves within its own group.' : '')),
         sections,
-        $('<div class="text-right">').append(
+        $('<div class="text-end">').append(
             $('<button type="button" class="btn btn-primary">').html('<i class="fas fa-save"></i> Save Order')
                 .on('click', function () { addWorksToProject(this); })
         )

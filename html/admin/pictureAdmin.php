@@ -6,299 +6,11 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Works Administration</title>
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
-
-    <!-- jQuery -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha384-UG8ao2jwOWB7/oDdObZc6ItJmwUkR/PfMyt9Qs5AwX7PsnYn1CRKCTWyncPTWvaS" crossorigin="anonymous"></script>
-
-    <!-- Bootstrap 5 CSS and JS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
-
-    <style>
-        /* Only what is particular to the Works page; the sidebar, panel,
-           fields, buttons and dialogs come from admin.css */
-        .search-and-filters {
-            margin-bottom: 20px;
-        }
-
-        .filter-tag {
-            display: inline-block;
-            padding: 5px 10px;
-            background-color: #f0f0f0;
-            border-radius: 20px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #333;
-        }
-
-        .filter-tag.active {
-            background-color: var(--amb-accent);
-            color: white;
-        }
-
-        .work-card {
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            transition: all 0.3s;
-            cursor: pointer;
-            position: relative;
-            background-color: white;
-            color: #333;
-        }
-
-        .work-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .work-image {
-            height: 200px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .work-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s;
-        }
-
-        .work-card:hover .work-image img {
-            transform: scale(1.05);
-        }
-
-        .work-badges {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .badge-select-works {
-            background-color: #4dabf7 !important;
-        }
-
-        .badge-carousel {
-            background-color: #ff922b !important;
-        }
-
-        .badge-available {
-            background-color: #51cf66 !important;
-        }
-
-        .badge-color {
-            background-color: #cc5de8 !important;
-        }
-
-        .badge-bw {
-            background-color: #34495e;
-        }
-
-        .work-info {
-            padding: 15px;
-        }
-
-        .work-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            color: #333;
-        }
-
-        .work-medium, .work-year {
-            color: #555;
-            font-size: 0.9rem;
-        }
-
-        .selected-card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(52, 152, 219, 0.3);
-            border: 3px solid #3498db;
-            border-radius: 8px;
-            display: none;
-        }
-
-        .selected-card-overlay .selection-icon {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: #3498db;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .work-card.selected .selected-card-overlay {
-            display: block;
-        }
-
-        .multi-select-toolbar {
-            display: none;
-            background-color: var(--amb-inset);
-            border: 1px solid var(--amb-line);
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            color: white;
-        }
-
-        .custom-toast {
-            min-width: 300px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        #loadingSpinner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            display: none;
-        }
-
-        #resultsInfo {
-            color: var(--amb-muted) !important;
-        }
-
-        /* The Sort button's menu */
-        #sortDropdown {
-            color: white;
-            border-color: var(--amb-muted);
-        }
-
-        /* The confirm button in the "are you sure" dialog */
-        #confirmActionBtn {
-            background-color: var(--amb-danger);
-            border-color: var(--amb-danger);
-        }
-
-        /* Image preview border */
-        .modal-content #previewImage,
-        .modal-content #uploadPreview {
-            border: 2px solid var(--amb-sidebar);
-        }
-
-        /* The projects a work belongs to, in its dialog */
-        #projectsList,
-        #createProjectsList {
-            border: 1px solid var(--amb-border);
-            border-radius: 8px;
-            max-height: 350px;
-            list-style-type: none;
-            margin: 15px 0;
-            overflow-y: auto;
-            padding: 0;
-            background-color: var(--amb-panel);
-        }
-
-        #projectsList .list-group-item,
-        #createProjectsList .list-group-item {
-            padding: 10px 15px;
-            border-radius: 0;
-        }
-
-        #projectsList .list-group-item:hover {
-            background-color: #404b57;
-        }
-
-        #projectsList .badge {
-            background-color: var(--amb-accent);
-            color: white;
-        }
-
-        @media (max-width: 767.98px) {
-            .multi-select-toolbar > div {
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-
-            .work-card {
-                margin-bottom: 12px;
-            }
-
-            .work-image {
-                height: 150px;
-            }
-
-            .work-info {
-                padding: 10px;
-            }
-
-            .work-title {
-                font-size: 0.95rem;
-            }
-
-            .work-medium, .work-year {
-                font-size: 0.8rem;
-            }
-
-            .work-badges {
-                top: 6px;
-                right: 6px;
-                gap: 3px;
-            }
-
-            .work-badges .badge {
-                font-size: 0.65rem;
-            }
-
-            .custom-toast {
-                min-width: 0;
-                width: 100%;
-            }
-
-            .modal-content #previewImage,
-            .modal-content #uploadPreview {
-                max-height: 220px;
-                object-fit: contain;
-            }
-
-            .modal-footer #deleteOrRestore {
-                margin-right: auto;
-            }
-        }
-    </style>
+    <?php $ambPageTitle = 'Works Administration'; include __DIR__ . '/adminHead.php'; ?>
 </head>
-<body>
+<body class="page-works">
 <?php $ambAdminPage = 'works'; include __DIR__ . '/adminNav.php'; ?>
 
 <!-- Loading Spinner -->
@@ -658,7 +370,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
                                 </div>
 
                                 <div class="projects-container">
-                                    <ul id="projectsList" class="list-group" style="max-height: 350px; overflow-y: auto;">
+                                    <ul id="projectsList" class="list-group">
                                         <li class="list-group-item text-center py-4">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">Loading projects...</span>
@@ -857,15 +569,15 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="createSelectAllProjects">
-                                    <label class="form-check-label" for="createSelectAllProjects" style="color: #ffffff;">
+                                    <label class="form-check-label"for="createSelectAllProjects">
                                         Select All Projects
                                     </label>
                                 </div>
 
                                 <div class="projects-container">
-                                    <ul id="createProjectsList" class="list-group" style="max-height: 350px; overflow-y: auto; background-color: #2c3e50; border: 1px solid #495057; border-radius: 8px;">
-                                        <li class="list-group-item text-center" style="background-color: #343a40; color: #ffffff; border-color: #495057;">
-                                            <p class="text-muted" style="color: #a8c7e0 !important;">Click the "Associated Projects" tab to load projects</p>
+                                    <ul id="createProjectsList" class="list-group">
+                                        <li class="list-group-item text-center">
+                                            <p class="text-muted mb-0">Click the "Associated Projects" tab to load projects</p>
                                         </li>
                                     </ul>
                                 </div>
@@ -908,7 +620,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
 <!-- Custom JS -->
 <script src="../js/imagePrep.js?v=<?php echo filemtime(__DIR__ . '/../js/imagePrep.js'); ?>"></script>
-<script src="../js/photoAdminFunctions.js"></script>
+<script src="../js/photoAdminFunctions.js?v=<?php echo filemtime(__DIR__ . '/../js/photoAdminFunctions.js'); ?>"></script>
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -916,6 +628,5 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
         getAllWorks('Select Works');
     });
 </script>
-<script src="../js/adminSession.js"></script>
 </body>
 </html>

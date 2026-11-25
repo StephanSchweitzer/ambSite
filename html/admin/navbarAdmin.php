@@ -6,122 +6,11 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
-    <link rel="stylesheet" href="admin.css?v=<?php echo filemtime(__DIR__ . '/admin.css'); ?>">
-    <link rel="icon" type="image/x-icon" href="../miscIcons/favicon.ico">
-    <title>Navbar Admin</title>
-    <style>
-        /* Only what is particular to the Navbar page; the sidebar, panel,
-           fields, buttons and dialogs come from admin.css */
-        #navbarLinks {
-            margin: 0;
-            padding: 0;
-        }
-
-        .nav-item-card {
-            background-color: var(--amb-inset);
-            border: 1px solid var(--amb-line);
-            border-radius: var(--amb-radius-sm);
-            margin-bottom: 10px;
-            padding: 12px 15px;
-            transition: all 0.3s ease;
-            position: relative;
-            cursor: grab;
-        }
-
-        .nav-item-card:hover {
-            background-color: var(--amb-inset-hover);
-        }
-
-        .nav-item-card.dragging {
-            background-color: rgba(59, 122, 87, 0.3) !important;
-            box-shadow: 0 0 15px rgba(59, 122, 87, 0.5) !important;
-            border: 1px dashed var(--amb-accent) !important;
-            z-index: 1000 !important;
-            cursor: grabbing !important;
-        }
-
-        .nav-item-card[draggable=true] {
-            user-select: none;
-            -webkit-user-drag: element;
-        }
-
-        .nav-item-card.dragNavBar {
-            transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s;
-        }
-
-        /* The handle only shows where to grab; the whole row drags */
-        .drag-handle {
-            color: var(--amb-muted);
-            opacity: 0.7;
-            transition: opacity 0.2s;
-            pointer-events: none;
-        }
-
-        .nav-item-card:hover .drag-handle {
-            opacity: 1;
-        }
-
-        .nav-item-card input,
-        .nav-item-card .input-group-text {
-            cursor: auto;
-        }
-
-        .nav-item-card button {
-            cursor: pointer;
-        }
-
-        .text-warning {
-            color: var(--amb-warning) !important;
-        }
-
-        .nav-item-card .row.align-items-center {
-            min-height: 38px;
-            row-gap: 8px;
-        }
-
-        .nav-item-card .col-auto {
-            display: flex;
-            align-items: center;
-        }
-
-        .loading-spinner {
-            display: none;
-            margin-left: 10px;
-        }
-
-        .save-success {
-            animation: successHighlight 2s ease-out;
-        }
-
-        @keyframes successHighlight {
-            0%, 100% { background-color: var(--amb-inset); }
-            30% { background-color: rgba(59, 122, 87, 0.45); }
-        }
-
-        #searchLinks {
-            width: 240px;
-            max-width: 100%;
-        }
-
-        @media (max-width: 767.98px) {
-            #searchLinks {
-                width: 100%;
-            }
-
-            .page-title-row > div {
-                flex: 1 1 100%;
-            }
-        }
-    </style>
+    <?php $ambPageTitle = 'Navbar Administration'; include __DIR__ . '/adminHead.php'; ?>
 </head>
-<body class="navbar-admin-page">
+<body class="page-navbar">
 <?php $ambAdminPage = 'navbar'; include __DIR__ . '/adminNav.php'; ?>
 
 <div class="admin-layout">
@@ -131,11 +20,11 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
         <div class="sidebar-actions">
             <button id="saveLinksButton" class="btn btn-light w-100 mb-2" onclick="saveLinks()">
-                <i class="bi bi-save"></i> Save Changes
+                <i class="fas fa-save"></i> Save Changes
                 <span class="spinner-border spinner-border-sm loading-spinner" id="saveSpinner" role="status" aria-hidden="true"></span>
             </button>
             <button id="createLinkButton" class="btn btn-outline-light w-100 mb-4" onclick="createNewNavLinkRow()">
-                <i class="bi bi-plus-circle"></i> Add New Link
+                <i class="fas fa-plus"></i> Add New Link
             </button>
         </div>
 
@@ -145,7 +34,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
             Drag them to reorder, then press Save Changes.
         </p>
         <p class="sidebar-note mb-0">
-            Links marked with <i class="bi bi-lock-fill text-warning"></i> have limited editing options.
+            Links marked with <i class="fas fa-lock text-warning"></i> have limited editing options.
         </p>
     </div>
 
@@ -187,11 +76,7 @@ if (($_SESSION["ambar"] ?? null) != "connected") {
 
 <!-- Toast Container -->
 <div class="toast-container p-3"></div>
+<script src="../js/navbarAdmin.js?v=<?php echo filemtime(__DIR__ . '/../js/navbarAdmin.js'); ?>"></script>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-<script src="../js/navbarAdmin.js"></script>
-
-<script src="../js/adminSession.js"></script>
 </body>
 </html>

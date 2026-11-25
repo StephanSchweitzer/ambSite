@@ -1598,19 +1598,19 @@ function showToast(message, type = 'info') {
   let bgColor, icon;
   switch (type) {
     case 'success':
-      bgColor = '#2ecc71';
+      bgColor = 'var(--amb-accent)';
       icon = 'fas fa-check-circle';
       break;
     case 'error':
-      bgColor = '#e74c3c';
+      bgColor = 'var(--amb-danger)';
       icon = 'fas fa-exclamation-circle';
       break;
     case 'warning':
-      bgColor = '#f39c12';
+      bgColor = 'var(--amb-warning)';
       icon = 'fas fa-exclamation-triangle';
       break;
     default:
-      bgColor = '#3498db';
+      bgColor = 'var(--amb-info)';
       icon = 'fas fa-info-circle';
   }
 

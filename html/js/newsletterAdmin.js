@@ -151,9 +151,9 @@ function displaySubscribers() {
             const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
             const isNew = isNewSubscriber(subscriber);
             const statusBadge = (subscriber.active == 1
-                ? '<span class="badge badge-success">Active</span>'
-                : '<span class="badge badge-secondary">Inactive</span>')
-                + (isNew ? ' <span class="badge badge-pill badge-info ml-2">New</span>' : '');
+                ? '<span class="badge bg-success">Active</span>'
+                : '<span class="badge bg-secondary">Inactive</span>')
+                + (isNew ? ' <span class="badge rounded-pill bg-info ms-2">New</span>' : '');
             const id = Number(subscriber.id);
 
             tbody.append(`
@@ -163,7 +163,7 @@ function displaySubscribers() {
                     <td data-label="Subscribed">${escapeHtml(formattedDate)}</td>
                     <td data-label="Status">${statusBadge}</td>
                     <td data-label="Actions">
-                        <button class="btn btn-sm btn-primary mr-2" onclick="openEditModal(${id})">
+                        <button class="btn btn-sm btn-primary me-2" onclick="openEditModal(${id})">
                             <i class="fas fa-edit"></i> Edit
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${id})">
@@ -492,12 +492,10 @@ function showToast(message, type = 'info') {
             'bg-info';
 
     const toast = `
-        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="3000">
+        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
             <div class="toast-header ${bgClass} text-white">
-                <strong class="mr-auto">Newsletter Admin</strong>
-                <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <strong class="me-auto">Newsletter Admin</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
             <div class="toast-body">
                 ${message}
