@@ -710,6 +710,156 @@ html.on-shop .shop-link,
 
 .carousel:hover span { opacity: 1; }
 
+/* ---------- Clouds over the first painting ----------
+   Arriving at the home page, the first painting is behind weather: a
+   white sheet of cloud, which thins and then parts, three banks of it
+   drifting off left, right and upwards.
+
+   White on white is the whole trick. The sheet the slideshow sits on is
+   --color-background, so the cloud is only ever *seen* where it lies over
+   a painting; what drifts out past the painting's edges simply stops
+   existing. Nothing has to be clipped, and the banks can be larger than
+   the picture they uncover.
+
+   It is three banks and a veil, because one fading layer reads as a
+   picture fading up rather than as cloud: it is the banks moving against
+   each other at different speeds, and the veil thinning out from under
+   them, that gives it depth. Each bank is a handful of soft ellipses,
+   thickest down the middle where the painting is and thinner at the
+   edges, so the parting is felt where it is being watched.
+
+   Nothing here waits for JavaScript. The animations are on the elements
+   themselves, so the cloud is opaque in the very first frame the markup
+   is painted (a class added later would let a cached painting show for a
+   frame before the weather landed on it), and a fresh slideshow - every
+   return to the home page rebuilds it in createCarousel() - starts them
+   again by being new. For the same reason none of them has a fill-mode:
+   the resting state of a veil or a bank is opacity 0, so anything that
+   stops an animation running, reduced motion at the end of this file
+   included, leaves the painting plainly visible rather than behind
+   weather that never clears.
+
+   The veil is gone by seven tenths of the way through while the banks are
+   still leaving, so the painting is readable in about a second and the
+   last wisps are unhurried; it holds its own for the first few hundred
+   milliseconds so that the painting, which is loaded first of anything on
+   the page, has arrived underneath before any of it thins.
+
+   Only transform and opacity are animated, so it is all done on the
+   compositor; blurring a picture this large cost frames on every visit
+   for no more mist than the veil already gives.
+
+   Phones and tablets never see this: / sends them to the works
+   (resolveView() in photoFunctions.js), so there is no slideshow there. */
+
+.home-clouds {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  /* Kept to the white sheet the slideshow sits on. Without this the banks
+     drift out over the menu column and the margin, which are
+     --color-surround and so show the white as a wash across Ambar's own
+     name and links. Nothing of the weather is lost to the clip: the box
+     is the full sheet, far wider and taller than any painting in it, and
+     white cut off against white leaves no edge to see. */
+  overflow: hidden;
+  pointer-events: none; /* the painting underneath stays clickable */
+}
+
+.home-clouds-veil,
+.home-clouds-bank {
+  position: absolute;
+  top: -4%;
+  right: -6%;
+  bottom: -4%;
+  left: -6%;
+  opacity: 0; /* where they rest once the weather has gone */
+}
+
+.home-clouds-bank {
+  will-change: transform, opacity;
+}
+
+.home-clouds-veil {
+  background: var(--color-background);
+  animation: homeCloudVeil 2400ms cubic-bezier(0.32, 0.06, 0.28, 1);
+}
+
+/* Off to the left */
+.home-clouds-bank.is-left {
+  background:
+    radial-gradient(ellipse 30% 22% at 18% 42%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.92) 48%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 24% 18% at 38% 63%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 46%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 27% 20% at 7% 71%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 50%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 20% 15% at 31% 27%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.86) 44%, rgba(253, 252, 250, 0) 100%);
+  animation: homeCloudLeft 2400ms var(--ease-out-soft);
+}
+
+/* Off to the right */
+.home-clouds-bank.is-right {
+  background:
+    radial-gradient(ellipse 30% 22% at 82% 46%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.92) 48%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 25% 18% at 63% 66%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 46%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 26% 19% at 93% 31%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 50%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 21% 16% at 71% 23%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.86) 44%, rgba(253, 252, 250, 0) 100%);
+  animation: homeCloudRight 2400ms var(--ease-out-soft);
+}
+
+/* Lifting, slower than the other two, so the picture clears from the
+   bottom upwards the way low cloud leaves a hill */
+.home-clouds-bank.is-high {
+  background:
+    radial-gradient(ellipse 34% 20% at 50% 53%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 50%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 27% 17% at 51% 79%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 46%, rgba(253, 252, 250, 0) 100%),
+    radial-gradient(ellipse 22% 14% at 44% 21%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.84) 44%, rgba(253, 252, 250, 0) 100%);
+  animation: homeCloudHigh 2400ms cubic-bezier(0.28, 0.1, 0.3, 1);
+}
+
+/* The painting settles the last of its size into place as the weather
+   leaves. startHomeReveal() puts this class on for the length of the
+   animation and takes it off again, rather than CSS matching the active
+   slide, so it belongs to the arrival and not to every time the
+   slideshow comes round to its first picture again. No fill-mode either:
+   a transform left locked in by one would stop .carousel-pic:hover
+   lifting the painting afterwards. */
+.carousel-item.is-settling .carousel-pic {
+  animation: homeCloudSettle 2400ms var(--ease-out-soft);
+}
+
+@keyframes homeCloudVeil {
+  0% { opacity: 1; }
+  15% { opacity: 0.88; }
+  45% { opacity: 0.36; }
+  70% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes homeCloudLeft {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  22% { transform: translate3d(-2.5%, -0.5%, 0) scale(1.02); opacity: 1; }
+  100% { transform: translate3d(-19%, -4%, 0) scale(1.14); opacity: 0; }
+}
+
+@keyframes homeCloudRight {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  22% { transform: translate3d(2%, -1%, 0) scale(1.02); opacity: 1; }
+  100% { transform: translate3d(21%, -6%, 0) scale(1.16); opacity: 0; }
+}
+
+@keyframes homeCloudHigh {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  25% { transform: translate3d(0.5%, -2%, 0) scale(1.03); opacity: 0.96; }
+  100% { transform: translate3d(3%, -26%, 0) scale(1.2); opacity: 0; }
+}
+
+@keyframes homeCloudSettle {
+  0% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+
 /* ==========================================================================
    Galleries / projects
    ========================================================================== */

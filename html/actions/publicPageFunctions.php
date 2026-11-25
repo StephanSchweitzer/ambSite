@@ -376,6 +376,17 @@ function ambRenderWorks($projects)
     return $html;
 }
 
+// The cloud that parts to reveal the first painting of the slideshow. A veil
+// and three banks of soft white puffs; all the movement is in ambar.css
+// ("Clouds over the first painting"). Mirrors HOME_CLOUDS_HTML in
+// photoFunctions.js - change both.
+define('AMB_HOME_CLOUDS', '<div class="home-clouds" aria-hidden="true">'
+    . '<div class="home-clouds-veil"></div>'
+    . '<div class="home-clouds-bank is-left"></div>'
+    . '<div class="home-clouds-bank is-right"></div>'
+    . '<div class="home-clouds-bank is-high"></div>'
+    . '</div>');
+
 function ambRenderCarousel($works)
 {
     $html = '<div id="homePageCarousel" class="carousel slide homePageCarousel"><div class="carousel-inner">';
@@ -386,6 +397,9 @@ function ambRenderCarousel($works)
             . '</a></div>';
     }
     $html .= '</div>';
+    if (count($works) > 0) {
+        $html .= AMB_HOME_CLOUDS; // the weather over the first painting (ambar.css)
+    }
     if (count($works) > 1) {
         $html .= '<a class="carousel-control-prev" href="#homePageCarousel" role="button" data-slide="prev">'
             . '<span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="sr-only">Previous</span></a>'
