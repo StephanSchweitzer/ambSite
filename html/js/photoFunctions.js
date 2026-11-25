@@ -2474,6 +2474,7 @@ function renderHome() {
         } else {
             createCarousel(works);
         }
+        warmSlideshow(works);
         startHomeReveal();
         viewReady = true;
     }, function () {
@@ -2544,7 +2545,7 @@ function createCarousel(works) {
 
     works.forEach(function (work, index) {
         var link = $('<a>').addClass('carousel-link').attr({ href: work.path, 'data-index': index, 'aria-label': work.name })
-            .append(workImage(work, { sizes: GALLERY_SIZES, lazy: index > 0, priority: index === 0, className: 'd-block carousel-pic' }));
+            .append(workImage(work, { sizes: carouselSizes(work), lazy: index > 0, priority: index === 0, className: 'd-block carousel-pic' }));
         inner.append($('<div>').addClass('carousel-item' + (index === 0 ? ' active' : '')).append(link));
     });
     carousel.append(inner);
@@ -2570,12 +2571,99 @@ function createCarousel(works) {
     }
 }
 
+// The slideshow's paintings are only as tall as 72vh lets them be
+// (.carousel-pic), so a portrait one is drawn far narrower than the 62vw the
+// gallery's sizes assume. Saying so lets the browser pick a lighter copy.
+// Same as ambCarouselSizes() in publicPageFunctions.php.
+function carouselSizes(work) {
+    if (!work.width || !work.height) {
+        return GALLERY_SIZES;
+    }
+    var ratio = Math.round(work.width / work.height * 1000) / 1000;
+    return '(max-width: 992px) 92vw, min(62vw, 72vh * ' + ratio + ')';
+}
+
+// Every slide after the first is a lazy picture, and a lazy picture in a
+// hidden slide (display: none until Bootstrap moves it in) is never
+// fetched, so each painting only started downloading as it slid in. Once
+// the first painting has arrived, the slides either side of the one
+// showing are fetched ahead (SLIDES_AHEAD forward, one back), and the
+// window moves along with the slideshow. Until its own copy is in, each
+// slide shows its 400px thumbnail, fetched for every slide at the start
+// (they're small), so nothing ever slides in blank.
+var SLIDES_AHEAD = 2;
+var slideshowPics = [];
+
+function warmSlideshow(works) {
+    var carousel = document.getElementById('homePageCarousel');
+    slideshowPics = carousel ? [].slice.call(carousel.querySelectorAll('.carousel-pic')) : [];
+    if (slideshowPics.length < 2) {
+        return;
+    }
+    var pics = slideshowPics;
+    var first = pics[0];
+    var started = false;
+    function start() {
+        if (started || pics !== slideshowPics) {
+            return; // already going, or the slideshow has been rebuilt since
+        }
+        started = true;
+        pics.forEach(function (pic, index) {
+            if (index > 0 && works[index]) {
+                showThumbnailFirst(pic, thumbnailUrl(works[index].location));
+            }
+        });
+        warmSlidesAround(0);
+    }
+    if (first.complete) {
+        start();
+    } else {
+        first.addEventListener('load', start, { once: true });
+        first.addEventListener('error', start, { once: true });
+        setTimeout(start, 4000); // a slow first painting doesn't hold the rest up forever
+    }
+}
+
+function warmSlidesAround(index) {
+    var count = slideshowPics.length;
+    for (var step = -1; step <= SLIDES_AHEAD; step++) {
+        var pic = slideshowPics[(index + step + count) % count];
+        if (pic && pic.loading === 'lazy') {
+            pic.loading = 'eager'; // starts the download, hidden or not
+        }
+    }
+}
+
+// The thumbnail is the picture's background until the picture itself has
+// loaded and covers it (paintings are opaque JPEGs), then it's taken away
+function showThumbnailFirst(pic, url) {
+    if (pic.complete && pic.naturalWidth) {
+        return;
+    }
+    var thumbnail = new Image();
+    thumbnail.onload = function () {
+        if (!(pic.complete && pic.naturalWidth)) {
+            pic.style.backgroundImage = 'url("' + url + '")';
+        }
+    };
+    thumbnail.src = url;
+    pic.addEventListener('load', function () {
+        pic.style.backgroundImage = '';
+        // Decode it now rather than in the middle of its slide moving in
+        if (pic.decode) {
+            pic.decode().catch(function () {});
+        }
+    }, { once: true });
+}
+
 // The slideshow doesn't move on underneath an open painting (so closing
 // can shrink it back into its slide)
 $(document).on('slide.bs.carousel', '#homePageCarousel', function (event) {
     if (viewer.open) {
         event.preventDefault();
+        return;
     }
+    warmSlidesAround(event.to);
 });
 
 $(document).on('click', '.carousel-link', function (event) {

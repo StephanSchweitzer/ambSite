@@ -669,6 +669,9 @@ html.on-shop .shop-link,
   border-radius: 3px;
   box-shadow: var(--shadow-medium);
   transition: transform 0.6s var(--ease-out-soft), box-shadow 0.6s ease;
+  /* Where warmSlideshow() puts the thumbnail while the painting loads */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
 
 /* Hover effects only where there's a mouse: on a phone a tap would set them

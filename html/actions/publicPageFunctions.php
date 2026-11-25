@@ -387,13 +387,26 @@ define('AMB_HOME_CLOUDS', '<div class="home-clouds" aria-hidden="true">'
     . '<div class="home-clouds-bank is-high"></div>'
     . '</div>');
 
+// The slideshow's paintings are only as tall as 72vh lets them be
+// (.carousel-pic), so a portrait one is drawn far narrower than the 62vw the
+// gallery's sizes assume. Saying so lets the browser pick a lighter copy.
+// Same as carouselSizes() in photoFunctions.js.
+function ambCarouselSizes($work)
+{
+    if (!$work['width'] || !$work['height']) {
+        return AMB_GALLERY_SIZES;
+    }
+    $ratio = round($work['width'] / $work['height'], 3);
+    return '(max-width: 992px) 92vw, min(62vw, 72vh * ' . $ratio . ')';
+}
+
 function ambRenderCarousel($works)
 {
     $html = '<div id="homePageCarousel" class="carousel slide homePageCarousel"><div class="carousel-inner">';
     foreach ($works as $index => $work) {
         $html .= '<div class="carousel-item' . ($index === 0 ? ' active' : '') . '">'
             . '<a class="carousel-link" href="' . ambHtml($work['path']) . '" data-index="' . $index . '" aria-label="' . ambHtml($work['name']) . '">'
-            . ambWorkImage($work, $index > 0, AMB_GALLERY_SIZES, 'd-block carousel-pic', $index === 0)
+            . ambWorkImage($work, $index > 0, ambCarouselSizes($work), 'd-block carousel-pic', $index === 0)
             . '</a></div>';
     }
     $html .= '</div>';
