@@ -1154,7 +1154,8 @@ function drawArrangeList() {
     });
 
     $area.empty().append(
-        $('<p class="order-hint">').html('<i class="fas fa-grip-vertical mr-1"></i> Drag the works, or use the arrows, into the order you want them on your Works page. Works you tick later go at the end.'),
+        $('<p class="order-hint">').html('<i class="fas fa-grip-vertical mr-1"></i> Drag the works, or use the arrows, into the order you want them on your Works page. Works you tick later go at the end.' +
+            ' Where your Works page shows a project in groups of years, this order is kept inside each group.'),
         list,
         $('<div class="text-right">').append(
             $('<button type="button" class="btn btn-primary">').html('<i class="fas fa-save"></i> Save Order')
