@@ -186,15 +186,25 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   flex-direction: row;
 }
 
-/* At least 10vh tall: the white sheet starts 10vh down
-   (.imagesAndContentMobile), and where the logo made the bar shorter than
-   that (taller iPhones), a sliver of the wall showed between the bar and
-   the sheet, like a line. */
+/* The phone bar's height, set once. Everything that has to line up with
+   the bar reads it from here: the white sheet starts at it
+   (.imagesAndContentMobile), the landing page's sheet ends a screen below
+   it, the menu button is centred in it and the shop's test bar sits under
+   it. The logo is sized by height to fit inside. (It used to be the
+   other way round - the logo sized by the screen's width, the sheet
+   placed at 10% of its height - and the two only met by accident: a line
+   of wall showed between them on taller iPhones, and on short or sideways
+   screens the top of the page hid under the bar.) */
+:root {
+  --bar-h: 80px;
+  --bar-logo-h: 54px;
+}
+
 .blockForHeaderMobile {
   width: 100vw;
-  min-height: 10vh;
+  height: var(--bar-h);
   box-sizing: border-box;
-  padding: 6px 0;
+  padding: 0;
   background-color: rgba(255, 255, 255, 0.92);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
@@ -246,12 +256,12 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 .ambarNamePicMobile {
-  margin-top: 8px;
-  margin-bottom: 8px;
+  margin-top: 0;
+  margin-bottom: 0;
   margin-left: 4vw !important;
-  width: 44vw;
-  max-width: 170px;
-  height: auto;
+  height: var(--bar-logo-h); /* centred in the bar, which is --bar-h tall */
+  width: auto;
+  max-width: none;
 }
 
 /* ---------- Hamburger ---------- */
@@ -758,9 +768,9 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
    mistake, with the torn edge it reads as the paper. */
 .imagesAndContentMobile {
   width: auto;
-  /* under the bar (.blockForHeaderMobile, at least 10vh), tucked a pixel
-     beneath it so no rounding can open a gap */
-  margin-top: calc(10vh - 1px);
+  /* straight under the bar (--bar-h), tucked a pixel beneath it so no
+     rounding can open a gap */
+  margin-top: calc(var(--bar-h) - 1px);
   margin-left: var(--wall-side);
   margin-right: var(--wall-side);
   padding: 4vw clamp(15px, 4vw, 32px);
@@ -837,15 +847,16 @@ html:has(#imagesAndContent[data-view="home"]) {
 }
 
 /* ...and on a phone, where the browser lets a finger move the page past
-   that, there is nothing below the edge to move to: the sheet starts 10vh
-   down (under the fixed header) and ends exactly at the bottom of the
-   screen, the smallest screen when the browser's bars are showing.
+   that, there is nothing below the edge to move to: the sheet starts
+   under the bar (--bar-h, less the pixel it tucks under) and ends exactly
+   at the bottom of the screen, the smallest screen when the browser's bars
+   are showing.
    The slideshow and the words under it sit together at the top of the
    sheet (align-content), not spread down it: spread out, the words ended
    up low enough for Safari's bottom bar to cover them. */
 #imagesAndContent.imagesAndContentMobile[data-view="home"] {
-  min-height: calc(90vh + 1px);
-  min-height: calc(100svh - 10vh + 1px);
+  min-height: calc(100vh - var(--bar-h) + 1px);
+  min-height: calc(100svh - var(--bar-h) + 1px);
   align-content: flex-start;
 }
 
@@ -2412,7 +2423,7 @@ body:has(.navLinksBoxMobile.active) .basket-pill {
 /* Phones and tablets: just under the white header bar, across the page */
 @media (max-width: 991px) {
   .shop-test-bar {
-    top: 90px;
+    top: calc(var(--bar-h) + 10px);
     left: 12px;
     right: 12px;
   }
@@ -4115,12 +4126,6 @@ html.no-scroll {
     justify-content: space-between;
   }
 
-  .ambarNamePicMobile {
-    margin-top: 8px;
-    width: 44vw;
-    max-width: 170px;
-  }
-
   .infoflex, .infoflexMobile {
     width: 100%;
     margin-left: 0;
@@ -4130,6 +4135,11 @@ html.no-scroll {
   .buttonContainer {
     flex-direction: row;
     gap: 10px;
+  }
+
+  /* centred in the bar (42px: 12px padding each side of 18px of lines) */
+  .hamburger-menu {
+    top: calc((var(--bar-h) - 42px) / 2);
   }
 
   .hamburger-menu.active {
