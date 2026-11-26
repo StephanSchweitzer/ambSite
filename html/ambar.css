@@ -53,12 +53,23 @@
   --header-clearance: 12vh;
 
   /* Computers: the column of warm ground the menu lives in, and how far
-     the logo and links sit in from the screen's edge. The white sheet of
-     works fills everything to its right, out to the edge of the screen.
-     Capped, so a wide screen gives the room to the paintings rather than
-     to five short links. */
+     the logo and links sit in from the screen's edge. Capped, so a wide
+     screen gives the room to the paintings rather than to five short
+     links. */
   --menu-col: clamp(236px, 20vw, 330px);
   --menu-inset: clamp(28px, 3.4vw, 64px);
+
+  /* The white sheet is a sheet of paper on the wall: the wall shows down
+     its right-hand side too (--wall-side; on phones both sides), and its
+     long edges are torn like watercolour paper, so that strip of wall
+     reads as the paper ending rather than as a frame round a box. The
+     tear is a 10px tile, drawn in --color-surround, laid inside the
+     sheet's own background, so it costs nothing and sits under
+     everything on the sheet (the tape included). */
+  --wall-side: clamp(18px, 2.6vw, 48px);
+  --paper-edges:
+    url('/miscIcons/paper/edge-left.svg') left top / 10px 240px repeat-y,
+    url('/miscIcons/paper/edge-right.svg') right top / 10px 240px repeat-y;
 
   /* Painted tape scraps (stand-ins until Ambar's own scanned tape replaces
      the files in miscIcons/tape/) */
@@ -616,42 +627,38 @@ html.on-shop .shop-link,
 
 #imagesAndContent {
   transition: opacity 0.4s ease;
-  /* Everything right of the menu column, to the screen's edge. flex (not
-     a vw width) so the scrollbar is never counted twice. */
+  /* Everything between the menu column and the strip of wall on the
+     right. flex (not a vw width) so the scrollbar is never counted twice. */
   flex: 1 1 auto;
   min-width: 0;
   padding: 4vw 5vw;
   margin-left: var(--menu-col);
+  margin-right: var(--wall-side);
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
   min-height: 100vh;
   box-sizing: border-box;
-  /* White sheet the works sit on, lifted off the dotted paper background */
-  background: var(--color-background);
-  border-left: 1px solid var(--color-line);
-  box-shadow: -14px 0 40px rgba(29, 29, 27, 0.04);
+  /* The white sheet the works sit on, torn down both long edges */
+  background: var(--paper-edges), var(--color-background);
 }
 
 /* Styled at all widths — JS applies this class from 992px down.
-   The sheet is the whole screen here: a frame of ground a few pixels
-   wide only looked like a mistake, so the ground lives in the menu
-   drawer instead and the room goes to a margin inside the sheet. */
+   A narrow strip of wall each side: with a straight edge it looked like a
+   mistake, with the torn edge it reads as the paper. */
 .imagesAndContentMobile {
-  width: 100%;
+  width: auto;
   margin-top: 10vh;
-  margin-left: 0;
-  margin-right: 0;
-  padding: 4vw clamp(16px, 4.5vw, 32px);
+  margin-left: var(--wall-side);
+  margin-right: var(--wall-side);
+  padding: 4vw clamp(15px, 4vw, 32px);
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
   box-sizing: border-box;
-  background: var(--color-background);
-  border: none;
-  box-shadow: none;
+  background: var(--paper-edges), var(--color-background);
 }
 
 .imagesAndContentMobile p { font-size: 1em; }
@@ -3898,15 +3905,13 @@ html.no-scroll {
 
   .navLinksBox { display: none; }
 
-  /* The whole screen is the sheet (see .imagesAndContentMobile) */
-  body { background: var(--color-background); }
+  :root { --wall-side: clamp(7px, 2vw, 16px); }
 
   #imagesAndContent {
-    width: 100%;
-    margin-left: 0;
-    padding: 4vw clamp(16px, 4.5vw, 32px);
-    border-left: none;
-    box-shadow: none;
+    width: auto;
+    margin-left: var(--wall-side);
+    margin-right: var(--wall-side);
+    padding: 4vw clamp(15px, 4vw, 32px);
   }
 
   .blockForHeader {
