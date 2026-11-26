@@ -1254,6 +1254,10 @@ html.on-shop .shop-link,
 #popUpImage {
   transition: opacity 0.2s ease;
   transform-origin: 0 0; /* the open / close zoom is worked out from the top-left corner */
+  /* On big screens the painting is wider than the 800px dialog around it.
+     As a flex item it would be squeezed to fit while a smaller copy (800px)
+     stands in, then jump to size when the sharper one arrives. */
+  flex-shrink: 0;
 }
 
 /* Opening: the caption, close button and arrows follow just after the
