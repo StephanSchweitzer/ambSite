@@ -29,6 +29,12 @@
      "See to scale" wall */
   --surround-dots: radial-gradient(rgba(92, 74, 48, 0.05) 1px, transparent 1.4px);
   --color-line: #eae8e3;
+  /* The menu's quieter words and the line down beside Works' sections.
+     They sit on the warm ground, where --color-line all but vanished and
+     the secondary greys read washed out. */
+  --color-menu-line: #d6cfc2;
+  --color-menu-sub: #5d5c57;
+  --color-menu-faint: #8b8a84;
   --color-accent: #8a8a8a;
 
   /* Palette borrowed from the hand-drawn logo */
@@ -355,9 +361,13 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   transition: clip-path 0.4s var(--ease-out-soft);
 }
 
-.mainLinkGenres:hover:after,
-.nav-link-container .mainLinkGenres:hover:after {
-  clip-path: inset(0 0 0 0);
+/* Only where there's a real pointer: on a phone a tap leaves :hover
+   stuck, which left a strip of tape on whatever was last touched */
+@media (hover: hover) {
+  .mainLinkGenres:hover:after,
+  .nav-link-container .mainLinkGenres:hover:after {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
 .nav-link-container:nth-child(4n+2) .mainLinkGenres:after { --tape-menu: var(--tape-pink); transform: rotate(1deg); }
@@ -469,7 +479,7 @@ html.on-shop .shop-link,
   overflow: hidden;
   box-sizing: border-box;
   padding: 2px 0 2px 14px;
-  border-left: 2px solid var(--color-line);
+  border-left: 2px solid var(--color-menu-line);
 }
 
 .hiddenLinkStuff a {
@@ -478,7 +488,7 @@ html.on-shop .shop-link,
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   margin-bottom: 0.55rem;
-  color: var(--color-text-secondary);
+  color: var(--color-menu-sub);
   transition: color 0.25s ease, transform 0.25s ease;
 }
 
@@ -500,7 +510,7 @@ html.on-shop .shop-link,
   text-indent: 14px;
   margin-bottom: 0.32rem;
   font-size: 0.72rem;
-  color: var(--color-faint);
+  color: var(--color-menu-faint);
 }
 
 .hiddenLinkStuff .nav-link-container { margin-bottom: 0.55rem; }
@@ -527,31 +537,36 @@ html.on-shop .shop-link,
   position: fixed;
   margin-top: 0;
   margin-left: 0;
-  width: min(84vw, 340px);
+  /* As wide as the words need, not most of the screen */
+  width: min(66vw, 252px);
   height: 100vh;
   height: 100dvh;
-  /* The warm ground: on phones this is the only place it shows, so it
-     still means "the menu", as the column does on computers */
-  background-color: rgba(242, 238, 230, 0.98);
+  /* A strip of the warm ground, torn down its right side like the white
+     sheet: the menu is a piece of the same paper laid over the page. The
+     tear is a mask (the same tile as the sheet's edge, read for its
+     shape), so what shows through it is the dimmed page. A mask also
+     cuts off any shadow, so there is none; the dimmed page is contrast
+     enough, and nothing smudges the page's edge while it's tucked away. */
+  background-color: var(--color-surround);
   background-image: var(--surround-dots);
   background-size: 22px 22px;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  -webkit-mask:
+    linear-gradient(#000, #000) left top / calc(100% - 10px) 100% no-repeat,
+    url('/miscIcons/paper/edge-left.svg') right top / 10px 240px repeat-y;
+  mask:
+    linear-gradient(#000, #000) left top / calc(100% - 10px) 100% no-repeat,
+    url('/miscIcons/paper/edge-left.svg') right top / 10px 240px repeat-y;
   z-index: 1000;
   padding-top: 96px;
-  padding-left: 9vw;
-  padding-right: 6vw;
+  padding-left: 34px;
+  padding-right: 22px;
   transform: translateX(-102%);
-  transition: transform 0.38s var(--ease-out-soft), box-shadow 0.38s ease;
+  transition: transform 0.38s var(--ease-out-soft);
   overflow-y: auto;
-  /* No shadow while it's tucked away: the shadow reaches past the screen's
-     edge and lay as a grey smudge down the side of the white page */
-  box-shadow: none;
 }
 
 .navLinksBoxMobile.active {
   transform: translateX(0);
-  box-shadow: 12px 0 40px rgba(29, 29, 27, 0.12);
 }
 
 /* Staggered entrance for drawer links */
@@ -588,6 +603,20 @@ html.on-shop .shop-link,
 .navLinksBoxMobile .mainLinkGenres:after {
   height: 1.6em;
   margin-top: -0.85em;
+}
+
+/* You are here: as the menu opens, a strip of tape is laid behind the
+   page you're on, after the links have come in. The page is read from
+   the sheet's data-view (set by setView() and by index.php), so this
+   needs no script and is right from the first paint. */
+.navLinksBoxMobile.active .mainLinkGenres:after {
+  transition-delay: 0.32s;
+}
+
+body:has(#imagesAndContent[data-view="works"]) .navLinksBoxMobile.active .mainLinkGenres[href="/select-works"]:after,
+body:has(#imagesAndContent[data-view="about"]) .navLinksBoxMobile.active .mainLinkGenres[href="/about"]:after,
+body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLinkGenres[href="/shop"]:after {
+  clip-path: inset(0 0 0 0);
 }
 
 /* Overlay behind the drawer */
@@ -2127,6 +2156,12 @@ html.on-shop .shop-link,
 
 .shop-test-bar[hidden] {
   display: none;
+}
+
+/* It floats above the header, which put it over the phone menu's top
+   link; it steps aside while the menu is open */
+body:has(.navLinksBoxMobile.active) .shop-test-bar {
+  visibility: hidden;
 }
 
 .shop-test-bar details {
@@ -3947,10 +3982,12 @@ html.no-scroll {
   /* Drawer sub-sections */
   .navLinksBoxMobile #selectProjectCategories {
     margin-top: 0;
-    margin-bottom: 12px;
+    /* the same breath below the sections as between the main links, so
+       they don't run straight on into About */
+    margin-bottom: 22px;
     margin-left: 4px;
     padding-left: 16px;
-    border-left: 2px solid var(--color-line);
+    border-left: 2px solid var(--color-menu-line);
   }
 
   .navLinksBoxMobile #selectProjectCategories a {
@@ -3959,7 +3996,7 @@ html.no-scroll {
     padding: 7px 0;
     font-size: 0.82rem;
     letter-spacing: 0.1em;
-    color: var(--color-text-secondary);
+    color: var(--color-menu-sub);
   }
 
   .navLinksBoxMobile #selectProjectCategories a:hover {
@@ -3971,7 +4008,7 @@ html.no-scroll {
   .navLinksBoxMobile #selectProjectCategories .project-year-link {
     text-indent: 14px;
     font-size: 0.75rem;
-    color: var(--color-faint);
+    color: var(--color-menu-faint);
   }
 
   .navLinksBoxMobile #newsletterSignUp {
