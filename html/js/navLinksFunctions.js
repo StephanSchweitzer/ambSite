@@ -163,32 +163,75 @@ function projectCategoryLink(sectionId, text) {
         }
         e.preventDefault();
         e.stopPropagation(); // keep the dropdown open
+        openProjectSection(sectionId);
+    });
 
-        // On phones, close the drawer so the works are visible
+    return link;
+}
+
+// Shows a project (or one of its year groups) on the Works page; on phones
+// the drawer closes first so the works are visible
+function openProjectSection(sectionId) {
+    if (window.innerWidth <= 992) {
+        $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
+        $('#navLinksBox').removeClass('active');
+        $('.nav-overlay').removeClass('active');
+        $('#sideBySide').removeClass('menu-open');
+    }
+    loadProjectSection(sectionId);
+}
+
+// A project's name in the "Works" dropdown, when it has years folded away
+// underneath. On a computer, clicking it unfolds them instead of going
+// anywhere, the way "Works" itself unfolds the projects; one project's years
+// at a time, so the menu stays short. On a phone the years aren't listed
+// (ambar.css: the drawer ran off the screen with them, and people kept
+// tapping a name that only opened and closed), so there the name goes
+// straight to the project. (The link keeps its address, so it still works
+// as a link before this script has run, and for anything that doesn't run
+// scripts.)
+function projectYearsToggle(title, yearsId) {
+    const sectionId = projectSectionId(title);
+    const link = $('<a>')
+        .addClass('project-link')
+        .attr({ href: '/select-works#' + sectionId, 'aria-expanded': 'false', 'aria-controls': yearsId })
+        .text(title);
+
+    link.on('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation(); // keep the Works list open
+
         if (window.innerWidth <= 992) {
-            $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
-            $('#navLinksBox').removeClass('active');
-            $('.nav-overlay').removeClass('active');
-            $('#sideBySide').removeClass('menu-open');
+            openProjectSection(sectionId);
+            return;
         }
 
-        loadProjectSection(sectionId);
+        const years = $('#' + yearsId);
+        const opening = !years.is(':visible');
+
+        $('#selectProjectCategories .project-years').not(years).slideUp(200);
+        $('#selectProjectCategories .project-link').not(this).attr('aria-expanded', 'false');
+
+        years.slideToggle(220);
+        $(this).attr('aria-expanded', opening ? 'true' : 'false');
     });
 
     return link;
 }
 
 // The project names under "Works" — from the same request the Works page
-// uses — each with its year groups listed under it where it has them, always
-// in view: the name goes to the project, a year to its group. (Mirrors the
-// same list in ambRenderNav(), actions/publicPageFunctions.php.)
+// uses — each with its year groups under it where it has them (mirrors the
+// same list in ambRenderNav(), actions/publicPageFunctions.php)
 function loadAndDisplayProjectTitles() {
     fetchPublicWorks('projects').then(function (projects) {
         const container = $('#selectProjectCategories');
         container.empty();
         projects.forEach(function (project) {
             const sectionId = projectSectionId(project.title);
-            const years = $('<div>').addClass('project-years');
+            const years = $('<div>').addClass('project-years').attr('id', 'years-' + sectionId);
 
             workGroups(project).forEach(function (group) {
                 if (!group.label) {
@@ -200,10 +243,13 @@ function loadAndDisplayProjectTitles() {
                 );
             });
 
-            container.append(projectCategoryLink(sectionId, project.title));
-            if (years.children().length) {
-                container.append(years);
+            // A project with years unfolds them when its name is clicked (on
+            // a computer); one without them goes to the project
+            if (!years.children().length) {
+                container.append(projectCategoryLink(sectionId, project.title));
+                return;
             }
+            container.append(projectYearsToggle(project.title, 'years-' + sectionId), years);
         });
     }, function () {
         console.log('Error loading project titles.');

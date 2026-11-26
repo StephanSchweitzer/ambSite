@@ -498,13 +498,16 @@ html.on-shop .shop-link,
 
 /* The years under a project that is shown in year groups (Works → Painting
    → 2025–2026 / 2023–2024 / 2020–2022): a step quieter and a step in again.
-   Always in view: they used to fold away under the project's name, and
-   people tapped the name over and over thinking the menu was broken. The
-   name now goes to the project, each year to its group. (Not on a phone,
-   where there isn't the room: see the drawer's rules further down.)
+   They stay folded away until the project's name is clicked, so the Works
+   list is as short as it ever was — the script unfolds them, and with no
+   script the project's name is still a link to the project. On a phone
+   they're never shown and the name goes to the project (the drawer's
+   rules further down).
    The step in is text-indent, not a margin, which the links' own margins
    would fight with. */
-.hiddenLinkStuff .project-years { margin-bottom: 0.75rem; }
+.project-years {
+  display: none;
+}
 
 .hiddenLinkStuff .project-year-link {
   text-indent: 14px;
@@ -783,11 +786,32 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
   justify-content: center;
 }
 
-/* A little shorter on phones, so the words under it (.home-links) are on
-   the first screen too, even on a phone turned on its side */
+/* On phones the slideshow is a fixed height, a little shorter than on a
+   computer, with each painting centred in it: the words under it
+   (.home-links) are on the first screen, even on a phone turned on its
+   side, and stay put while taller and shorter paintings come and go. */
+.homePageCarouselMobile {
+  --home-pic: min(58vh, calc(100vh - 230px));
+}
+
+@supports (height: 1svh) {
+  .homePageCarouselMobile { --home-pic: min(58svh, calc(100svh - 230px)); }
+}
+
+.homePageCarouselMobile .carousel-inner,
+.homePageCarouselMobile .carousel-item,
+.homePageCarouselMobile .carousel-link {
+  height: var(--home-pic);
+}
+
+.homePageCarouselMobile .carousel-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .homePageCarouselMobile .carousel-pic {
-  max-height: min(58vh, calc(100vh - 230px));
-  max-height: min(58svh, calc(100svh - 230px));
+  max-height: 100%;
 }
 
 /* The landing page is one screen and never scrolls, on a phone or a
@@ -815,9 +839,10 @@ html:has(#imagesAndContent[data-view="home"]) {
 
 /* ---------- The way in, under the slideshow (phones) ----------
    The menu's pages written out as words, so the first page never depends
-   on finding the menu button. Works keeps its strip of tape all the time:
-   it's the way in. Same words, sizes and tape as the menu's own links
-   (.mainLinkGenres). On a computer the menu is beside the slideshow, so
+   on finding the menu button. None is singled out: in the drawer a strip of
+   tape marks the page you're on, so a taped Works here read as "you are
+   here". Same words and sizes as the menu's own links (.mainLinkGenres).
+   On a computer the menu is beside the slideshow, so
    these are never shown there. Drawn by ambRenderHomeLinks()
    (publicPageFunctions.php) and homeLinks() (photoFunctions.js). */
 .home-links { display: none; }
@@ -829,7 +854,7 @@ html:has(#imagesAndContent[data-view="home"]) {
     justify-content: center;
     align-items: center;
     /* the page is a wrapping row that stretches its rows to fill the
-       screen; this row keeps its own height so the tape sits on the word */
+       screen; this row keeps its own height, its words in its middle */
     align-self: flex-start;
     gap: 4px 28px;
     width: 100%;
@@ -838,10 +863,6 @@ html:has(#imagesAndContent[data-view="home"]) {
 
   .home-links .home-link {
     padding: 12px 4px; /* a finger's height to tap */
-  }
-
-  .home-links .is-main:after {
-    clip-path: inset(0 0 0 0);
   }
 }
 
@@ -4135,9 +4156,10 @@ html.no-scroll {
      drawer ran past the bottom of the screen and About, Shop and the rest
      had to be scrolled to. The drawer is too narrow to put the years side
      by side at a size a finger can tap, and each year's heading is on the
-     Works page anyway, a short scroll from the project's top. */
+     Works page anyway, a short scroll from the project's top. (important:
+     over years a computer width may have unfolded before a resize) */
   .navLinksBoxMobile #selectProjectCategories .project-years {
-    display: none;
+    display: none !important;
   }
 
   .navLinksBoxMobile #newsletterSignUp {

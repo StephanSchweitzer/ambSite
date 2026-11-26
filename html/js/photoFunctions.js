@@ -2593,15 +2593,14 @@ function createCarousel(works) {
 }
 
 // Under the slideshow, shown on phones only (ambar.css, "The way in"): the
-// menu's pages written out as words, Works first with its tape, so nobody
-// has to find the menu button to get past the first page. Taken from the
-// menu itself; if it isn't drawn yet, Works alone.
+// menu's pages written out as words, so nobody has to find the menu button
+// to get past the first page. Taken from the menu itself; if it isn't drawn
+// yet, Works alone.
 // Mirrors ambRenderHomeLinks() in publicPageFunctions.php - change both.
 function homeLinks() {
     var nav = $('<nav class="home-links" aria-label="Pages">');
     function add(href, text) {
-        nav.append($('<a>').attr('href', href).text(text)
-            .addClass('mainLinkGenres home-link' + (href === '/select-works' ? ' is-main' : '')));
+        nav.append($('<a>').attr('href', href).text(text).addClass('mainLinkGenres home-link'));
     }
     $('#navLinksBox a.mainLinkGenres').each(function () {
         var href = this.getAttribute('href') || '';
@@ -3000,10 +2999,11 @@ function spawnNewsletterFloat() {
 // Names the menu links (stored in the database) call
 // --------------------------------------------------------------------------
 
-// Works, from the menu. Already on the works, it goes back to the top of
-// them, so the tap always does something you can see.
+// Works, from the menu. On a phone, already on the works, it goes back to
+// the top of them, so the tap always does something you can see (on a
+// computer it opens and closes the list of projects instead).
 function getProjectsAndWorks() {
-    if (currentView === 'works' && viewReady && location.pathname === '/select-works') {
+    if (window.innerWidth <= BREAKPOINT && currentView === 'works' && viewReady && location.pathname === '/select-works') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return $.Deferred().resolve().promise();
     }
