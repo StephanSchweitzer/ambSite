@@ -448,8 +448,8 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
     <div class="modal-backdrop show" id="preopenedBackdrop"></div>
 <?php endif; ?>
 
-    <!-- Navigation Overlay for Mobile -->
-    <div class="nav-overlay"></div>
+    <!-- Navigation Overlay for Mobile: the table the menu is laid on -->
+    <div class="nav-overlay" aria-hidden="true"><span class="splat splat-1"></span><span class="splat splat-2"></span><span class="splat splat-3"></span><span class="splat splat-4"></span><span class="splat splat-5"></span></div>
 </div>
 <?= shopRenderTestBar(strpos($view, 'shop') === 0) ?>
 <?php if (shopTestMode()): ?>

@@ -73,6 +73,8 @@
      sheet's own background, so it costs nothing and sits under
      everything on the sheet (the tape included). */
   --wall-side: clamp(18px, 2.6vw, 48px);
+  /* The phone menu's width: as wide as its words need */
+  --drawer-w: min(66vw, 252px);
   --paper-edges:
     url('/miscIcons/paper/edge-left.svg') left top / 10px 240px repeat-y,
     url('/miscIcons/paper/edge-right.svg') right top / 10px 240px repeat-y;
@@ -537,19 +539,15 @@ html.on-shop .shop-link,
   position: fixed;
   margin-top: 0;
   margin-left: 0;
-  /* As wide as the words need, not most of the screen */
-  width: min(66vw, 252px);
+  width: var(--drawer-w);
   height: 100vh;
   height: 100dvh;
-  /* A strip of the warm ground, torn down its right side like the white
-     sheet: the menu is a piece of the same paper laid over the page. The
-     tear is a mask (the same tile as the sheet's edge, read for its
-     shape), so what shows through it is the dimmed page. A mask also
-     cuts off any shadow, so there is none; the dimmed page is contrast
-     enough, and nothing smudges the page's edge while it's tucked away. */
-  background-color: var(--color-surround);
-  background-image: var(--surround-dots);
-  background-size: 22px 22px;
+  /* A scrap of the same white paper as the sheet, torn down its right
+     side, laid on the table the page turns into (.nav-overlay). The tear
+     is a mask (the same tile as the sheet's edge, read for its shape),
+     so what shows through it is the table. A mask also cuts off any
+     shadow, so there is none; white on the table is contrast enough. */
+  background-color: var(--color-background);
   -webkit-mask:
     linear-gradient(#000, #000) left top / calc(100% - 10px) 100% no-repeat,
     url('/miscIcons/paper/edge-left.svg') right top / 10px 240px repeat-y;
@@ -619,16 +617,23 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   clip-path: inset(0 0 0 0);
 }
 
-/* Overlay behind the drawer */
+/* Behind the menu the page turns into the table it's laid on: the warm
+   ground, opaque, with a few splashes of paint in the logo's colours
+   landing on it as the menu opens (stand-ins in miscIcons/paint/ until
+   Ambar's own scanned splatters replace them). Some land under the
+   paper's edge, so the menu reads as laid on top of them. Nothing of the
+   page shows through, so nothing has to be blurred. Only transform and
+   opacity move. */
 .nav-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(24, 24, 22, 0.4);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  overflow: hidden;
+  background-color: var(--color-surround);
+  background-image: var(--surround-dots);
+  background-size: 22px 22px;
   z-index: 999;
   opacity: 0;
   visibility: hidden;
@@ -640,9 +645,76 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   visibility: visible;
 }
 
-.main-content.menu-open #imagesAndContent {
-  filter: blur(2px);
+.nav-overlay .splat {
+  /* Placed by their share of the table (the screen right of the paper,
+     --fx across, --fy down, centred there) and sized with it, so a
+     tablet's bigger table gets bigger, more spread out splashes rather
+     than the phone's few bunched against its edge */
+  --splat: clamp(150px, 26vw, 260px);
+  --size: calc(var(--splat) * var(--k, 1));
+  position: absolute;
+  width: var(--size);
+  aspect-ratio: 1;
+  left: calc(var(--drawer-w) + (100vw - var(--drawer-w)) * var(--fx) - var(--size) / 2);
+  top: var(--fy);
+  margin-top: calc(var(--size) / -2);
+  background: center / contain no-repeat;
+  transform: rotate(var(--turn, 0deg));
   pointer-events: none;
+}
+
+.nav-overlay.active .splat {
+  animation: splatLand 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes splatLand {
+  0%   { opacity: 0; transform: rotate(var(--turn, 0deg)) scale(0.35); }
+  55%  { opacity: 1; transform: rotate(var(--turn, 0deg)) scale(1.08); }
+  100% { opacity: 1; transform: rotate(var(--turn, 0deg)) scale(1); }
+}
+
+.nav-overlay .splat-1 {
+  background-image: url('/miscIcons/paint/splat-pink.svg');
+  --fx: 0.7; --fy: 20%; --k: 1.1; --turn: 18deg;
+  animation-delay: 0.12s !important;
+}
+/* Half under the paper's edge, so the menu reads as laid on top */
+.nav-overlay .splat-2 {
+  background-image: url('/miscIcons/paint/splat-blue.svg');
+  --fx: 0.02; --fy: 50%; --k: 0.95; --turn: -24deg;
+  animation-delay: 0.2s !important;
+}
+.nav-overlay .splat-3 {
+  background-image: url('/miscIcons/paint/splat-yellow.svg');
+  --fx: 0.62; --fy: 86%; --k: 0.9; --turn: 40deg;
+  animation-delay: 0.27s !important;
+}
+.nav-overlay .splat-4 {
+  background-image: url('/miscIcons/paint/splat-green.svg');
+  --fx: 0.5; --fy: 67%; --k: 0.8; --turn: -60deg;
+  animation-delay: 0.33s !important;
+}
+.nav-overlay .splat-5 {
+  background-image: url('/miscIcons/paint/drops-pink.svg');
+  --fx: 0.3; --fy: 34%; --k: 0.85; --turn: 75deg;
+  animation-delay: 0.38s !important;
+}
+
+.main-content.menu-open #imagesAndContent {
+  pointer-events: none;
+}
+
+/* While the menu is open the header bar steps back, so the table runs
+   to the top of the screen and the close button sits on it */
+.blockForHeaderMobile {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
+  background-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* ==========================================================================
@@ -2159,8 +2231,10 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
 }
 
 /* It floats above the header, which put it over the phone menu's top
-   link; it steps aside while the menu is open */
-body:has(.navLinksBoxMobile.active) .shop-test-bar {
+   link; it steps aside while the menu is open, as does the basket
+   button, which would otherwise sit on the table */
+body:has(.navLinksBoxMobile.active) .shop-test-bar,
+body:has(.navLinksBoxMobile.active) .basket-pill {
   visibility: hidden;
 }
 
