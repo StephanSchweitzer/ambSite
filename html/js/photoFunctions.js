@@ -222,10 +222,6 @@ function isTouchScreen() {
     return !!window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
 }
 
-function isTouchDevice() {
-    return window.innerWidth <= BREAKPOINT && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-}
-
 // The page has smooth scrolling for in-page jumps, but putting the page back
 // where it was must be instant, or it visibly glides down from the top
 function instantScrollTo(y) {
@@ -361,8 +357,9 @@ function setupResponsiveLayout() {
     $('#selectProjectCategories').toggleClass('hiddenLinkStuffMobile', mobile).toggleClass('hiddenLinkStuff', !mobile);
     $('#ambName').toggleClass('ambarNamePicMobile', mobile).toggleClass('ambarNamePic', !mobile);
 
-    // Bigger tap targets for the menu links on phones
-    $('#navLinksBox a').each(function () {
+    // Bigger tap targets for the menu links on phones (the projects and years
+    // under Works get theirs from ambar.css)
+    $('#navLinksBox a').not('#selectProjectCategories a').each(function () {
         this.style.padding = mobile ? '.05em' : '';
         this.style.margin = mobile ? '-.05em' : '';
     });
@@ -423,11 +420,6 @@ function isShowing(view, route) {
     return view === currentView && (!isShopView(view) || route.path === shownPath);
 }
 
-// Phones and tablets skip the home slideshow and land on the works
-function resolveView(route) {
-    return route.view === 'home' && isTouchDevice() ? 'works' : route.view;
-}
-
 // Draws a page (without touching the address bar). Returns a promise that
 // resolves once the page's content is on screen.
 function renderView(view, route) {
@@ -457,14 +449,13 @@ function goTo(path, options) {
     }
 
     var route = parseRoute(path);
-    var view = resolveView(route);
+    var view = route.view;
     // (opening or closing a shop item's panel keeps the shop where it is)
     var changingPage = !isShowing(view, route) && !shopPanelMove(view);
 
     if (path !== location.pathname) {
         rememberScroll();
-        var newPath = view === 'works' && route.view === 'home' ? '/select-works' : path;
-        history.pushState($.extend({}, options.state, { path: newPath }), '', newPath);
+        history.pushState($.extend({}, options.state, { path: path }), '', path);
     }
 
     var ready = renderView(view, route);
@@ -484,7 +475,7 @@ window.goTo = goTo;
 // Back / Forward
 window.addEventListener('popstate', function (event) {
     var route = parseRoute(location.pathname);
-    var view = resolveView(route);
+    var view = route.view;
     var state = event.state || {};
 
     // Forward into a painting that's on the page already
@@ -2593,13 +2584,44 @@ function createCarousel(works) {
         );
     }
 
-    content.append(carousel);
+    content.append(carousel, homeLinks());
     galleryItems = works;
 
     if (works.length > 1) {
         carousel.carousel({ interval: 3000, ride: 'carousel' });
     }
 }
+
+// Under the slideshow, shown on phones only (ambar.css, "The way in"): the
+// menu's pages written out as words, Works first with its tape, so nobody
+// has to find the menu button to get past the first page. Taken from the
+// menu itself; if it isn't drawn yet, Works alone.
+// Mirrors ambRenderHomeLinks() in publicPageFunctions.php - change both.
+function homeLinks() {
+    var nav = $('<nav class="home-links" aria-label="Pages">');
+    function add(href, text) {
+        nav.append($('<a>').attr('href', href).text(text)
+            .addClass('mainLinkGenres home-link' + (href === '/select-works' ? ' is-main' : '')));
+    }
+    $('#navLinksBox a.mainLinkGenres').each(function () {
+        var href = this.getAttribute('href') || '';
+        if (href.charAt(0) === '/' && href !== '/' && this.target !== '_blank') {
+            add(href, $(this).text());
+        }
+    });
+    if (!nav.children().length) {
+        add('/select-works', 'Works');
+    }
+    return nav;
+}
+
+$(document).on('click', '.home-link', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+    }
+    event.preventDefault();
+    goTo(this.getAttribute('href'));
+});
 
 // The slideshow's paintings are only as tall as 72vh lets them be
 // (.carousel-pic), so a portrait one is drawn far narrower than the 62vw the
@@ -2978,7 +3000,13 @@ function spawnNewsletterFloat() {
 // Names the menu links (stored in the database) call
 // --------------------------------------------------------------------------
 
+// Works, from the menu. Already on the works, it goes back to the top of
+// them, so the tap always does something you can see.
 function getProjectsAndWorks() {
+    if (currentView === 'works' && viewReady && location.pathname === '/select-works') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return $.Deferred().resolve().promise();
+    }
     return goTo('/select-works');
 }
 
@@ -3171,14 +3199,13 @@ $(function () {
         setMenuOpen(false);
     });
 
-    // On phones, menu links close the drawer — except the ones that open a
-    // sub-menu (Works) or the newsletter form inside it
+    // On phones, menu links close the drawer — except the one that opens the
+    // newsletter form inside it
     $(document).on('click', '#navLinksBox a', function (e) {
         if (window.innerWidth > BREAKPOINT) {
             return;
         }
-        var text = $(this).text();
-        if (text === 'Works' || text === 'Newsletter') {
+        if ($(this).text() === 'Newsletter') {
             e.stopPropagation();
         } else if (!$(this).closest('#selectProjectCategories, #newsletterSignUp').length) {
             setMenuOpen(false);
@@ -3205,15 +3232,10 @@ $(function () {
 
     // First page of the visit
     var route = parseRoute(location.pathname);
-    var view = document.body.getAttribute('data-status') === '404' ? 'notfound' : resolveView(route);
+    var view = document.body.getAttribute('data-status') === '404' ? 'notfound' : route.view;
     var section = location.hash && location.hash.indexOf('#section-') === 0 ? location.hash.slice(1) : null;
 
-    if (view === 'works' && route.view === 'home') {
-        // (keeping the test switch's ?vt= if there is one)
-        history.replaceState({ path: '/select-works' }, '', '/select-works' + (VT.id || VT.menu ? location.search : ''));
-    } else {
-        history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
-    }
+    history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
 
     renderView(view, route).then(function () {
         if (VT.menu) {

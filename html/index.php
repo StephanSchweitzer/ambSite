@@ -168,7 +168,7 @@ if ($conn) {
         } elseif ($view === 'home') {
             $carousel = ambGetCarouselWorks($conn);
             $pageData['carousel'] = $carousel;
-            $content = ambRenderCarousel($carousel);
+            $content = ambRenderCarousel($carousel) . ambRenderHomeLinks($navLinks);
             $shareWork = $carousel ? $carousel[0] : null;
         } elseif ($view === 'about') {
             $about = $aboutCache ? $aboutCache['about'] : null;

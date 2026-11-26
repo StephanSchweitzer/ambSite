@@ -187,9 +187,11 @@ function ambRenderNav($links, $projects)
         $style = '';
         if ($id === 'selectProjectCategories') {
             foreach ($projects as $project) {
-                // A project shown in year groups keeps its years folded away
-                // underneath it; clicking the project's name unfolds them
-                // (navLinksFunctions.js). The undated group has no heading to
+                // A project shown in year groups has its years listed under
+                // it, always in view; the project's name goes to the project
+                // and each year to its group. (They used to fold away under
+                // the name, and people tapped the name over and over thinking
+                // the menu was broken.) The undated group has no heading to
                 // jump to, so it is not listed.
                 $years = '';
                 foreach (ambWorkGroups($project) as $group) {
@@ -202,12 +204,10 @@ function ambRenderNav($links, $projects)
                 }
                 // One group is no grouping: ambWorkGroups() gives a lone
                 // unlabelled group, which leaves $years empty
-                $yearsId = 'years-' . ambSectionId($project['title']);
-                $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '"'
-                    . ($years === '' ? '' : ' class="project-link" aria-expanded="false" aria-controls="' . ambHtml($yearsId) . '"')
-                    . '>' . ambHtml($project['title']) . '</a>';
+                $inner .= '<a href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '">'
+                    . ambHtml($project['title']) . '</a>';
                 if ($years !== '') {
-                    $inner .= '<div class="project-years" id="' . ambHtml($yearsId) . '">' . $years . '</div>';
+                    $inner .= '<div class="project-years">' . $years . '</div>';
                 }
             }
         } elseif ($id === 'newsletterSignUp') {
@@ -420,6 +420,25 @@ function ambRenderCarousel($works)
             . '<span class="carousel-control-next-icon" aria-hidden="true"></span><span class="sr-only">Next</span></a>';
     }
     return $html . '</div>';
+}
+
+// Under the slideshow, shown on phones only (ambar.css, "The way in"): the
+// menu's pages written out as words, Works first with its tape, so nobody
+// has to find the menu button to get past the first page.
+// Mirrors homeLinks() in photoFunctions.js - change both.
+function ambRenderHomeLinks($links)
+{
+    $html = '';
+    foreach ($links as $link) {
+        $page = ambNavLinkPage($link);
+        if ($page === null) {
+            continue; // Instagram, Newsletter: not pages of the site
+        }
+        $html .= '<a href="' . ambHtml($page) . '" class="mainLinkGenres home-link'
+            . ($page === '/select-works' ? ' is-main' : '') . '">'
+            . ambHtml($link['displayedText']) . '</a>';
+    }
+    return $html === '' ? '' : '<nav class="home-links" aria-label="Pages">' . $html . '</nav>';
 }
 
 // Plain email addresses in the About text become mailto links

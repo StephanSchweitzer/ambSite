@@ -178,47 +178,17 @@ function projectCategoryLink(sectionId, text) {
     return link;
 }
 
-// A project's name in the "Works" dropdown, when it has years folded away
-// underneath: clicking it unfolds them instead of going anywhere, the way
-// "Works" itself unfolds the projects. One project's years at a time, so the
-// menu stays short. (The link keeps its address, so it still works as a link
-// before this script has run, and for anything that doesn't run scripts.)
-function projectYearsToggle(title, yearsId) {
-    const link = $('<a>')
-        .addClass('project-link')
-        .attr({ href: '/select-works#' + projectSectionId(title), 'aria-expanded': 'false', 'aria-controls': yearsId })
-        .text(title);
-
-    link.on('click', function (e) {
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-            return;
-        }
-        e.preventDefault();
-        e.stopPropagation(); // keep the Works list open
-
-        const years = $('#' + yearsId);
-        const opening = !years.is(':visible');
-
-        $('#selectProjectCategories .project-years').not(years).slideUp(200);
-        $('#selectProjectCategories .project-link').not(this).attr('aria-expanded', 'false');
-
-        years.slideToggle(220);
-        $(this).attr('aria-expanded', opening ? 'true' : 'false');
-    });
-
-    return link;
-}
-
 // The project names under "Works" — from the same request the Works page
-// uses — each with its year groups under it where it has them (mirrors the
-// same list in ambRenderNav(), actions/publicPageFunctions.php)
+// uses — each with its year groups listed under it where it has them, always
+// in view: the name goes to the project, a year to its group. (Mirrors the
+// same list in ambRenderNav(), actions/publicPageFunctions.php.)
 function loadAndDisplayProjectTitles() {
     fetchPublicWorks('projects').then(function (projects) {
         const container = $('#selectProjectCategories');
         container.empty();
         projects.forEach(function (project) {
             const sectionId = projectSectionId(project.title);
-            const years = $('<div>').addClass('project-years').attr('id', 'years-' + sectionId);
+            const years = $('<div>').addClass('project-years');
 
             workGroups(project).forEach(function (group) {
                 if (!group.label) {
@@ -230,13 +200,10 @@ function loadAndDisplayProjectTitles() {
                 );
             });
 
-            // A project with years unfolds them when its name is clicked; one
-            // without them goes to the project, as every project used to
-            if (!years.children().length) {
-                container.append(projectCategoryLink(sectionId, project.title));
-                return;
+            container.append(projectCategoryLink(sectionId, project.title));
+            if (years.children().length) {
+                container.append(years);
             }
-            container.append(projectYearsToggle(project.title, 'years-' + sectionId), years);
         });
     }, function () {
         console.log('Error loading project titles.');
@@ -320,15 +287,18 @@ function validateEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// Works opens and closes its list of projects on a computer. On a phone the
+// list is always open in the drawer (ambar.css), so there Works simply goes
+// to the works and closes the drawer, like every other link.
 function toggleSublinks(event, sublinksId) {
+    if (window.innerWidth <= 992) {
+        return;
+    }
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
     $("#" + sublinksId).slideToggle();
-    if (window.innerWidth <= 992) {
-        $('#navLinksBox').addClass('active');
-    }
     return false;
 }
 

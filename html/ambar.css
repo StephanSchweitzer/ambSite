@@ -498,15 +498,12 @@ html.on-shop .shop-link,
 
 /* The years under a project that is shown in year groups (Works → Painting
    → 2025–2026 / 2023–2024 / 2020–2022): a step quieter and a step in again.
-   They stay folded away until the project's name is clicked, so the Works
-   list is as short as it ever was — the script unfolds them, and with no
-   script the project's name is still a link to the project.
-   The step in is text-indent, not a margin: setupResponsiveLayout() writes
-   an inline margin and padding onto every menu link at phone width, which
-   would beat anything this rule said about either. */
-.project-years {
-  display: none;
-}
+   Always in view: they used to fold away under the project's name, and
+   people tapped the name over and over thinking the menu was broken. The
+   name now goes to the project, each year to its group.
+   The step in is text-indent, not a margin, which the links' own margins
+   would fight with. */
+.hiddenLinkStuff .project-years { margin-bottom: 0.75rem; }
 
 .hiddenLinkStuff .project-year-link {
   text-indent: 14px;
@@ -780,10 +777,48 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
 .homePageCarouselMobile {
   width: 100%;
   margin-top: 1vh;
-  min-height: 60vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+/* A little shorter on phones, so the words under it (.home-links) are on
+   the first screen too */
+.homePageCarouselMobile .carousel-pic {
+  max-height: 58vh;
+  max-height: 58svh;
+}
+
+/* ---------- The way in, under the slideshow (phones) ----------
+   The menu's pages written out as words, so the first page never depends
+   on finding the menu button. Works keeps its strip of tape all the time:
+   it's the way in. Same words, sizes and tape as the menu's own links
+   (.mainLinkGenres). On a computer the menu is beside the slideshow, so
+   these are never shown there. Drawn by ambRenderHomeLinks()
+   (publicPageFunctions.php) and homeLinks() (photoFunctions.js). */
+.home-links { display: none; }
+
+@media (max-width: 992px) {
+  .home-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    /* the page is a wrapping row that stretches its rows to fill the
+       screen; this row keeps its own height so the tape sits on the word */
+    align-self: flex-start;
+    gap: 4px 28px;
+    width: 100%;
+    margin: 22px 0 4px;
+  }
+
+  .home-links .home-link {
+    padding: 12px 4px; /* a finger's height to tap */
+  }
+
+  .home-links .is-main:after {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
 .carousel-inner { width: 100%; }
@@ -881,10 +916,7 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
 
    Only transform and opacity are animated, so it is all done on the
    compositor; blurring a picture this large cost frames on every visit
-   for no more mist than the veil already gives.
-
-   Phones and tablets never see this: / sends them to the works
-   (resolveView() in photoFunctions.js), so there is no slideshow there. */
+   for no more mist than the veil already gives. Phones see it too. */
 
 .home-clouds {
   position: absolute;
@@ -1928,12 +1960,6 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
   width: 100%;
 }
 
-/* Phones and tablets skip the home slideshow and go to the works
-   (resolveView in photoFunctions.js), so the slideshow index.php draws for
-   "/" stays hidden there until the works replace it */
-@media (max-width: 992px) and (hover: none) and (pointer: coarse) {
-  main[data-server-view="home"] { visibility: hidden; }
-}
 
 
 /* ==========================================================================
@@ -4054,8 +4080,11 @@ html.no-scroll {
     right: 14px;
   }
 
-  /* Drawer sub-sections */
+  /* Drawer sub-sections. Always open on a phone: Works itself goes to the
+     works there (toggleSublinks() in navLinksFunctions.js), so nothing in
+     the drawer opens and closes except the newsletter form. */
   .navLinksBoxMobile #selectProjectCategories {
+    display: block !important; /* over the slideToggle a computer width may have left */
     margin-top: 0;
     /* the same breath below the sections as between the main links, so
        they don't run straight on into About */
@@ -4066,24 +4095,29 @@ html.no-scroll {
   }
 
   .navLinksBoxMobile #selectProjectCategories a {
-    margin-bottom: 2px;
+    margin: 0;
     display: block;
-    padding: 7px 0;
-    font-size: 0.82rem;
+    padding: 8px 0;
+    font-size: 0.9rem;
     letter-spacing: 0.1em;
-    color: var(--color-menu-sub);
+    color: var(--color-text);
   }
 
   .navLinksBoxMobile #selectProjectCategories a:hover {
     color: var(--color-ink);
   }
 
-  /* Same step in as on a computer; their height to tap comes from the rule
-     for every link above, which is what keeps them a comfortable size */
+  /* Same step in as on a computer, a size down from the project names but
+     still easy to read and to tap */
   .navLinksBoxMobile #selectProjectCategories .project-year-link {
     text-indent: 14px;
-    font-size: 0.75rem;
-    color: var(--color-menu-faint);
+    padding: 6px 0;
+    font-size: 0.82rem;
+    color: var(--color-menu-sub);
+  }
+
+  .navLinksBoxMobile #selectProjectCategories .project-years {
+    margin-bottom: 6px;
   }
 
   .navLinksBoxMobile #newsletterSignUp {
