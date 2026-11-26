@@ -851,13 +851,17 @@ html:has(#imagesAndContent[data-view="home"]) {
    under the bar (--bar-h, less the pixel it tucks under) and ends exactly
    at the bottom of the screen, the smallest screen when the browser's bars
    are showing.
-   The slideshow and the words under it sit together at the top of the
-   sheet (align-content), not spread down it: spread out, the words ended
-   up low enough for Safari's bottom bar to cover them. */
+   A column: the slideshow at the top, then the words (.home-links)
+   filling the rest of the sheet with themselves in its middle. */
 #imagesAndContent.imagesAndContentMobile[data-view="home"] {
   min-height: calc(100vh - var(--bar-h) + 1px);
   min-height: calc(100svh - var(--bar-h) + 1px);
-  align-content: flex-start;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.imagesAndContentMobile .homePageCarouselMobile {
+  flex: none;
 }
 
 /* ---------- The way in, under the slideshow (phones) ----------
@@ -870,18 +874,35 @@ html:has(#imagesAndContent[data-view="home"]) {
    (publicPageFunctions.php) and homeLinks() (photoFunctions.js). */
 .home-links { display: none; }
 
+/* Where they sit: halfway between the bottom of the slideshow and the
+   bottom of the sheet, so the space above them and below them is the
+   same (they fill that space, centred in it; the padding on top matches
+   the sheet's own padding at the bottom). Packed right under the
+   slideshow they looked cramped, with an empty stretch below.
+   On iPhones, Safari's bottom bar floats over the last stretch of the
+   screen, and a fair measure of that is lifted out of the space
+   (--home-links-lift), so the words are centred in what's actually seen
+   rather than in what's under the glass. Earlier, centred without it,
+   the bar covered them. Other phones' browsers don't cover the page, so
+   there they're centred in all of it. */
 @media (max-width: 992px) {
   .home-links {
+    --home-links-lift: 0px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    /* the page is a wrapping row that stretches its rows to fill the
-       screen; this row keeps its own height, its words in its middle */
-    align-self: flex-start;
+    align-content: center;
+    flex: 1 0 auto;
+    align-self: stretch;
     gap: 4px 28px;
     width: 100%;
-    margin: 22px 0 4px;
+    margin: 0;
+    padding: 4vw 0 var(--home-links-lift);
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    .home-links { --home-links-lift: 72px; }
   }
 
   .home-links .home-link {
