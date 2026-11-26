@@ -186,8 +186,14 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   flex-direction: row;
 }
 
+/* At least 10vh tall: the white sheet starts 10vh down
+   (.imagesAndContentMobile), and where the logo made the bar shorter than
+   that (taller iPhones), a sliver of the wall showed between the bar and
+   the sheet, like a line. */
 .blockForHeaderMobile {
   width: 100vw;
+  min-height: 10vh;
+  box-sizing: border-box;
   padding: 6px 0;
   background-color: rgba(255, 255, 255, 0.92);
   -webkit-backdrop-filter: blur(10px);
@@ -752,7 +758,9 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
    mistake, with the torn edge it reads as the paper. */
 .imagesAndContentMobile {
   width: auto;
-  margin-top: 10vh;
+  /* under the bar (.blockForHeaderMobile, at least 10vh), tucked a pixel
+     beneath it so no rounding can open a gap */
+  margin-top: calc(10vh - 1px);
   margin-left: var(--wall-side);
   margin-right: var(--wall-side);
   padding: 4vw clamp(15px, 4vw, 32px);
@@ -831,10 +839,14 @@ html:has(#imagesAndContent[data-view="home"]) {
 /* ...and on a phone, where the browser lets a finger move the page past
    that, there is nothing below the edge to move to: the sheet starts 10vh
    down (under the fixed header) and ends exactly at the bottom of the
-   screen, the smallest screen when the browser's bars are showing */
+   screen, the smallest screen when the browser's bars are showing.
+   The slideshow and the words under it sit together at the top of the
+   sheet (align-content), not spread down it: spread out, the words ended
+   up low enough for Safari's bottom bar to cover them. */
 #imagesAndContent.imagesAndContentMobile[data-view="home"] {
-  min-height: 90vh;
-  min-height: calc(100svh - 10vh);
+  min-height: calc(90vh + 1px);
+  min-height: calc(100svh - 10vh + 1px);
+  align-content: flex-start;
 }
 
 /* ---------- The way in, under the slideshow (phones) ----------
