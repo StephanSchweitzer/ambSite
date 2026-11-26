@@ -500,7 +500,8 @@ html.on-shop .shop-link,
    → 2025–2026 / 2023–2024 / 2020–2022): a step quieter and a step in again.
    Always in view: they used to fold away under the project's name, and
    people tapped the name over and over thinking the menu was broken. The
-   name now goes to the project, each year to its group.
+   name now goes to the project, each year to its group. (Not on a phone,
+   where there isn't the room: see the drawer's rules further down.)
    The step in is text-indent, not a margin, which the links' own margins
    would fight with. */
 .hiddenLinkStuff .project-years { margin-bottom: 0.75rem; }
@@ -783,10 +784,33 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
 }
 
 /* A little shorter on phones, so the words under it (.home-links) are on
-   the first screen too */
+   the first screen too, even on a phone turned on its side */
 .homePageCarouselMobile .carousel-pic {
-  max-height: 58vh;
-  max-height: 58svh;
+  max-height: min(58vh, calc(100vh - 230px));
+  max-height: min(58svh, calc(100svh - 230px));
+}
+
+/* The landing page is one screen and never scrolls, on a phone or a
+   computer. The sheet is a screen tall below the header, so it simply runs
+   on out of sight past the bottom edge. Written against the sheet's
+   data-view (set by setView() and by index.php), so it's right from the
+   first paint and lets go the moment another page is drawn. */
+html:has(#imagesAndContent[data-view="home"]),
+html:has(#imagesAndContent[data-view="home"]) body {
+  overflow: hidden;
+}
+
+html:has(#imagesAndContent[data-view="home"]) {
+  overscroll-behavior: none;
+}
+
+/* ...and on a phone, where the browser lets a finger move the page past
+   that, there is nothing below the edge to move to: the sheet starts 10vh
+   down (under the fixed header) and ends exactly at the bottom of the
+   screen, the smallest screen when the browser's bars are showing */
+#imagesAndContent.imagesAndContentMobile[data-view="home"] {
+  min-height: 90vh;
+  min-height: calc(100svh - 10vh);
 }
 
 /* ---------- The way in, under the slideshow (phones) ----------
@@ -4107,17 +4131,13 @@ html.no-scroll {
     color: var(--color-ink);
   }
 
-  /* Same step in as on a computer, a size down from the project names but
-     still easy to read and to tap */
-  .navLinksBoxMobile #selectProjectCategories .project-year-link {
-    text-indent: 14px;
-    padding: 6px 0;
-    font-size: 0.82rem;
-    color: var(--color-menu-sub);
-  }
-
+  /* The projects only, no years, on a phone: with every year listed the
+     drawer ran past the bottom of the screen and About, Shop and the rest
+     had to be scrolled to. The drawer is too narrow to put the years side
+     by side at a size a finger can tap, and each year's heading is on the
+     Works page anyway, a short scroll from the project's top. */
   .navLinksBoxMobile #selectProjectCategories .project-years {
-    margin-bottom: 6px;
+    display: none;
   }
 
   .navLinksBoxMobile #newsletterSignUp {
