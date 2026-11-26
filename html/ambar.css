@@ -618,12 +618,12 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
 }
 
 /* Behind the menu the page turns into the table it's laid on: the warm
-   ground, opaque, with a few splashes of paint in the logo's colours
-   landing on it as the menu opens (stand-ins in miscIcons/paint/ until
-   Ambar's own scanned splatters replace them). Some land under the
-   paper's edge, so the menu reads as laid on top of them. Nothing of the
-   page shows through, so nothing has to be blurred. Only transform and
-   opacity move. */
+   ground, opaque, with a few drops of paint on it in the logo's colours,
+   the kind a brush throws off round a canvas (stand-ins in
+   miscIcons/paint/ until Ambar's own are scanned). Kept small and few on
+   purpose: big splashes read as a gimmick. One trail runs under the
+   paper's edge, so the menu reads as laid on top. Nothing of the page
+   shows through, so nothing has to be blurred. */
 .nav-overlay {
   position: fixed;
   top: 0;
@@ -650,7 +650,7 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
      --fx across, --fy down, centred there) and sized with it, so a
      tablet's bigger table gets bigger, more spread out splashes rather
      than the phone's few bunched against its edge */
-  --splat: clamp(150px, 26vw, 260px);
+  --splat: clamp(150px, 24vw, 240px);
   --size: calc(var(--splat) * var(--k, 1));
   position: absolute;
   width: var(--size);
@@ -663,41 +663,42 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   pointer-events: none;
 }
 
+/* They're simply there on the table, a moment after it: a short fade,
+   a little apart, no movement */
 .nav-overlay.active .splat {
-  animation: splatLand 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation: dropsAppear 0.5s ease-out both;
 }
 
-@keyframes splatLand {
-  0%   { opacity: 0; transform: rotate(var(--turn, 0deg)) scale(0.35); }
-  55%  { opacity: 1; transform: rotate(var(--turn, 0deg)) scale(1.08); }
-  100% { opacity: 1; transform: rotate(var(--turn, 0deg)) scale(1); }
+@keyframes dropsAppear {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .nav-overlay .splat-1 {
-  background-image: url('/miscIcons/paint/splat-pink.svg');
-  --fx: 0.7; --fy: 20%; --k: 1.1; --turn: 18deg;
-  animation-delay: 0.12s !important;
+  background-image: url('/miscIcons/paint/flick-pink.svg');
+  --fx: 0.62; --fy: 22%; --k: 1; --turn: 10deg;
+  animation-delay: 0.1s !important;
 }
-/* Half under the paper's edge, so the menu reads as laid on top */
+/* Running under the paper's edge, so the menu reads as laid on top */
 .nav-overlay .splat-2 {
-  background-image: url('/miscIcons/paint/splat-blue.svg');
-  --fx: 0.02; --fy: 50%; --k: 0.95; --turn: -24deg;
-  animation-delay: 0.2s !important;
+  background-image: url('/miscIcons/paint/flick-blue.svg');
+  --fx: 0.12; --fy: 52%; --k: 1; --turn: 200deg;
+  animation-delay: 0.16s !important;
 }
 .nav-overlay .splat-3 {
-  background-image: url('/miscIcons/paint/splat-yellow.svg');
-  --fx: 0.62; --fy: 86%; --k: 0.9; --turn: 40deg;
-  animation-delay: 0.27s !important;
+  background-image: url('/miscIcons/paint/specks-yellow.svg');
+  --fx: 0.6; --fy: 84%; --k: 1.1; --turn: 30deg;
+  animation-delay: 0.22s !important;
 }
 .nav-overlay .splat-4 {
-  background-image: url('/miscIcons/paint/splat-green.svg');
-  --fx: 0.5; --fy: 67%; --k: 0.8; --turn: -60deg;
-  animation-delay: 0.33s !important;
+  background-image: url('/miscIcons/paint/flick-green.svg');
+  --fx: 0.7; --fy: 68%; --k: 0.85; --turn: -35deg;
+  animation-delay: 0.27s !important;
 }
 .nav-overlay .splat-5 {
-  background-image: url('/miscIcons/paint/drops-pink.svg');
-  --fx: 0.3; --fy: 34%; --k: 0.85; --turn: 75deg;
-  animation-delay: 0.38s !important;
+  background-image: url('/miscIcons/paint/specks-pink.svg');
+  --fx: 0.4; --fy: 38%; --k: 0.9; --turn: 75deg;
+  animation-delay: 0.32s !important;
 }
 
 .main-content.menu-open #imagesAndContent {
