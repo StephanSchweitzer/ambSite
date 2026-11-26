@@ -3868,22 +3868,38 @@ a.shop-button-quiet {
 }
 
 /* ==========================================================================
-   Floating newsletter nudge (every page, until dismissed with its x)
+   Floating newsletter nudge (every page, until closed with its x or signed
+   up). Where it is comes from wanderNewsletterFloat() in photoFunctions.js:
+   it wanders round the screen, keeping away from the middle.
    ========================================================================== */
-/* ...except while paying: it would drift over the checkout form */
+/* ...except while paying: it would wander over the checkout form */
 body:has(#imagesAndContent[data-view="shop-basket"]) .newsletter-float,
 body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
   display: none;
 }
 
+/* Sits in the bottom-left corner until it sets off (and stays there for
+   visitors who've asked their device for less motion) */
 .newsletter-float {
   position: fixed;
-  /* starts just over the edge of the menu column and drifts out over the sheet */
-  left: calc(var(--menu-col) - 2vw);
-  top: 58vh;
+  left: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
   z-index: 900;
   cursor: pointer;
-  animation: floatDriftX 30s ease-in-out infinite alternate;
+}
+
+/* (on computers that corner is the sheet's, beside the menu column) */
+@media (min-width: 993px) {
+  .newsletter-float {
+    left: calc(var(--menu-col) + 14px);
+  }
+}
+
+/* Wandering: placed by the script with transform */
+.newsletter-float.is-wandering {
+  left: 0;
+  top: 0;
+  bottom: auto;
 }
 
 .newsletter-float-inner {
@@ -3897,19 +3913,11 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
   box-shadow: var(--shadow-medium);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
-  animation: floatDriftY 21s ease-in-out infinite alternate;
   transition: box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-/* Freeze the drift while the visitor is aiming at it */
-.newsletter-float:hover,
-.newsletter-float:focus-visible {
-  animation-play-state: paused;
 }
 
 .newsletter-float:hover .newsletter-float-inner,
 .newsletter-float:focus-visible .newsletter-float-inner {
-  animation-play-state: paused;
   box-shadow: var(--shadow-lifted);
   border-color: var(--amb-pink);
 }
@@ -3929,6 +3937,7 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
   white-space: nowrap;
 }
 
+/* Always shown, so it's plain how to make the bubble go away */
 .newsletter-float-close {
   background: transparent;
   border: none;
@@ -3937,27 +3946,11 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
   line-height: 1;
   padding: 2px 2px 2px 6px;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.25s ease, color 0.25s ease;
-}
-
-.newsletter-float:hover .newsletter-float-close,
-.newsletter-float:focus-within .newsletter-float-close {
-  opacity: 1;
+  transition: color 0.25s ease;
 }
 
 .newsletter-float-close:hover {
   color: var(--color-ink);
-}
-
-@keyframes floatDriftX {
-  from { transform: translateX(0); }
-  to { transform: translateX(56vw); }
-}
-
-@keyframes floatDriftY {
-  from { transform: translateY(-22vh); }
-  to { transform: translateY(14vh); }
 }
 
 @keyframes floatWobble {
@@ -3965,42 +3958,11 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
   50% { transform: rotate(8deg); }
 }
 
-@media (max-width: 992px) {
-  .newsletter-float {
-    left: 5vw;
-    top: 64vh;
-    animation-duration: 24s;
-  }
-
-  .newsletter-float-close {
-    opacity: 1; /* no hover on touch — keep the dismiss visible */
-  }
-
-  @keyframes floatDriftX {
-    from { transform: translateX(0); }
-    to { transform: translateX(38vw); }
-  }
-
-  @keyframes floatDriftY {
-    from { transform: translateY(-14vh); }
-    to { transform: translateY(10vh); }
-  }
-}
-
-/* Phones: drifting across the middle of a small screen it sat on the
-   paintings, so here it stays put, smaller, in the bottom-left corner */
+/* Phones: smaller */
 @media (max-width: 576px) {
-  .newsletter-float {
-    left: 14px;
-    top: auto;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-    animation: none;
-  }
-
   .newsletter-float-inner {
     gap: 6px;
     padding: 5px 8px 5px 8px;
-    animation: none;
   }
 
   .newsletter-float-leaf {
@@ -4012,7 +3974,11 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
     letter-spacing: 0.16em;
   }
 
-  /* The x stays easy to tap: the box is bigger than the cross */
+}
+
+/* Touch screens (tablets too): the x stays easy to tap, its box bigger
+   than the cross */
+@media (max-width: 576px), (pointer: coarse) {
   .newsletter-float-close {
     min-width: 32px;
     min-height: 32px;

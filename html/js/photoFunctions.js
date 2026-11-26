@@ -2944,20 +2944,193 @@ $(document).on('click', '.not-found-link', function (event) {
 });
 
 // --------------------------------------------------------------------------
-// Floating newsletter nudge. Drifts gently around the page, pauses on hover,
-// opens the newsletter sign-up when clicked, and stays on every page until
-// the visitor dismisses it with its x (for the rest of their visit).
+// Floating newsletter nudge. Wanders slowly round the screen, bouncing off
+// its edges and steering away from the middle (where the paintings are), so
+// it mostly keeps to the edges and corners. Pauses on hover and while a
+// painting is open, opens the newsletter sign-up when clicked. Closing it
+// with its x, or signing up, keeps it away for NEWSLETTER_FLOAT_QUIET_DAYS.
 // --------------------------------------------------------------------------
+
+var NEWSLETTER_FLOAT_KEY = 'ambNewsletterFloatQuietUntil';
+var NEWSLETTER_FLOAT_QUIET_DAYS = 90;
+var FLOAT_SPEED = 28;          // px a second (computers)
+var FLOAT_SPEED_PHONE = 20;    // px a second (phones)
+var FLOAT_EDGE = 14;           // px kept clear of the screen's edges (as the CSS's resting place)
+var FLOAT_MIDDLE = 0.72;       // how far out the middle reaches (1 = an edge)
+var FLOAT_STEER = 1.6;         // how hard it turns away from the middle
+var FLOAT_WANDER = 0.9;        // how much it meanders on its own
+var FLOAT_BOUNCE_SPREAD = 0.6; // radians of randomness added to each bounce
+
+function newsletterFloatQuiet() {
+    try {
+        return Number(localStorage.getItem(NEWSLETTER_FLOAT_KEY) || 0) > Date.now();
+    } catch (e) {
+        return false; // storage blocked: just show it
+    }
+}
+
+// Closed with its x, or signed up: away for a few months
+function quietNewsletterFloat() {
+    try {
+        localStorage.setItem(NEWSLETTER_FLOAT_KEY, String(Date.now() + NEWSLETTER_FLOAT_QUIET_DAYS * 864e5));
+    } catch (e) { /* storage blocked: hide for this page only */ }
+    var float = $('#newsletterFloat');
+    float.fadeOut(250, function () {
+        float.remove();
+        $(window).off('resize.newsletterFloat');
+    });
+}
+window.quietNewsletterFloat = quietNewsletterFloat;
+
+// A heading reflected off a wall whose inward direction is (nx, ny), with a
+// little randomness, and always pointing away from the wall afterwards
+function bounceOff(heading, nx, ny) {
+    var vx = Math.cos(heading), vy = Math.sin(heading);
+    var dot = vx * nx + vy * ny;
+    if (dot < 0) {
+        vx -= 2 * dot * nx;
+        vy -= 2 * dot * ny;
+    }
+    var reflected = Math.atan2(vy, vx);
+    var spread = reflected + (Math.random() - 0.5) * FLOAT_BOUNCE_SPREAD;
+    return Math.cos(spread) * nx + Math.sin(spread) * ny > 0.2 ? spread : reflected;
+}
+
+// The wandering. x, y is the bubble's top-left corner on the screen, heading
+// its direction in radians. It keeps to the open area: below the phone's top
+// bar, and to the right of the menu column on computers (so it never covers
+// the menu), and the middle it steers round is that area's middle.
+function wanderNewsletterFloat(el) {
+    var w = 0, h = 0, left = 0, top = 0, right = 0, bottom = 0;
+    var x, y, heading, turn = 0, last = 0, measured = 0;
+    var hovering = false, keyFocus = false;
+    var viewer = document.getElementById('bigPicModal');
+    var bar = document.getElementById('modifyZIndex');
+    var menu = document.getElementById('navLinksBox');
+
+    function measure() {
+        w = el.offsetWidth;
+        h = el.offsetHeight;
+        var W = document.documentElement.clientWidth;
+        left = FLOAT_EDGE;
+        top = FLOAT_EDGE + (bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0);
+        if (window.innerWidth > BREAKPOINT && menu) { // (as setupResponsiveLayout decides)
+            left += Math.max(0, menu.getBoundingClientRect().right);
+        }
+        // (the furthest its top-left corner can go)
+        right = Math.max(left, W - w - FLOAT_EDGE);
+        bottom = Math.max(top, window.innerHeight - h - FLOAT_EDGE);
+    }
+
+    function keepInside() {
+        x = Math.min(Math.max(x, left), right);
+        y = Math.min(Math.max(y, top), bottom);
+    }
+
+    function place() {
+        el.style.transform = 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,0)';
+    }
+
+    if (prefersReducedMotion()) {
+        return; // stays still in the bottom-left corner (the CSS's place)
+    }
+    // Sets off from that corner, heading up and to the right
+    heading = -Math.PI / 4 + (Math.random() - 0.5) * 0.8;
+
+    // (not while it's hidden, on the basket page: it has no size there)
+    function start() {
+        var rect = el.getBoundingClientRect();
+        x = rect.left;
+        y = rect.top;
+        el.classList.add('is-wandering');
+        measure();
+        keepInside();
+        place();
+    }
+
+    $(window).on('resize.newsletterFloat', function () {
+        if (x === undefined || !el.isConnected) {
+            return;
+        }
+        measure();
+        keepInside();
+        place();
+    });
+    // Holds still while someone is pointing at it with a mouse, or has
+    // reached it with the keyboard. Not after a tap: on a phone that would
+    // leave it stopped until the next tap somewhere else.
+    var canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    $(el).on('mouseenter', function () { hovering = canHover; })
+         .on('mouseleave', function () { hovering = false; })
+         .on('focusin', function () { keyFocus = el.matches(':focus-visible'); })
+         .on('focusout', function () { keyFocus = false; });
+
+    function step(now) {
+        if (!el.isConnected) {
+            $(window).off('resize.newsletterFloat');
+            return; // closed
+        }
+        var dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+        last = now;
+        // (hidden on the basket page; no height while a page is still opening)
+        var hidden = !el.getClientRects().length || !window.innerHeight;
+        var viewing = viewer && !viewer.classList.contains('is-idle'); // a painting is open
+        if (!hidden && x === undefined) {
+            start();
+        } else if (!hidden && now - measured > 1000) {
+            measure(); // (its size changes once the leaf has loaded)
+            measured = now;
+        }
+        if (dt && !hovering && !keyFocus && !hidden && !viewing && w) {
+            var speed = window.innerWidth <= 576 ? FLOAT_SPEED_PHONE : FLOAT_SPEED;
+
+            // Meander: the turning drifts at random and settles back
+            turn += (Math.random() - 0.5) * FLOAT_WANDER * 6 * dt;
+            turn *= 1 - Math.min(1, 1.5 * dt);
+            heading += turn * dt;
+
+            // The middle: how far in it is, with 0 the centre and 1 an
+            // edge (in proportion to the area, so it works on any shape).
+            // Inside FLOAT_MIDDLE it turns outwards, harder the deeper it is.
+            var halfW = Math.max(1, (right - left) / 2), halfH = Math.max(1, (bottom - top) / 2);
+            var dx = (x - left - halfW) / halfW;
+            var dy = (y - top - halfH) / halfH;
+            var depth = Math.sqrt(dx * dx + dy * dy);
+            if (depth < FLOAT_MIDDLE) {
+                var out = Math.atan2(dy * halfH, dx * halfW);
+                var off = Math.atan2(Math.sin(out - heading), Math.cos(out - heading));
+                heading += off * FLOAT_STEER * (1 - depth / FLOAT_MIDDLE) * dt;
+            }
+
+            x += Math.cos(heading) * speed * dt;
+            y += Math.sin(heading) * speed * dt;
+
+            // The edges: bounce off, a little differently each time
+            if (x < left) { heading = bounceOff(heading, 1, 0); turn = 0; }
+            if (x > right) { heading = bounceOff(heading, -1, 0); turn = 0; }
+            if (y < top) { heading = bounceOff(heading, 0, 1); turn = 0; }
+            if (y > bottom) { heading = bounceOff(heading, 0, -1); turn = 0; }
+            keepInside();
+            place();
+        }
+        if (hidden) {
+            // (on the basket page: only look now and then whether it's back)
+            last = 0;
+            setTimeout(function () { requestAnimationFrame(step); }, 500);
+        } else {
+            requestAnimationFrame(step);
+        }
+    }
+    requestAnimationFrame(step);
+}
 
 function spawnNewsletterFloat() {
     if (VT.noBlur) {
         return; // test switch
     }
-    try {
-        if (sessionStorage.getItem('newsletterFloatDismissed')) {
-            return;
-        }
-    } catch (e) { /* storage blocked: just show it */ }
+    if (newsletterFloatQuiet()) {
+        return;
+    }
     if (document.getElementById('newsletterFloat')) {
         return;
     }
@@ -2973,13 +3146,15 @@ function spawnNewsletterFloat() {
     );
     $('body').append(float);
 
-    float.find('.newsletter-float-close').on('click', function (e) {
-        e.stopPropagation();
-        try {
-            sessionStorage.setItem('newsletterFloatDismissed', '1');
-        } catch (err) { /* storage blocked: hide for this page only */ }
-        float.fadeOut(250, function () { float.remove(); });
+    float.find('.newsletter-float-close').on('click keydown', function (e) {
+        e.stopPropagation(); // (Enter/Space on the x close it, not open the form)
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
+        e.preventDefault();
+        quietNewsletterFloat();
     });
+    wanderNewsletterFloat(float[0]);
 
     float.on('click keydown', function (e) {
         if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') {

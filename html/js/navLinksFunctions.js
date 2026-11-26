@@ -308,6 +308,9 @@ function sendEmailToDB() {
             if (response.status === 'success') {
                 $("#newsletterEmail").val("");
                 showNewsletterMessage("Thank you for subscribing!", "success");
+                if (typeof quietNewsletterFloat === 'function') {
+                    quietNewsletterFloat(); // signed up: no more reminders
+                }
                 if (window.innerWidth <= 992) {
                     setTimeout(function () {
                         $('#navLinksBox').addClass('active');
