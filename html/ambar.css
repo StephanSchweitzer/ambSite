@@ -73,6 +73,9 @@
      sheet's own background, so it costs nothing and sits under
      everything on the sheet (the tape included). */
   --wall-side: clamp(18px, 2.6vw, 48px);
+  /* The tape on a phone, the works' and the shop's alike: small enough to
+     stay on the paper */
+  --tape-w-phone: 60px;
   /* The phone menu's width: as wide as its words need */
   --drawer-w: min(66vw, 252px);
   --paper-edges:
@@ -3734,16 +3737,21 @@ a.shop-button-quiet {
   }
 }
 
-/* Narrow cards: the kind and the price each get their own line */
+/* Phones: one item to a row, as wide as the paintings on the Works page
+   (two side by side left each picture a third of the screen). The sheet's
+   own padding is the only margin, so the shop's extra one goes. */
 @media (max-width: 600px) {
-  .shop-card-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+  .shop {
+    padding: 0;
   }
 
-  .shop-card-type:after {
-    content: none;
+  .shop-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3.4rem;
+  }
+
+  .shop-card-picture {
+    --tape-w: var(--tape-w-phone);
   }
 }
 
@@ -3964,6 +3972,40 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
   @keyframes floatDriftY {
     from { transform: translateY(-14vh); }
     to { transform: translateY(10vh); }
+  }
+}
+
+/* Phones: drifting across the middle of a small screen it sat on the
+   paintings, so here it stays put, smaller, in the bottom-left corner */
+@media (max-width: 576px) {
+  .newsletter-float {
+    left: 14px;
+    top: auto;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    animation: none;
+  }
+
+  .newsletter-float-inner {
+    gap: 6px;
+    padding: 5px 8px 5px 8px;
+    animation: none;
+  }
+
+  .newsletter-float-leaf {
+    height: 20px;
+  }
+
+  .newsletter-float-text {
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+  }
+
+  /* The x stays easy to tap: the box is bigger than the cross */
+  .newsletter-float-close {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    margin: -4px -4px -4px 0;
   }
 }
 
@@ -4261,6 +4303,23 @@ html.no-scroll {
     margin: 0 auto;
   }
 
+}
+
+/* Phones: a little more room at the sides. A wider strip of wall each side,
+   the works set further in from the torn edge, and smaller tape, so every
+   scrap stays on the paper instead of hanging over the edge onto the wall.
+   (The shop's pictures take the same tape: .shop-card-picture, 600px.) */
+@media (max-width: 576px) {
+  :root { --wall-side: 12px; }
+
+  #imagesAndContent {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+
+  .projectWorks .work-card {
+    --tape-w: var(--tape-w-phone);
+  }
 }
 
 /* ---------- Reduced motion ---------- */
