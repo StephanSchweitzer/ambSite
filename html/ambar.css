@@ -807,13 +807,18 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
 /* On phones the slideshow is a fixed height, a little shorter than on a
    computer, with each painting centred in it: the words under it
    (.home-links) are on the first screen, even on a phone turned on its
-   side, and stay put while taller and shorter paintings come and go. */
+   side, and stay put while taller and shorter paintings come and go.
+   Sized from --seen-h, the height the browser really shows (measured in
+   index.php's <head>; Safari's address bar is not part of it), with the
+   CSS screen height only as a stand-in should the script not run. */
 .homePageCarouselMobile {
   --home-pic: min(58vh, calc(100vh - 230px));
 }
 
 @supports (height: 1svh) {
-  .homePageCarouselMobile { --home-pic: min(58svh, calc(100svh - 230px)); }
+  .homePageCarouselMobile {
+    --home-pic: min(calc(var(--seen-h, 100svh) * 0.58), calc(var(--seen-h, 100svh) - 230px));
+  }
 }
 
 .homePageCarouselMobile .carousel-inner,
@@ -849,13 +854,13 @@ html:has(#imagesAndContent[data-view="home"]) {
 /* ...and on a phone, where the browser lets a finger move the page past
    that, there is nothing below the edge to move to: the sheet starts
    under the bar (--bar-h, less the pixel it tucks under) and ends exactly
-   at the bottom of the screen, the smallest screen when the browser's bars
-   are showing.
+   at the bottom of what the browser shows (--seen-h): on an iPhone, at
+   the top edge of Safari's address bar, not behind it.
    A column: the slideshow at the top, then the words (.home-links)
    filling the rest of the sheet with themselves in its middle. */
 #imagesAndContent.imagesAndContentMobile[data-view="home"] {
   min-height: calc(100vh - var(--bar-h) + 1px);
-  min-height: calc(100svh - var(--bar-h) + 1px);
+  min-height: calc(var(--seen-h, 100svh) - var(--bar-h) + 1px);
   flex-direction: column;
   flex-wrap: nowrap;
 }
@@ -879,15 +884,12 @@ html:has(#imagesAndContent[data-view="home"]) {
    same (they fill that space, centred in it; the padding on top matches
    the sheet's own padding at the bottom). Packed right under the
    slideshow they looked cramped, with an empty stretch below.
-   On iPhones, Safari's bottom bar floats over the last stretch of the
-   screen, and a fair measure of that is lifted out of the space
-   (--home-links-lift), so the words are centred in what's actually seen
-   rather than in what's under the glass. Earlier, centred without it,
-   the bar covered them. Other phones' browsers don't cover the page, so
-   there they're centred in all of it. */
+   The sheet's bottom is the bottom of what the browser shows (--seen-h),
+   so on an iPhone the space is measured to the top of Safari's address
+   bar, which takes its own strip of the screen; the words are centred in
+   what is actually seen. */
 @media (max-width: 992px) {
   .home-links {
-    --home-links-lift: 0px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -898,11 +900,7 @@ html:has(#imagesAndContent[data-view="home"]) {
     gap: 4px 28px;
     width: 100%;
     margin: 0;
-    padding: 4vw 0 var(--home-links-lift);
-  }
-
-  @supports (-webkit-touch-callout: none) {
-    .home-links { --home-links-lift: 72px; }
+    padding: 4vw 0 0;
   }
 
   .home-links .home-link {

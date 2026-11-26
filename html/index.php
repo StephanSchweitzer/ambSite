@@ -287,6 +287,24 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script>
+        // The height of the page the browser really shows, as --seen-h (the
+        // phone landing page is laid out in it: ambar.css). On iPhones Safari's
+        // address bar takes its own strip of the screen, and the CSS screen
+        // heights (vh, svh, dvh) have, on some iOS versions, counted that strip
+        // as page; window.innerHeight never has. Set here, before anything is
+        // drawn, so the first paint is right; kept up to date on turning the
+        // phone. (The keyboard doesn't change innerHeight, so typing in the
+        // menu's newsletter box doesn't move the page underneath.)
+        (function () {
+            function seen() {
+                document.documentElement.style.setProperty('--seen-h', window.innerHeight + 'px');
+            }
+            seen();
+            window.addEventListener('resize', seen);
+            window.addEventListener('orientationchange', seen);
+        })();
+    </script>
     <meta name="theme-color" content="<?= $work ? '#222220' : '#ffffff' ?>">
 
     <title><?= e($title) ?></title>
