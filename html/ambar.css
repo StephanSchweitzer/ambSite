@@ -73,9 +73,6 @@
      sheet's own background, so it costs nothing and sits under
      everything on the sheet (the tape included). */
   --wall-side: clamp(18px, 2.6vw, 48px);
-  /* The tape on a phone, the works' and the shop's alike: small enough to
-     stay on the paper */
-  --tape-w-phone: 60px;
   /* The phone menu's width: as wide as its words need */
   --drawer-w: min(66vw, 252px);
   --paper-edges:
@@ -786,6 +783,25 @@ body:has(.navLinksBoxMobile.active) .blockForHeaderMobile {
 }
 
 .imagesAndContentMobile p { font-size: 1em; }
+
+/* Tape that reaches the side of the sheet wraps round it, as real tape
+   would: nothing shows past the sheet (clip, not hidden, so the page's
+   sticky parts and its scrolling are untouched), and the torn edge is
+   drawn again on top, so the tape disappears behind the paper right where
+   the tear is. Only the 10px edges are painted; the rest lets taps through. */
+.imagesAndContentMobile {
+  position: relative;
+  overflow-x: clip;
+}
+
+.imagesAndContentMobile:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3; /* over the tape (2) */
+  background: var(--paper-edges);
+  pointer-events: none;
+}
 
 /* ==========================================================================
    Home carousel
@@ -3749,10 +3765,6 @@ a.shop-button-quiet {
     grid-template-columns: minmax(0, 1fr);
     gap: 3.4rem;
   }
-
-  .shop-card-picture {
-    --tape-w: var(--tape-w-phone);
-  }
 }
 
 @media (max-width: 480px) {
@@ -4305,22 +4317,6 @@ html.no-scroll {
 
 }
 
-/* Phones: a little more room at the sides. A wider strip of wall each side,
-   the works set further in from the torn edge, and smaller tape, so every
-   scrap stays on the paper instead of hanging over the edge onto the wall.
-   (The shop's pictures take the same tape: .shop-card-picture, 600px.) */
-@media (max-width: 576px) {
-  :root { --wall-side: 12px; }
-
-  #imagesAndContent {
-    padding-left: 22px;
-    padding-right: 22px;
-  }
-
-  .projectWorks .work-card {
-    --tape-w: var(--tape-w-phone);
-  }
-}
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
