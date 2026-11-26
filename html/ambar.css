@@ -25,6 +25,9 @@
      lives in, and the margin down the other side. Warm, like unbleached
      paper or a gallery wall, so the sheet reads as brighter against it. */
   --color-surround: #f2eee6;
+  /* The ground's dot grid, shared by the page, the phone menu and the
+     "See to scale" wall */
+  --surround-dots: radial-gradient(rgba(92, 74, 48, 0.05) 1px, transparent 1.4px);
   --color-line: #eae8e3;
   --color-accent: #8a8a8a;
 
@@ -49,6 +52,14 @@
 
   --header-clearance: 12vh;
 
+  /* Computers: the column of warm ground the menu lives in, and how far
+     the logo and links sit in from the screen's edge. The white sheet of
+     works fills everything to its right, out to the edge of the screen.
+     Capped, so a wide screen gives the room to the paintings rather than
+     to five short links. */
+  --menu-col: clamp(236px, 20vw, 330px);
+  --menu-inset: clamp(28px, 3.4vw, 64px);
+
   /* Painted tape scraps (stand-ins until Ambar's own scanned tape replaces
      the files in miscIcons/tape/) */
   --tape-blue: url('/miscIcons/tape/tape-blue.svg');
@@ -71,7 +82,7 @@ body {
      the white "sheet" the works sit on (#imagesAndContent). The dots are
      warm too: a neutral grey dot on this ground reads as a smudge. */
   background-color: var(--color-surround);
-  background-image: radial-gradient(rgba(92, 74, 48, 0.05) 1px, transparent 1.4px);
+  background-image: var(--surround-dots);
   background-size: 22px 22px;
   line-height: 1.65;
   margin: 0;
@@ -146,10 +157,9 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
 }
 
 .blockForHeader {
-  /* 19vw keeps the logo clear of the white content sheet, which starts at
-     24vw (5vw margin + 19vw, less the logo's -12px nudge) */
-  max-width: 19vw;
-  margin-left: 5vw;
+  /* Keeps the logo inside the menu column, clear of the white sheet */
+  max-width: calc(var(--menu-col) - var(--menu-inset) - 20px);
+  margin-left: var(--menu-inset);
   margin-top: 1vw;
   padding: 0;
   display: flex;
@@ -275,8 +285,8 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   position: fixed;
   margin-top: 11vw;
   padding-top: 4vh;
-  margin-left: 5vw;
-  width: 18vw;
+  margin-left: var(--menu-inset);
+  width: calc(var(--menu-col) - var(--menu-inset) - 20px);
   font-family: var(--font-primary);
   font-weight: var(--font-weight-normal);
   /* With every project's years open the list can outgrow a shorter
@@ -509,7 +519,11 @@ html.on-shop .shop-link,
   width: min(84vw, 340px);
   height: 100vh;
   height: 100dvh;
-  background-color: rgba(255, 255, 255, 0.97);
+  /* The warm ground: on phones this is the only place it shows, so it
+     still means "the menu", as the column does on computers */
+  background-color: rgba(242, 238, 230, 0.98);
+  background-image: var(--surround-dots);
+  background-size: 22px 22px;
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   z-index: 1000;
@@ -517,13 +531,16 @@ html.on-shop .shop-link,
   padding-left: 9vw;
   padding-right: 6vw;
   transform: translateX(-102%);
-  transition: transform 0.38s var(--ease-out-soft);
+  transition: transform 0.38s var(--ease-out-soft), box-shadow 0.38s ease;
   overflow-y: auto;
-  box-shadow: 12px 0 40px rgba(29, 29, 27, 0.12);
+  /* No shadow while it's tucked away: the shadow reaches past the screen's
+     edge and lay as a grey smudge down the side of the white page */
+  box-shadow: none;
 }
 
 .navLinksBoxMobile.active {
   transform: translateX(0);
+  box-shadow: 12px 0 40px rgba(29, 29, 27, 0.12);
 }
 
 /* Staggered entrance for drawer links */
@@ -599,9 +616,12 @@ html.on-shop .shop-link,
 
 #imagesAndContent {
   transition: opacity 0.4s ease;
-  width: 72vw;
+  /* Everything right of the menu column, to the screen's edge. flex (not
+     a vw width) so the scrollbar is never counted twice. */
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 4vw 5vw;
-  margin-left: 24vw;
+  margin-left: var(--menu-col);
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -614,22 +634,24 @@ html.on-shop .shop-link,
   box-shadow: -14px 0 40px rgba(29, 29, 27, 0.04);
 }
 
-/* Styled at all widths — JS applies this class from 992px down */
+/* Styled at all widths — JS applies this class from 992px down.
+   The sheet is the whole screen here: a frame of ground a few pixels
+   wide only looked like a mistake, so the ground lives in the menu
+   drawer instead and the room goes to a margin inside the sheet. */
 .imagesAndContentMobile {
-  width: 92vw;
+  width: 100%;
   margin-top: 10vh;
-  margin-left: 4vw;
-  margin-right: 4vw;
-  padding: 4vw 3vw;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 4vw clamp(16px, 4.5vw, 32px);
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
   box-sizing: border-box;
   background: var(--color-background);
-  border: 1px solid var(--color-line);
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
+  border: none;
+  box-shadow: none;
 }
 
 .imagesAndContentMobile p { font-size: 1em; }
@@ -1606,7 +1628,7 @@ html.on-shop .shop-link,
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--color-surround);
-  background-image: radial-gradient(rgba(92, 74, 48, 0.055) 1px, transparent 1.4px);
+  background-image: radial-gradient(rgba(92, 74, 48, 0.055) 1px, transparent 1.4px); /* a touch stronger than --surround-dots, at viewer scale */
   background-size: 22px 22px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
   cursor: default;
@@ -2084,11 +2106,11 @@ html.on-shop .shop-link,
    details), and a short line beside each "Add to basket" and "Pay" button
    (shopRenderTestNote). Over the header and basket button, under the item
    panel (1030) and the viewer. On computers it's centred over the content
-   sheet (which starts at 24vw), clear of the basket button on the right. */
+   sheet (which starts at --menu-col), clear of the basket button on the right. */
 .shop-test-bar {
   position: fixed;
   top: 16px;
-  left: 24vw;
+  left: var(--menu-col);
   right: 170px;
   z-index: 1020;
   display: flex;
@@ -3606,7 +3628,8 @@ body:has(#imagesAndContent[data-view="shop-thanks"]) .newsletter-float {
 
 .newsletter-float {
   position: fixed;
-  left: 22vw; /* keep the drift over the content sheet, off the nav column */
+  /* starts just over the edge of the menu column and drifts out over the sheet */
+  left: calc(var(--menu-col) - 2vw);
   top: 58vh;
   z-index: 900;
   cursor: pointer;
@@ -3875,10 +3898,15 @@ html.no-scroll {
 
   .navLinksBox { display: none; }
 
+  /* The whole screen is the sheet (see .imagesAndContentMobile) */
+  body { background: var(--color-background); }
+
   #imagesAndContent {
-    width: 92vw;
-    margin-left: 4vw;
-    padding: 4vw 0;
+    width: 100%;
+    margin-left: 0;
+    padding: 4vw clamp(16px, 4.5vw, 32px);
+    border-left: none;
+    box-shadow: none;
   }
 
   .blockForHeader {
