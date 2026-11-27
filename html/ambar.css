@@ -87,6 +87,17 @@
   --tape-green: url('/miscIcons/tape/tape-green.svg');
   --tape-lilac: url('/miscIcons/tape/tape-lilac.svg');
   --tape-coral: url('/miscIcons/tape/tape-coral.svg');
+  /* The same scraps laid on a painting, with their soft shadow, as ready
+     pictures (drawn once from the SVGs above, at twice the size): the
+     SVGs paint their texture from scratch and a live drop-shadow on top
+     cost every scroll of the works dozens of times over. Used where the
+     scraps hold a picture: the works and the shop cards. */
+  --tape-blue-laid: url('/miscIcons/tape/tape-blue-laid.webp');
+  --tape-pink-laid: url('/miscIcons/tape/tape-pink-laid.webp');
+  --tape-yellow-laid: url('/miscIcons/tape/tape-yellow-laid.webp');
+  --tape-green-laid: url('/miscIcons/tape/tape-green-laid.webp');
+  --tape-lilac-laid: url('/miscIcons/tape/tape-lilac-laid.webp');
+  --tape-coral-laid: url('/miscIcons/tape/tape-coral-laid.webp');
 }
 
 /* ---------- Base ---------- */
@@ -1450,10 +1461,32 @@ html:has(#imagesAndContent[data-view="home"]) {
    (in a repeating pattern) so it looks done by hand. The tape is two
    pseudo-elements on the card, so the server-drawn and JS-drawn galleries
    both get it with no change to their markup. */
+.projectWorks .work-card,
+.shop-card-picture,
+.shop-item-picture {
+  /* (the patterns below name the plain colours: here they're the laid ones) */
+  --tape-blue: var(--tape-blue-laid);
+  --tape-pink: var(--tape-pink-laid);
+  --tape-yellow: var(--tape-yellow-laid);
+  --tape-green: var(--tape-green-laid);
+  --tape-lilac: var(--tape-lilac-laid);
+  --tape-coral: var(--tape-coral-laid);
+}
+
 .projectWorks .work-card {
   --tape-w: clamp(72px, 9vw, 132px);
   --tape-a: var(--tape-yellow);
   --tape-b: var(--tape-blue);
+}
+
+/* Computers: the paintings near the screen each on a layer of their own
+   (prepareArrivals() in photoFunctions.js), drawn once and slid along by
+   a scroll rather than painted again strip by strip. The painting only,
+   not the card: a card on its own layer would also hold its tape, and a
+   corner scrap reaching towards the next painting could end up under it.
+   This way the tape stacks exactly as it always has. */
+.projectWorks .work-card.is-near .img-container {
+  will-change: transform;
 }
 
 .projectWorks .work-card:before,
@@ -1465,7 +1498,6 @@ html:has(#imagesAndContent[data-view="home"]) {
   aspect-ratio: 160 / 44;
   background: var(--tape-a) center / 100% 100% no-repeat;
   pointer-events: none;
-  filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
   /* where the scrap sits (--tape-at, per pattern below), then how far it's
      folded back (--tape-peel, only while its painting is in the viewer) */
   /* (flat at rest: a 3D transform, even one doing nothing, would give every
@@ -2715,7 +2747,6 @@ body:has(.navLinksBoxMobile.active) .basket-pill {
   aspect-ratio: 160 / 44;
   background: var(--tape-a) center / 100% 100% no-repeat;
   pointer-events: none;
-  filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
 }
 
 .shop-card-picture:before,

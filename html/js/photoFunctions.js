@@ -817,6 +817,7 @@ var ARRIVAL_WAITED_MS = 150; // on screen this long before it landed: fade it in
 var ARRIVAL_FADE_MS = 350;   // the fade in ambar.css (.is-landing)
 var FETCH_AHEAD = '250% 0px';  // start downloading two and a half screens ahead
 var DECODE_AHEAD = '120% 0px'; // unpack about a screen ahead
+var LIFT_AHEAD = '100% 0px';   // computers: a layer of its own from a screen ahead
 
 var arrivalWatchers = [];
 
@@ -857,6 +858,21 @@ function prepareArrivals(root) {
             img.decode().catch(function () {}); // (a picture that never comes is handled below)
         }
     });
+
+    // Computers: a painting about to come on screen is lifted onto a layer
+    // of its own (.is-near, ambar.css), so the browser draws it
+    // once and a scroll only slides it along, instead of painting every
+    // strip of it again as it passes. It's let go again a screen after it
+    // has left, so only the few around the screen hold one. Not on phones:
+    // they pay for layers in memory, and iPhones repaint when they change.
+    var lifting = !isTouchScreen() && watch(LIFT_AHEAD, function (card, near) {
+        card.classList.toggle('is-near', near);
+    });
+    if (lifting) {
+        $(root).find('.projectWorks .work-card').each(function () {
+            lifting.observe(this);
+        });
+    }
 
     $(root).find('.projectWorks .img-container img').each(function () {
         var img = this;
