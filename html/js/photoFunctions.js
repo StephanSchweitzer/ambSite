@@ -2973,6 +2973,7 @@ function warmSlideshow(works) {
             }
         });
         warmSlidesAround(0);
+        parkSlides();
     }
     if (first.complete) {
         start();
@@ -3023,7 +3024,40 @@ $(document).on('slide.bs.carousel', '#homePageCarousel', function (event) {
         return;
     }
     warmSlidesAround(event.to);
+    // Only the painting about to move in stays parked, and only if it's
+    // waiting on the side it's coming from ('left' is next, 'right' back)
+    var side = event.direction === 'left' ? 'is-parked-next' : 'is-parked-prev';
+    $(this).find('.carousel-item').each(function () {
+        if (this !== event.relatedTarget || !this.classList.contains(side)) {
+            this.classList.remove('is-parked-next', 'is-parked-prev');
+        }
+    });
 });
+
+$(document).on('slid.bs.carousel', '#homePageCarousel', parkSlides);
+
+// The paintings either side of the one showing wait just out of sight,
+// already drawn, so a slide never starts by unpacking one (ambar.css,
+// "wait just out of sight"). With two paintings there's only a next.
+function parkSlides() {
+    var carousel = document.getElementById('homePageCarousel');
+    if (!carousel) {
+        return;
+    }
+    var items = [].slice.call(carousel.querySelectorAll('.carousel-item'));
+    items.forEach(function (item) {
+        item.classList.remove('is-parked-next', 'is-parked-prev');
+    });
+    var active = items.indexOf(carousel.querySelector('.carousel-item.active'));
+    var count = items.length;
+    if (count < 2 || active < 0) {
+        return;
+    }
+    items[(active + 1) % count].classList.add('is-parked-next');
+    if (count > 2) {
+        items[(active - 1 + count) % count].classList.add('is-parked-prev');
+    }
+}
 
 $(document).on('click', '.carousel-link', function (event) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {

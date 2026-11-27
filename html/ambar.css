@@ -1030,8 +1030,49 @@ html:has(#imagesAndContent[data-view="home"]) {
   }
 }
 
+/* How a painting slides in: it sets off gently and has a long, soft
+   landing. Bootstrap's script reads this duration itself. */
 .carousel-item {
-  transition: transform 0.6s ease;
+  transition: transform 0.9s cubic-bezier(0.55, 0, 0.25, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carousel-item { transition: none; }
+}
+
+/* The paintings either side of the one showing wait just out of sight,
+   already drawn (parkSlides() in photoFunctions.js). Hidden until its
+   turn, a painting had to be unpacked and drawn in the slide's first
+   moment, and the slide stumbled. Laid over the others rather than in
+   line with them, so a tall neighbour never changes the slideshow's
+   height. Bootstrap's own classes take over once it starts to move,
+   from the same place, so nothing jumps. */
+#homePageCarousel .carousel-item.is-parked-next:not(.active):not(.carousel-item-next):not(.carousel-item-prev),
+#homePageCarousel .carousel-item.is-parked-prev:not(.active):not(.carousel-item-next):not(.carousel-item-prev) {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: none;
+}
+
+#homePageCarousel .carousel-item.is-parked-next:not(.active):not(.carousel-item-next):not(.carousel-item-prev) {
+  transform: translateX(100%);
+}
+
+#homePageCarousel .carousel-item.is-parked-prev:not(.active):not(.carousel-item-next):not(.carousel-item-prev) {
+  transform: translateX(-100%);
+}
+
+/* On computers each of them keeps a layer of its own, so the slide only
+   moves pictures that are already drawn. Not on phones: iPhones repaint
+   the page when layers change. */
+@media (min-width: 993px) {
+  #homePageCarousel .carousel-item.active,
+  #homePageCarousel .carousel-item.is-parked-next,
+  #homePageCarousel .carousel-item.is-parked-prev {
+    will-change: transform;
+  }
 }
 
 .carousel-control-prev, .carousel-control-next {
