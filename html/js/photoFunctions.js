@@ -432,15 +432,26 @@ function isShowing(view, route) {
     return view === currentView && (!isShopView(view) || route.path === shownPath);
 }
 
+var shopDrawing = null; // the shop page being drawn: { path, promise }
+
 // Draws a page (without touching the address bar). Returns a promise that
 // resolves once the page's content is on screen.
-function renderView(view, route) {
+// options.turn: the shop arrives with a turn of the page (turnPageOut), at
+// options.scrollY (default the top)
+function renderView(view, route, options) {
     if (isShowing(view, route) && viewReady) {
         return $.Deferred().resolve().promise();
     }
     if (isShopView(view)) {
+        // (asked for again while it's still being drawn, e.g. Shop clicked
+        // twice as the page turns: the drawing under way carries on)
+        if (shopDrawing && shopDrawing.path === route.path && currentView === view && shopDrawing.promise.state() === 'pending') {
+            return shopDrawing.promise;
+        }
         shownPath = route.path;
-        return renderShopPage(view, route.path); // shop.js
+        var drawing = renderShopPage(view, route.path, options || {}); // shop.js
+        shopDrawing = { path: route.path, promise: drawing };
+        return drawing;
     }
     switch (view) {
         case 'works': return renderWorks();
@@ -464,14 +475,17 @@ function goTo(path, options) {
     var view = route.view;
     // (opening or closing a shop item's panel keeps the shop where it is)
     var changingPage = !isShowing(view, route) && !shopPanelMove(view);
+    // Into the shop from another page: the page turns (and goes to the top
+    // itself, once the old page has faded)
+    var turning = changingPage && !options.section && turnsToShop(view);
 
     if (path !== location.pathname) {
         rememberScroll();
         history.pushState($.extend({}, options.state, { path: path }), '', path);
     }
 
-    var ready = renderView(view, route);
-    if (changingPage && !options.section) {
+    var ready = renderView(view, route, { turn: turning });
+    if (changingPage && !options.section && !turning) {
         instantScrollTo(0);
     }
 
@@ -513,21 +527,31 @@ window.addEventListener('popstate', function (event) {
         return;
     }
 
-    renderView(view, route).then(function () {
+    var turning = turnsToShop(view);
+    renderView(view, route, { turn: turning, scrollY: state.scrollY }).then(function () {
+        if (currentView !== view) {
+            return; // (the visitor has moved on meanwhile)
+        }
         if (route.workId) {
             openSharedWork(route.workId, {});
         } else {
             instantScrollTo(typeof state.scrollY === 'number' ? state.scrollY : 0);
         }
     });
-    if (typeof state.scrollY !== 'number') {
+    if (typeof state.scrollY !== 'number' && !turning) {
         instantScrollTo(0);
     }
 });
 
+// Going to the shop's front page from a page that isn't the shop
+function turnsToShop(view) {
+    return view === 'shop' && !isShopView(currentView);
+}
+
 function setView(view) {
     leaveCheckout(view); // shop.js: a payment left unfinished is given up
     leaveShopPanel(view); // shop.js: an item's panel closes when the shop does
+    endPageTurn();
     var main = document.getElementById('imagesAndContent');
     pageIsServerDrawn = main.getAttribute('data-server-view') === view;
     main.removeAttribute('data-server-view');
@@ -548,6 +572,76 @@ function setPageTitle(title) {
     if (!viewer.open) {
         document.title = title;
     }
+}
+
+// --------------------------------------------------------------------------
+// Turning the page (going to the shop)
+// --------------------------------------------------------------------------
+//
+// Going to the shop from another page: what's on the sheet fades away where
+// it is (nothing scrolls), the shop is put in its place unseen, already at
+// the top, with its first pictures ready, and then rises gently into view.
+// Nothing jumps and nothing is seen half drawn. renderShopPage() (shop.js)
+// drives it; ambar.css: "Turning the page".
+var PAGE_OUT_MS = 200;            // the fade out in ambar.css (.page-out)
+var PAGE_IN_MS = 560;             // the rise in ambar.css (.page-rising)
+var PAGE_PICTURES_WAIT_MS = 450;  // the longest the new page waits for its first pictures
+var pageTurnTimer = null;
+var pageTurnToken = 0; // a rise only starts for the latest page put in place
+
+function turnPageOut(content) {
+    endPageTurn();
+    content.addClass('page-out');
+    var faded = $.Deferred();
+    pageTurnTimer = setTimeout(faded.resolve, prefersReducedMotion() ? 0 : PAGE_OUT_MS);
+    return faded.promise();
+}
+
+// The new page is in place (still faded out): put it at the top, wait for
+// the pictures on screen, then let it rise. Resolves as it starts rising.
+function turnPageIn(content, scrollY) {
+    clearTimeout(pageTurnTimer);
+    var token = ++pageTurnToken;
+    content.removeClass('page-out page-rising').addClass('page-in');
+    instantScrollTo(scrollY || 0);
+    return picturesInSight(content[0], PAGE_PICTURES_WAIT_MS).then(function () {
+        if (token !== pageTurnToken) {
+            return; // (another page, or the shop after its spinner, came meanwhile)
+        }
+        void content[0].offsetWidth; // (starts from the faded, lowered place)
+        content.removeClass('page-in').addClass('page-rising');
+        pageTurnTimer = setTimeout(endPageTurn, PAGE_IN_MS + 50);
+    });
+}
+
+// Every page drawn starts from here (setView), so a turn cut short by
+// another click never leaves a page faded out
+function endPageTurn() {
+    clearTimeout(pageTurnTimer);
+    pageTurnToken++;
+    $('#imagesAndContent').removeClass('page-out page-in page-rising');
+}
+
+// Resolves once the pictures on screen are ready to draw, or after `wait`
+function picturesInSight(root, wait) {
+    var ready = $.Deferred();
+    var pictures = $(root).find('img').filter(function () {
+        var rect = this.getBoundingClientRect();
+        return rect.bottom > 0 && rect.top < window.innerHeight && rect.width > 0;
+    }).get();
+    setTimeout(ready.resolve, wait);
+    $.when.apply($, pictures.map(function (img) {
+        var one = $.Deferred();
+        if (img.decode) {
+            img.decode().then(one.resolve, one.resolve);
+        } else if (img.complete) {
+            one.resolve();
+        } else {
+            $(img).one('load error', one.resolve);
+        }
+        return one.promise();
+    })).then(ready.resolve);
+    return ready.promise();
 }
 
 // --------------------------------------------------------------------------
@@ -706,12 +800,31 @@ function createProjectElement(project) {
     return section;
 }
 
-// A painting that hasn't arrived by the time its card is on the page fades
-// in when it does, over a soft space its own size, instead of popping in.
-// Only the lazy ones: the first couple load straight away, and one the
-// browser already has simply shows. No extra downloads; it only waits for
-// the picture that was coming anyway. ambar.css: "A painting on its way".
+// A painting that hasn't arrived by the time its card is on the page waits
+// as a soft space its own size. Most land before anyone has looked at that
+// space (still below the screen, or only just scrolled to): those simply
+// appear, since fading in a painting that is already here reads as a white
+// flash. Only one somebody has been waiting for fades in, quickly. Only the
+// lazy ones: the first couple load straight away, and one the browser
+// already has simply shows. No extra downloads. ambar.css: "A painting on
+// its way".
+var ARRIVAL_WAITED_MS = 150; // on screen this long before it landed: fade it in
+var ARRIVAL_FADE_MS = 350;   // the fade in ambar.css (.is-landing)
+
+var arrivalWatcher = null;
+
 function fadeInArrivals(root) {
+    // When each waiting space came into sight (0: not in sight). One watcher
+    // at a time: the cards of an earlier drawing are gone.
+    if (arrivalWatcher) {
+        arrivalWatcher.disconnect();
+    }
+    var watcher = arrivalWatcher = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            entry.target.seenAt = entry.isIntersecting ? (entry.target.seenAt || performance.now()) : 0;
+        });
+    }) : null;
+
     $(root).find('.projectWorks .img-container img').each(function () {
         var img = this;
         if (img.loading !== 'lazy' || (img.complete && img.naturalWidth)) {
@@ -720,9 +833,26 @@ function fadeInArrivals(root) {
         var card = img.parentNode;
         var errors = 0;
         function arrived() {
+            if (!card.classList.contains('is-arriving')) {
+                return;
+            }
+            if (watcher) {
+                watcher.unobserve(card);
+            }
+            var waited = card.seenAt && performance.now() - card.seenAt >= ARRIVAL_WAITED_MS;
+            if (waited) {
+                card.classList.add('is-landing');
+                setTimeout(function () {
+                    card.classList.remove('is-landing');
+                }, ARRIVAL_FADE_MS + 50);
+            }
             card.classList.remove('is-arriving');
         }
+        card.seenAt = 0;
         card.classList.add('is-arriving');
+        if (watcher) {
+            watcher.observe(card);
+        }
         img.addEventListener('load', arrived);
         // The first error swaps in the original (the error handler above),
         // whose load arrives here too; only a second means nothing is coming

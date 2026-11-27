@@ -722,6 +722,29 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   pointer-events: none;
 }
 
+/* ---------- Turning the page (going to the shop) ----------
+   turnPageOut() / turnPageIn() in photoFunctions.js. What's on the sheet
+   fades where it is; the sheet itself stays, so the wall never shows
+   through. The shop is put in its place unseen, at the top, then rises a
+   few pixels into view. Never fully transparent: browsers stop drawing at
+   0 and need frames to catch up (VIEWER_MIN_OPACITY). */
+#imagesAndContent.page-out > * {
+  opacity: 0.003;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+#imagesAndContent.page-in > * {
+  opacity: 0.003;
+  transform: translateY(10px);
+  transition: none;
+  pointer-events: none;
+}
+
+#imagesAndContent.page-rising > * {
+  transition: opacity 0.42s ease, transform 0.56s var(--ease-out-soft);
+}
+
 /* While the menu is open the header bar steps back, so the table runs
    to the top of the screen and the close button sits on it */
 .blockForHeaderMobile {
@@ -1287,26 +1310,27 @@ html:has(#imagesAndContent[data-view="home"]) {
 .projectWorks .img-container img {
   width: 100%;
   max-height: none;
-  transition: transform 0.7s var(--ease-out-soft), opacity 0.5s ease;
 }
 
 /* ---------- A painting on its way ----------
    fadeInArrivals() in photoFunctions.js marks a card whose painting hasn't
-   loaded yet: a soft paper-coloured space of the painting's size, and the
-   painting fades in over it when it lands. The paper colour waits for the
-   fade to finish before it goes, so the painting never fades in from
-   white. */
-.projectWorks .img-container {
-  transition: transform 0.45s var(--ease-out-soft), box-shadow 0.45s ease, background-color 0s linear 0.5s;
-}
-
-.projectWorks .img-container.is-arriving {
+   loaded yet: a soft paper-coloured space of the painting's size. A
+   painting that lands before anyone has been looking at its space simply
+   appears (a fade there reads as a white flash); only one somebody has
+   been waiting for fades in (.is-landing), over the paper colour, never
+   from white. Never fully transparent: browsers stop drawing at 0 and need
+   frames to catch up (VIEWER_MIN_OPACITY in photoFunctions.js). */
+.projectWorks .img-container.is-arriving,
+.projectWorks .img-container.is-landing {
   background-color: var(--color-paper);
-  transition: transform 0.45s var(--ease-out-soft), box-shadow 0.45s ease;
 }
 
 .projectWorks .img-container.is-arriving img {
-  opacity: 0;
+  opacity: 0.003;
+}
+
+.projectWorks .img-container.is-landing img {
+  transition: transform 0.7s var(--ease-out-soft), opacity 0.35s ease;
 }
 
 /* Hover effects only where there's a mouse: on a phone a tap would set them
@@ -2418,6 +2442,15 @@ html:has(#imagesAndContent[data-view="home"]) {
 
 .shop-test-bar[hidden] {
   display: none;
+}
+
+/* (it arrives with the shop as the page turns, rather than before it) */
+.shop-test-bar:not([hidden]) {
+  animation: shopTestBarIn 0.42s ease both;
+}
+
+@keyframes shopTestBarIn {
+  from { opacity: 0.003; }
 }
 
 /* It floats above the header, which put it over the phone menu's top

@@ -128,11 +128,24 @@ function drawBasketPill() {
 // --------------------------------------------------------------------------
 
 // Called by renderView() in photoFunctions.js. Returns a promise that
-// resolves once the page is on screen.
-function renderShopPage(view, path) {
+// resolves once the page is on screen. options.turn: arriving from another
+// page, the old one fades away first and the shop rises in (turnPageOut in
+// photoFunctions.js), at options.scrollY or the top.
+function renderShopPage(view, path, options) {
+    options = options || {};
     var onlyThePanel = shopPanelMove(view);
+    var content = $('#imagesAndContent');
+    var leftView = content.attr('data-view');
     setView(view);
-    var content = $('#imagesAndContent').css('padding-top', '50px');
+    var turning = !!options.turn && view === 'shop' && !onlyThePanel && !pageIsServerDrawn;
+    if (turning) {
+        // The page being left keeps its look while it fades; the test bar
+        // comes with the shop
+        content.attr('data-view', leftView);
+        showShopTestBar('');
+    } else {
+        content.css('padding-top', '50px');
+    }
     drawBasketPill();
 
     if (view === 'shop-basket') {
@@ -169,17 +182,48 @@ function renderShopPage(view, path) {
         return $.Deferred().resolve().promise();
     }
 
+    var stillHere = function () {
+        return currentView === view && shownPath === path;
+    };
+    // Turning: the old page fades, then the shop (or whatever came instead)
+    // is put in its place unseen and rises in
+    var leaving = turning ? turnPageOut(content) : $.Deferred().resolve().promise();
+    var putInPlace = function (html) {
+        content.css('padding-top', '50px').attr('data-view', view).html(html);
+    };
+    var riseIn = function () {
+        return turnPageIn(content, options.scrollY).then(function () {
+            if (stillHere()) {
+                showShopTestBar(view);
+            }
+        });
+    };
+    // A spinner only if the shop is slow to come (sooner when nothing is
+    // turning: then the old page is still showing)
     var spinner = pageIsServerDrawn ? null : setTimeout(function () {
-        content.html(loadingHtml(''));
-    }, 200); // (a page index.php drew stays up until it's redrawn)
+        leaving.then(function () {
+            if (stillHere() && !viewReady) {
+                putInPlace(loadingHtml(''));
+                if (turning) {
+                    riseIn();
+                }
+            }
+        });
+    }, turning ? 900 : 200); // (a page index.php drew stays up until it's redrawn)
     var drawn = $.Deferred();
     var show = function (page) {
+        if (turning && leaving.state() === 'pending') {
+            leaving.then(function () {
+                show(page);
+            });
+            return;
+        }
         clearTimeout(spinner);
-        if (currentView !== view || shownPath !== path) {
+        if (!stillHere()) {
             drawn.resolve(); // the visitor has already moved on
             return;
         }
-        content.html(page.html);
+        putInPlace(page.html);
         adoptPanel(content);
         fetchCardsInSight();
         setPageTitle(page.title);
@@ -192,23 +236,60 @@ function renderShopPage(view, path) {
             shownPath = page.path;
         }
         viewReady = true;
-        drawn.resolve();
+        if (turning) {
+            riseIn().then(drawn.resolve);
+        } else {
+            drawn.resolve();
+        }
     };
-    givingUp.then(function () {
-        return $.ajax({ url: SHOP_API, data: { view: 'page', path: path }, dataType: 'json' });
-    }).then(show, function (xhr) {
+    shopPageRequest(path).then(show, function (xhr) {
         if (xhr.status === 404 && xhr.responseJSON && xhr.responseJSON.html) {
             show(xhr.responseJSON); // sold and taken down since the link was made
             return;
         }
         clearTimeout(spinner);
-        if (currentView === view && shownPath === path) {
-            content.html(errorHtml("Sorry, the shop couldn't be loaded. Please try again."));
-        }
-        drawn.reject();
+        leaving.then(function () {
+            if (stillHere()) {
+                putInPlace(errorHtml("Sorry, the shop couldn't be loaded. Please try again."));
+                if (turning) {
+                    riseIn();
+                }
+            }
+            drawn.reject();
+        });
     });
     return drawn.promise();
 }
+
+// The shop's front page, fetched as the pointer reaches the menu's Shop
+// link (or a finger lands on it), so turning to it rarely has to wait.
+// Kept only a few seconds and used once, so what's reserved or sold is
+// never out of date.
+var SHOP_AHEAD_KEEP_MS = 10000;
+var shopAhead = null; // { path, at, request }
+
+function fetchShopPage(path) {
+    // (after any payment left behind is given up, or its items look sold)
+    return givingUp.then(function () {
+        return $.ajax({ url: SHOP_API, data: { view: 'page', path: path }, dataType: 'json' });
+    });
+}
+
+function shopAheadFresh() {
+    return shopAhead && Date.now() - shopAhead.at < SHOP_AHEAD_KEEP_MS && shopAhead.request.state() !== 'rejected';
+}
+
+function shopPageRequest(path) {
+    var ahead = shopAheadFresh() && shopAhead.path === path ? shopAhead.request : null;
+    shopAhead = null;
+    return ahead || fetchShopPage(path);
+}
+
+$(document).on('pointerover focusin touchstart', 'a.shop-link', function () {
+    if (!isShopView(currentView) && !shopAheadFresh()) {
+        shopAhead = { path: '/shop', at: Date.now(), request: fetchShopPage('/shop') };
+    }
+});
 
 // Links between the shop's pages stay inside the page (no reload)
 $(document).on('click', 'a[data-shop-nav]', function (event) {
