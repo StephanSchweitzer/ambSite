@@ -1384,38 +1384,46 @@ html:has(#imagesAndContent[data-view="home"]) {
   background: var(--tape-a) center / 100% 100% no-repeat;
   pointer-events: none;
   filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
-  transition: transform 0.45s var(--ease-out-soft);
+  /* where the scrap sits (--tape-at, per pattern below), then how far it's
+     peeled up (--tape-peel, only while its painting is in the viewer) */
+  /* (flat at rest: a 3D transform, even one doing nothing, would give every
+     scrap on the page its own layer, which phones pay for in memory) */
+  transform: var(--tape-at) var(--tape-peel, translate(0, 0));
+  /* Laying back down: a touch past flat and back, as if pressed on with a
+     finger. The second scrap follows the first. */
+  transition: transform 0.55s cubic-bezier(0.3, 1.45, 0.5, 1), filter 0.4s ease;
 }
 
 .projectWorks .work-card:after {
   background-image: var(--tape-b);
+  transition-delay: 0.09s;
 }
 
 /* Pattern 1: across both top corners */
 .projectWorks .work-card:before {
   left: 14px;
   top: 12px;
-  transform: translate(-50%, -50%) rotate(-38deg);
+  --tape-at: translate(-50%, -50%) rotate(-38deg);
 }
 
 .projectWorks .work-card:after {
   right: 14px;
   top: 12px;
-  transform: translate(50%, -50%) rotate(41deg);
+  --tape-at: translate(50%, -50%) rotate(41deg);
 }
 
 /* Pattern 2: one strip over the top edge, one across the bottom-right corner */
 .projectWorks .work-card:nth-child(3n+2):before {
   left: 50%;
   top: 0;
-  transform: translate(-50%, -45%) rotate(-3deg);
+  --tape-at: translate(-50%, -45%) rotate(-3deg);
 }
 
 .projectWorks .work-card:nth-child(3n+2):after {
   top: auto;
   right: 12px;
   bottom: 12px;
-  transform: translate(50%, 50%) rotate(-36deg);
+  --tape-at: translate(50%, 50%) rotate(-36deg);
 }
 
 /* Pattern 3: top-left and bottom-right corners */
@@ -1423,7 +1431,33 @@ html:has(#imagesAndContent[data-view="home"]) {
   top: auto;
   right: 14px;
   bottom: 14px;
-  transform: translate(50%, 50%) rotate(-42deg);
+  --tape-at: translate(50%, 50%) rotate(-42deg);
+}
+
+/* Opening a painting peels its tape up (liftTape() in photoFunctions.js):
+   each scrap lifts one end off the paper, hinged on the other end, the
+   first scrap its left end and the second its right. Putting the painting
+   back lays the tape down again (the transition above). */
+.projectWorks .work-card.tape-up:before,
+.projectWorks .work-card.tape-up:after {
+  filter: drop-shadow(0 7px 6px rgba(29, 29, 27, 0.26));
+  transition: transform 0.26s cubic-bezier(0.3, 0.7, 0.4, 1), filter 0.26s ease;
+}
+
+.projectWorks .work-card.tape-up:before {
+  --tape-peel: translateX(calc(var(--tape-w) / 2)) perspective(320px) rotateY(40deg) translateX(calc(var(--tape-w) / -2));
+}
+
+.projectWorks .work-card.tape-up:after {
+  --tape-peel: translateX(calc(var(--tape-w) / -2)) perspective(320px) rotateY(-40deg) translateX(calc(var(--tape-w) / 2));
+  transition-delay: 0.05s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .projectWorks .work-card:before,
+  .projectWorks .work-card:after {
+    transition: none;
+  }
 }
 
 /* Colours, in a different rhythm to the placement */

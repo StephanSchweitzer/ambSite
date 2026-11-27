@@ -57,6 +57,7 @@ var viewer = {
     afterOpening: null,      // swap in the sharper copy once the opening has finished
     source: null,            // { index, img }: the picture on the page it grew out of
     hiddenInPage: [],        // pictures on the page hidden while their twin is in the viewer
+    tapeUp: [],              // cards whose tape is peeled up while their painting is out (liftTape)
     hidingNow: false,        // closeViewer's own final, instant hide
     room: 0,                 // height left for the painting (fitViewerToScreen)
     loading: null            // { work, src }: the copy being shown / loaded
@@ -856,6 +857,7 @@ function openViewer(items, index, options) {
         if (!preopened) {
             document.getElementById('popUpImage').removeAttribute('src');
             source = pageImageToGrowFrom(options.from);
+            liftTape(options.from);
         }
         var here = parseRoute(location.pathname);
         viewer.basePath = here.workId ? '/select-works' : here.path;
@@ -973,6 +975,34 @@ function showInPage() {
         el.style.visibility = '';
     });
     viewer.hiddenInPage = [];
+}
+
+// The tape holding a painting to the page peels up as the painting comes off
+// it, and is pressed back down once it's back (the motion itself is CSS:
+// .work-card.tape-up in ambar.css). Only the Works galleries have tape.
+function liftTape(el) {
+    if (!el || prefersReducedMotion() || VT.noAnim) {
+        return;
+    }
+    var card = $(el).closest('.projectWorks .work-card')[0];
+    if (!card || viewer.tapeUp.indexOf(card) !== -1) {
+        return;
+    }
+    card.classList.add('tape-up');
+    viewer.tapeUp.push(card);
+}
+
+function pressTapeDown() {
+    var cards = viewer.tapeUp;
+    viewer.tapeUp = [];
+    // A moment after the painting has landed, not in the same instant
+    setTimeout(function () {
+        cards.forEach(function (card) {
+            if (viewer.tapeUp.indexOf(card) === -1) { // (unless it's out again)
+                card.classList.remove('tape-up');
+            }
+        });
+    }, 40);
 }
 
 // delay: change it part-way through the fade, when the screen is about as
@@ -1509,6 +1539,7 @@ function animateClosing() {
         img.style.transform = transformOnto(at, target.getBoundingClientRect());
         img.style.opacity = '1';
         hideInPage(target);
+        liftTape(target); // (already up, unless it's a different painting from the one opened)
     } else {
         img.style.transition = 'transform ' + ms + 'ms ' + VIEWER_CLOSE_EASE + ', opacity ' + Math.round(ms * 0.8) + 'ms ease';
         img.style.transform = at.width ? shrunkAboutMiddle(at, 0.96) : '';
@@ -1532,6 +1563,7 @@ function finishClosing() {
     resetViewerTools();
     setThemeColor(PAGE_THEME_COLOR);
     showInPage();
+    pressTapeDown();
     viewer.hidingNow = true;
     viewerModal('hide'); // instant; hidden.bs.modal tidies up
     viewer.hidingNow = false;
