@@ -702,9 +702,44 @@ function updateBuyForm(form) {
 $(document).on('change', '[data-shop-buy] input[name=variant]', function () {
     var form = $(this).closest('form');
     form.find('.shop-quantity-value').text('1');
-    form.find('.shop-added').prop('hidden', true);
+    hideAdded(form);
     updateBuyForm(form);
 });
+
+// "Added to your basket" unfolds under the button (ambar.css .shop-added)
+var SHOP_ADDED_MS = 700;
+
+function showAdded(form) {
+    var added = form.find('.shop-added')[0];
+    clearTimeout(added.foldTimer);
+    if (added.hidden || !added.classList.contains('is-shown')) {
+        added.hidden = false;
+        void added.offsetHeight; // (unfolds from closed)
+        added.classList.add('is-shown');
+    } else {
+        // Added again while it's open: it stays open, the tick and the words
+        // arrive once more
+        added.style.transition = 'none';
+        added.classList.remove('is-shown');
+        void added.offsetHeight;
+        added.classList.add('is-shown');
+        void added.offsetHeight;
+        added.style.transition = '';
+    }
+    return added;
+}
+
+function hideAdded(form) {
+    var added = form.find('.shop-added')[0];
+    if (!added || added.hidden) {
+        return;
+    }
+    added.classList.remove('is-shown');
+    clearTimeout(added.foldTimer);
+    added.foldTimer = setTimeout(function () {
+        added.hidden = true;
+    }, prefersReducedMotion() ? 0 : SHOP_ADDED_MS);
+}
 
 $(document).on('click', '[data-shop-buy] .shop-step', function () {
     var form = $(this).closest('form');
@@ -724,12 +759,14 @@ $(document).on('submit', '[data-shop-buy]', function (event) {
     }
     setBasketQuantity(variant, basketQuantity(variant) + adding);
     form.find('.shop-quantity-value').text('1');
-    var added = form.find('.shop-added').prop('hidden', false)[0];
+    var added = showAdded(form);
     updateBuyForm(form);
-    // (brought into sight in the panel, where it can open below the fold)
+    // (brought into sight in the panel, where it can open below the fold:
+    // scrolled to where its bottom will be once it has unfolded)
     var scroller = $(added).closest('.shop-panel-body')[0];
     if (scroller) {
-        var below = added.getBoundingClientRect().bottom + 24 - scroller.getBoundingClientRect().bottom;
+        var fullHeight = added.querySelector('.shop-added-fold').scrollHeight;
+        var below = added.getBoundingClientRect().top + fullHeight + 24 - scroller.getBoundingClientRect().bottom;
         if (below > 0) {
             scroller.scrollTo({ top: scroller.scrollTop + below, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
         }

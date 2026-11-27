@@ -3086,8 +3086,26 @@ a.shop-button {
   transform: none;
 }
 
-/* After "Add to basket": on to the basket, or back to the shop */
+/* After "Add to basket": on to the basket, or back to the shop.
+   It unfolds under the button (is-shown, shop.js showAdded): the room opens,
+   the card settles into it, then the tick draws itself and the words and
+   links follow one after another. Unhurried on purpose. */
 .shop-added {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.7s var(--ease-out-soft);
+}
+
+.shop-added.is-shown {
+  grid-template-rows: 1fr;
+}
+
+.shop-added-fold {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shop-added-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3101,10 +3119,70 @@ a.shop-button {
 }
 
 .shop-added p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-basis: 100%;
   margin: 0;
   font-size: 0.92rem;
   color: var(--color-ink);
+}
+
+.shop-added-tick {
+  flex: none;
+  color: var(--amb-green);
+}
+
+.shop-added-tick path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+/* (animations that only hold their first frame while waiting, so the
+   buttons keep their own hover once they've arrived) */
+.shop-added.is-shown .shop-added-card {
+  animation: shop-added-settle 0.8s var(--ease-out-soft) 0.05s backwards;
+}
+
+.shop-added.is-shown p span,
+.shop-added.is-shown .shop-added-card > a,
+.shop-added.is-shown .shop-added-card > button {
+  animation: shop-added-rise 0.6s var(--ease-out-soft) backwards;
+}
+
+.shop-added.is-shown p span { animation-delay: 0.3s; }
+.shop-added.is-shown .shop-added-card > a { animation-delay: 0.42s; }
+.shop-added.is-shown .shop-added-card > button { animation-delay: 0.52s; }
+
+.shop-added.is-shown .shop-added-tick path {
+  animation: shop-tick-draw 0.55s var(--ease-out-soft) 0.32s forwards;
+}
+
+@keyframes shop-added-settle {
+  from { opacity: 0; transform: translateY(-10px); }
+}
+
+@keyframes shop-added-rise {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+@keyframes shop-tick-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-added {
+    transition: none;
+  }
+
+  .shop-added.is-shown *,
+  .shop-added.is-shown .shop-added-card {
+    animation: none !important;
+  }
+
+  .shop-added-tick path {
+    stroke-dashoffset: 0;
+  }
 }
 
 .shop-button-quiet,

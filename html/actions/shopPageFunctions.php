@@ -385,9 +385,15 @@ function shopRenderBuying($product, $settings)
     $html .= '<p class="shop-left" data-shop-left' . ($left === null ? ' hidden' : '') . '>' . ($left === null ? '' : 'Only ' . $left . ' left') . '</p>'
         . '<button type="submit" class="shop-button">Add to basket</button>'
         . shopRenderTestNote()
-        . '<div class="shop-added" role="status" hidden><p>Added to your basket.</p>'
+        // (unfolds under the button: shop.js showAdded, ambar.css .shop-added)
+        . '<div class="shop-added" role="status" hidden><div class="shop-added-fold"><div class="shop-added-card">'
+        . '<p><svg class="shop-added-tick" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">'
+        . '<circle cx="9" cy="9" r="8.25" stroke="currentColor" stroke-width="1"/>'
+        . '<path d="M5.4 9.3l2.4 2.4 4.8-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></svg>'
+        . '<span>Added to your basket.</span></p>'
         . '<a href="/shop/basket" class="shop-button shop-button-quiet" data-shop-nav>View basket</a>'
-        . '<button type="button" class="shop-keep-browsing" data-shop-panel-close>Keep browsing</button></div>'
+        . '<button type="button" class="shop-keep-browsing" data-shop-panel-close>Keep browsing</button>'
+        . '</div></div></div>'
         . '</form>';
     return $html;
 }
