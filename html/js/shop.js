@@ -759,21 +759,85 @@ $(document).on('submit', '[data-shop-buy]', function (event) {
     }
     setBasketQuantity(variant, basketQuantity(variant) + adding);
     form.find('.shop-quantity-value').text('1');
-    var added = showAdded(form);
     updateBuyForm(form);
-    // (brought into sight in the panel, where it can open below the fold:
-    // scrolled to where its bottom will be once it has unfolded)
+    $('#basketPill, .shop-panel-basket').addClass('is-bumped');
+    setTimeout(function () { $('#basketPill, .shop-panel-basket').removeClass('is-bumped'); }, 500);
+
+    // On phones the button sits near the bottom of the sheet, so the note
+    // would unfold out of sight and only be seen once it had finished. The
+    // sheet glides up first to make room, and the note unfolds in view.
+    var added = form.find('.shop-added')[0];
     var scroller = $(added).closest('.shop-panel-body')[0];
-    if (scroller) {
-        var fullHeight = added.querySelector('.shop-added-fold').scrollHeight;
-        var below = added.getBoundingClientRect().top + fullHeight + 24 - scroller.getBoundingClientRect().bottom;
+    var wasOpen = !added.hidden && added.classList.contains('is-shown');
+    if (added.gliding) {
+        return; // (tapped again on the way: it opens when the glide ends)
+    }
+    clearTimeout(added.foldTimer);
+    added.hidden = false; // (still folded shut: it can be measured now)
+    var fullHeight = added.querySelector('.shop-added-fold').scrollHeight;
+    var below = scroller
+        ? added.getBoundingClientRect().top + fullHeight + 24 - scroller.getBoundingClientRect().bottom
+        : 0;
+    if (below <= 0 || wasOpen || prefersReducedMotion()) {
+        showAdded(form);
         if (below > 0) {
             scroller.scrollTo({ top: scroller.scrollTop + below, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
         }
+        return;
     }
-    $('#basketPill, .shop-panel-basket').addClass('is-bumped');
-    setTimeout(function () { $('#basketPill, .shop-panel-basket').removeClass('is-bumped'); }, 500);
+    glideOpen(form, added, scroller, below);
 });
+
+var SHOP_GLIDE_MS = 520;
+
+function glideOpen(form, added, scroller, distance) {
+    // Room below the end of the sheet if it has too little left to scroll
+    // (given back once the note has unfolded and takes that room itself)
+    var short = distance - (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop);
+    if (short > 0) {
+        var padding = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
+        scroller.style.paddingBottom = (padding + short) + 'px';
+    }
+    added.gliding = true;
+    var from = scroller.scrollTop;
+    var started = null;
+    var stopped = false;
+    var stop = function () {
+        stopped = true;
+    };
+    // (a finger or a wheel on the sheet takes over at once)
+    scroller.addEventListener('touchstart', stop, { once: true, passive: true });
+    scroller.addEventListener('wheel', stop, { once: true, passive: true });
+    var finish = function () {
+        scroller.removeEventListener('touchstart', stop);
+        scroller.removeEventListener('wheel', stop);
+        added.gliding = false;
+        showAdded(form);
+        if (short > 0) {
+            setTimeout(function () {
+                scroller.style.paddingBottom = '';
+            }, SHOP_ADDED_MS + 100);
+        }
+    };
+    var step = function (now) {
+        if (stopped) {
+            finish();
+            return;
+        }
+        if (started === null) {
+            started = now;
+        }
+        var t = Math.min(1, (now - started) / SHOP_GLIDE_MS);
+        var eased = 1 - Math.pow(1 - t, 3); // (eases to a stop, like the panel)
+        scroller.scrollTop = from + distance * eased;
+        if (t < 1) {
+            requestAnimationFrame(step);
+        } else {
+            finish();
+        }
+    };
+    requestAnimationFrame(step);
+}
 
 // A work that's for sale: the link under it in the viewer goes to the shop
 $(document).on('click', '#imageShop', function (event) {
