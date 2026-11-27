@@ -742,7 +742,7 @@ function renderWorks() {
         }
         if (keepServerDrawn) {
             galleryItems = worksInDrawnOrder(projects);
-            fadeInArrivals(content);
+            prepareArrivals(content);
             viewReady = true;
             return;
         }
@@ -780,7 +780,7 @@ function renderWorks() {
         });
 
         galleryItems = items;
-        fadeInArrivals(content);
+        prepareArrivals(content);
         viewReady = true;
     }, function () {
         if (currentView === 'works') {
@@ -800,58 +800,104 @@ function createProjectElement(project) {
     return section;
 }
 
-// A painting that hasn't arrived by the time its card is on the page waits
-// as a soft space its own size. Most land before anyone has looked at that
-// space (still below the screen, or only just scrolled to): those simply
-// appear, since fading in a painting that is already here reads as a white
-// flash. Only one somebody has been waiting for fades in, quickly. Only the
-// lazy ones: the first couple load straight away, and one the browser
-// already has simply shows. No extra downloads. ambar.css: "A painting on
-// its way".
+// The paintings further down the Works, so a fast scroll rarely meets an
+// empty space:
+//  - each starts downloading well before it's reached (FETCH_AHEAD), not
+//    only a screen or so ahead, as the browser would on its own;
+//  - each is unpacked (decoded) a little before it reaches the screen
+//    (DECODE_AHEAD), so drawing it then costs nothing;
+//  - while one is still on its way, its space shows the painting's small
+//    400px copy (it arrives almost at once), softened by being stretched,
+//    and the painting settles in sharp on top of it.
+// A painting that lands before anyone has looked at its space simply
+// appears (a fade there reads as a flash); only one somebody has been
+// waiting for fades in over its preview, quickly. The first couple load
+// straight away and aren't touched. ambar.css: "A painting on its way".
 var ARRIVAL_WAITED_MS = 150; // on screen this long before it landed: fade it in
 var ARRIVAL_FADE_MS = 350;   // the fade in ambar.css (.is-landing)
+var FETCH_AHEAD = '250% 0px';  // start downloading two and a half screens ahead
+var DECODE_AHEAD = '120% 0px'; // unpack about a screen ahead
 
-var arrivalWatcher = null;
+var arrivalWatchers = [];
 
-function fadeInArrivals(root) {
-    // When each waiting space came into sight (0: not in sight). One watcher
-    // at a time: the cards of an earlier drawing are gone.
-    if (arrivalWatcher) {
-        arrivalWatcher.disconnect();
-    }
-    var watcher = arrivalWatcher = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-            entry.target.seenAt = entry.isIntersecting ? (entry.target.seenAt || performance.now()) : 0;
-        });
-    }) : null;
+function prepareArrivals(root) {
+    // One set of watchers at a time: the cards of an earlier drawing are gone
+    arrivalWatchers.forEach(function (watcher) {
+        watcher.disconnect();
+    });
+    arrivalWatchers = [];
+    var watching = 'IntersectionObserver' in window;
+    var watch = function (margin, reached) {
+        if (!watching) {
+            return null;
+        }
+        var watcher = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                reached(entry.target, entry.isIntersecting, watcher);
+            });
+        }, { rootMargin: margin });
+        arrivalWatchers.push(watcher);
+        return watcher;
+    };
+    // When each waiting space came into sight (0: not in sight)
+    var sight = watch('0px', function (card, inSight) {
+        card.seenAt = inSight ? (card.seenAt || performance.now()) : 0;
+    });
+    var fetching = watch(FETCH_AHEAD, function (card, near, watcher) {
+        if (near) {
+            watcher.unobserve(card);
+            showPreview(card);
+            card.querySelector('img').loading = 'eager';
+        }
+    });
+    var decoding = watch(DECODE_AHEAD, function (card, near, watcher) {
+        var img = card.querySelector('img');
+        if (near && img && img.decode) {
+            watcher.unobserve(card);
+            img.decode().catch(function () {}); // (a picture that never comes is handled below)
+        }
+    });
 
     $(root).find('.projectWorks .img-container img').each(function () {
         var img = this;
-        if (img.loading !== 'lazy' || (img.complete && img.naturalWidth)) {
+        if (img.loading !== 'lazy') {
             return;
         }
         var card = img.parentNode;
+        if (decoding) {
+            decoding.observe(card);
+        }
+        if (img.complete) {
+            return; // (already here: only unpacking left; or already failed, and nothing is coming)
+        }
         var errors = 0;
         function arrived() {
             if (!card.classList.contains('is-arriving')) {
                 return;
             }
-            if (watcher) {
-                watcher.unobserve(card);
+            if (sight) {
+                sight.unobserve(card);
+            }
+            if (fetching) {
+                fetching.unobserve(card);
             }
             var waited = card.seenAt && performance.now() - card.seenAt >= ARRIVAL_WAITED_MS;
+            card.classList.remove('is-arriving');
             if (waited) {
                 card.classList.add('is-landing');
                 setTimeout(function () {
                     card.classList.remove('is-landing');
+                    card.style.backgroundImage = '';
                 }, ARRIVAL_FADE_MS + 50);
+            } else {
+                card.style.backgroundImage = '';
             }
-            card.classList.remove('is-arriving');
         }
         card.seenAt = 0;
         card.classList.add('is-arriving');
-        if (watcher) {
-            watcher.observe(card);
+        if (sight) {
+            sight.observe(card);
+            fetching.observe(card);
         }
         img.addEventListener('load', arrived);
         // The first error swaps in the original (the error handler above),
@@ -862,6 +908,19 @@ function fadeInArrivals(root) {
             }
         });
     });
+}
+
+// The painting's small copy as the background of its waiting space. Only
+// for paintings bigger than it (a small one is its own preview), and only
+// once it's near: the copy is fetched as soon as it's set.
+function showPreview(card) {
+    var img = card.querySelector('img');
+    var original = img && img.getAttribute('data-original');
+    if (!card.classList.contains('is-arriving') || !original || !img.srcset) {
+        return;
+    }
+    var preview = original.replace(/^\/baseImages\//, '/thumbnails/');
+    card.style.backgroundImage = 'url("' + preview.replace(/"/g, '%22') + '")';
 }
 
 // Each work is a real link to its own address, so it can be opened in a new

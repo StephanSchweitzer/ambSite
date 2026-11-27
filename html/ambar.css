@@ -1341,16 +1341,22 @@ html:has(#imagesAndContent[data-view="home"]) {
 }
 
 /* ---------- A painting on its way ----------
-   fadeInArrivals() in photoFunctions.js marks a card whose painting hasn't
-   loaded yet: a soft paper-coloured space of the painting's size. A
+   prepareArrivals() in photoFunctions.js marks a card whose painting hasn't
+   loaded yet: a soft paper-coloured space of the painting's size, which
+   shows the painting's small copy once it's near (showPreview(), set as
+   the background inline; stretched to the card, it reads softened). A
    painting that lands before anyone has been looking at its space simply
-   appears (a fade there reads as a white flash); only one somebody has
-   been waiting for fades in (.is-landing), over the paper colour, never
-   from white. Never fully transparent: browsers stop drawing at 0 and need
-   frames to catch up (VIEWER_MIN_OPACITY in photoFunctions.js). */
+   appears (a fade there reads as a flash); only one somebody has been
+   waiting for fades in (.is-landing), over its preview or the paper
+   colour, never from white. Never fully transparent: browsers stop drawing
+   at 0 and need frames to catch up (VIEWER_MIN_OPACITY in
+   photoFunctions.js). */
 .projectWorks .img-container.is-arriving,
 .projectWorks .img-container.is-landing {
   background-color: var(--color-paper);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .projectWorks .img-container.is-arriving img {
