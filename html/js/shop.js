@@ -1391,7 +1391,7 @@ function startCheckout(answer, country, noStripeJs) {
         shopTemplate('shopTestNote') +
         '<p class="basket-note">Payments are processed securely by Stripe.</p>' +
         '</form></div></div>');
-    window.scrollTo(0, 0);
+    instantScrollTo(0); // photoFunctions.js: a jump, never a glide up
 
     var fail = function (message) {
         if (!state.ended) {

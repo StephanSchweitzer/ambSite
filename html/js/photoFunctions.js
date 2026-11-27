@@ -225,13 +225,23 @@ function isTouchScreen() {
 }
 
 // The page has smooth scrolling for in-page jumps, but putting the page back
-// where it was must be instant, or it visibly glides down from the top
+// where it was must be instant, or it visibly glides down from the top (and
+// a new page, like the shop after the works, glides up from far down).
+// behavior 'instant' is what overrides the stylesheet: switching the style
+// off around the call isn't enough, Chrome still glides.
 function instantScrollTo(y) {
-    var html = document.documentElement;
-    var previous = html.style.scrollBehavior;
-    html.style.scrollBehavior = 'auto';
-    window.scrollTo(0, Math.max(0, y));
-    html.style.scrollBehavior = previous;
+    var top = Math.max(0, y);
+    try {
+        window.scrollTo({ top: top, left: 0, behavior: 'instant' });
+    } catch (e) {
+        // (older browsers that don't know 'instant')
+        var html = document.documentElement;
+        var previous = html.style.scrollBehavior;
+        html.style.scrollBehavior = 'auto';
+        void getComputedStyle(html).scrollBehavior; // (makes the browser see it)
+        window.scrollTo(0, top);
+        html.style.scrollBehavior = previous;
+    }
 }
 
 function currentScrollY() {
