@@ -111,6 +111,34 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Computers: the warm ground (the menu column and the strip of wall on the
+   right) is a still layer of its own behind everything, painted once.
+   Laid on the page itself it slid under the fixed menu with every scroll,
+   so scrolling the works quickly - with paintings arriving and the
+   browser busy - had that strip redrawn non-stop, and the menu column
+   flickered. The plain colour stays on html for anything past the edges. */
+@media (min-width: 993px) {
+  html {
+    background-color: var(--color-surround);
+  }
+
+  body {
+    background: transparent;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--color-surround);
+    background-image: var(--surround-dots);
+    background-size: 22px 22px;
+    pointer-events: none;
+    will-change: transform;
+  }
+}
+
 /* The tape scraps on the right-hand works reach a few pixels past a phone's
    edge. iPhones ignore body's overflow-x and let the page be dragged
    sideways, so trim at the page wrapper too. clip (not hidden) keeps it from
