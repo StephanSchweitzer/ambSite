@@ -130,7 +130,9 @@ function drawBasketPill() {
 // Called by renderView() in photoFunctions.js. Returns a promise that
 // resolves once the page is on screen. options.turn: arriving from another
 // page, the old one fades away first and the shop rises in (turnPageOut in
-// photoFunctions.js), at options.scrollY or the top.
+// photoFunctions.js), at options.scrollY or the top. Only the shop's front
+// page turns here, so it can be fetched while the old page fades; the
+// shop's other pages are turned to by turnToPage() in photoFunctions.js.
 function renderShopPage(view, path, options) {
     options = options || {};
     var onlyThePanel = shopPanelMove(view);

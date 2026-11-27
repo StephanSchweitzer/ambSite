@@ -382,7 +382,7 @@ function setupResponsiveLayout() {
     isMobile = mobile;
 
     // The About page has a stacked layout for narrower screens
-    if (currentView === 'about' && viewReady && aboutLayout !== (window.innerWidth <= 1206 ? 'stacked' : 'side')) {
+    if (onPage('about') && aboutLayout !== (window.innerWidth <= 1206 ? 'stacked' : 'side')) {
         renderAbout(true);
     }
 }
@@ -428,20 +428,42 @@ function isShopView(view) {
 
 // True when that page is the one already on screen. Each shop item has its
 // own address but the same view, so for the shop the address has to match too.
+// While the page is turning, the page it's turning to counts as the one shown.
 function isShowing(view, route) {
+    if (pageTurn) {
+        return view === pageTurn.view && (!isShopView(view) || route.path === pageTurn.path);
+    }
     return view === currentView && (!isShopView(view) || route.path === shownPath);
+}
+
+// That page is on screen, drawn, and not about to be turned away from
+function onPage(view) {
+    return currentView === view && viewReady && !pageTurn;
 }
 
 var shopDrawing = null; // the shop page being drawn: { path, promise }
 
 // Draws a page (without touching the address bar). Returns a promise that
 // resolves once the page's content is on screen.
-// options.turn: the shop arrives with a turn of the page (turnPageOut), at
-// options.scrollY (default the top)
+// options.turn: the page arrives with a turn of the page (turnPageOut), at
+// options.scrollY or options.section (default the top)
 function renderView(view, route, options) {
+    options = options || {};
+    if (pageTurn && isShowing(view, route)) {
+        return pageTurn.promise; // (asked for again while the page turns to it)
+    }
     if (isShowing(view, route) && viewReady) {
         return $.Deferred().resolve().promise();
     }
+    // The shop's front page turns by itself (renderShopPage), fetching while
+    // the old page fades; every other page turns here
+    if (options.turn && view !== 'shop') {
+        return turnToPage(view, route, options);
+    }
+    return drawView(view, route, options);
+}
+
+function drawView(view, route, options) {
     if (isShopView(view)) {
         // (asked for again while it's still being drawn, e.g. Shop clicked
         // twice as the page turns: the drawing under way carries on)
@@ -475,16 +497,16 @@ function goTo(path, options) {
     var view = route.view;
     // (opening or closing a shop item's panel keeps the shop where it is)
     var changingPage = !isShowing(view, route) && !shopPanelMove(view);
-    // Into the shop from another page: the page turns (and goes to the top
-    // itself, once the old page has faded)
-    var turning = changingPage && !options.section && turnsToShop(view);
+    // Onto another page: the page turns (and goes to the top, or the
+    // section, itself, once the old page has faded)
+    var turning = changingPage && !route.workId;
 
     if (path !== location.pathname) {
         rememberScroll();
         history.pushState($.extend({}, options.state, { path: path }), '', path);
     }
 
-    var ready = renderView(view, route, { turn: turning });
+    var ready = renderView(view, route, { turn: turning, section: options.section });
     if (changingPage && !options.section && !turning) {
         instantScrollTo(0);
     }
@@ -505,7 +527,7 @@ window.addEventListener('popstate', function (event) {
     var state = event.state || {};
 
     // Forward into a painting that's on the page already
-    if (route.workId && currentView === 'works' && viewReady) {
+    if (route.workId && onPage('works')) {
         openSharedWork(route.workId, { fromHistory: true });
         return;
     }
@@ -527,7 +549,7 @@ window.addEventListener('popstate', function (event) {
         return;
     }
 
-    var turning = turnsToShop(view);
+    var turning = !route.workId;
     renderView(view, route, { turn: turning, scrollY: state.scrollY }).then(function () {
         if (currentView !== view) {
             return; // (the visitor has moved on meanwhile)
@@ -543,14 +565,10 @@ window.addEventListener('popstate', function (event) {
     }
 });
 
-// Going to the shop's front page from a page that isn't the shop
-function turnsToShop(view) {
-    return view === 'shop' && !isShopView(currentView);
-}
-
 function setView(view) {
     leaveCheckout(view); // shop.js: a payment left unfinished is given up
     leaveShopPanel(view); // shop.js: an item's panel closes when the shop does
+    pageTurn = null; // (a turn under way is overtaken by whatever is drawn now)
     endPageTurn();
     var main = document.getElementById('imagesAndContent');
     pageIsServerDrawn = main.getAttribute('data-server-view') === view;
@@ -575,19 +593,81 @@ function setPageTitle(title) {
 }
 
 // --------------------------------------------------------------------------
-// Turning the page (going to the shop)
+// Turning the page (going from one page to another)
 // --------------------------------------------------------------------------
 //
-// Going to the shop from another page: what's on the sheet fades away where
-// it is (nothing scrolls), the shop is put in its place unseen, already at
-// the top, with its first pictures ready, and then rises gently into view.
-// Nothing jumps and nothing is seen half drawn. renderShopPage() (shop.js)
-// drives it; ambar.css: "Turning the page".
+// Every move to another page: what's on the sheet fades away where it is
+// (nothing scrolls), the new page is put in its place unseen, already at the
+// top (or where Back left it, or at the project asked for), with its first
+// pictures ready, and then rises gently into view. Nothing jumps and nothing
+// is seen half drawn. turnToPage() drives it for every page but the shop's
+// front, which renderShopPage() (shop.js) turns itself; ambar.css: "Turning
+// the page". Not for the first page of a visit, an item's panel opening or
+// closing over the shop, or a painting's own address (it opens the viewer).
 var PAGE_OUT_MS = 200;            // the fade out in ambar.css (.page-out)
 var PAGE_IN_MS = 560;             // the rise in ambar.css (.page-rising)
 var PAGE_PICTURES_WAIT_MS = 450;  // the longest the new page waits for its first pictures
+var PAGE_SLOW_MS = 700;           // a page still loading this long after the fade rises with its spinner
 var pageTurnTimer = null;
 var pageTurnToken = 0; // a rise only starts for the latest page put in place
+var pageTurn = null;   // the page being turned to while the old one fades: { view, path, promise }
+
+// The data each page draws from, asked for as the old page starts fading
+// (each is fetched once a visit, so this costs nothing when it's here)
+function fetchAheadFor(view) {
+    if (view === 'works') {
+        fetchPublicWorks('projects');
+    } else if (view === 'home') {
+        fetchPublicWorks('carousel');
+    } else if (view === 'current-project') {
+        fetchPublicWorks('currentProject');
+    } else if (view === 'about') {
+        fetchAboutMe();
+    }
+}
+
+function turnToPage(view, route, options) {
+    var content = $('#imagesAndContent');
+    var arrived = $.Deferred();
+    var turn = { view: view, path: route.path, promise: arrived.promise() };
+    fetchAheadFor(view);
+    turnPageOut(content).then(function () {
+        if (pageTurn !== turn) {
+            return; // (another page was asked for meanwhile)
+        }
+        // The new page is drawn under the faded sheet: setView() takes the
+        // classes off, so they go straight back on before anything is painted
+        var drawing = drawView(view, route, {});
+        content.addClass('page-in');
+        var stillHere = function () {
+            return !pageTurn && currentView === view && (!isShopView(view) || shownPath === route.path);
+        };
+        var risen = false;
+        var rise = function () {
+            if (risen || !stillHere()) {
+                return $.Deferred().resolve().promise();
+            }
+            risen = true;
+            var y = options.scrollY;
+            var section = options.section && document.getElementById(options.section);
+            if (section) {
+                // (where scrollToSection() puts it, less the few pixels the
+                // waiting page is lowered by)
+                var lowered = new DOMMatrix(getComputedStyle(content.children()[0]).transform).m42 || 0;
+                y = section.getBoundingClientRect().top - lowered + window.pageYOffset - 100;
+            }
+            return turnPageIn(content, y);
+        };
+        // (slow to come: the spinner rises in, and the page replaces it)
+        var slow = setTimeout(rise, PAGE_SLOW_MS);
+        drawing.always(function () {
+            clearTimeout(slow);
+            rise().then(arrived.resolve);
+        });
+    });
+    pageTurn = turn;
+    return turn.promise;
+}
 
 function turnPageOut(content) {
     endPageTurn();
@@ -3520,7 +3600,7 @@ function spawnNewsletterFloat() {
 // the top of them, so the tap always does something you can see (on a
 // computer it opens and closes the list of projects instead).
 function getProjectsAndWorks() {
-    if (window.innerWidth <= BREAKPOINT && currentView === 'works' && viewReady && location.pathname === '/select-works') {
+    if (window.innerWidth <= BREAKPOINT && onPage('works') && location.pathname === '/select-works') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return $.Deferred().resolve().promise();
     }
@@ -3542,7 +3622,7 @@ function loadShop() {
 // Menu link to one project: show the works and scroll to that project
 function loadProjectSection(sectionId) {
     ensureDropdownOpen('selectProjectCategories');
-    if (currentView === 'works' && viewReady) {
+    if (onPage('works')) {
         if (location.pathname !== '/select-works') {
             history.replaceState({ path: '/select-works' }, '', '/select-works');
         }

@@ -774,10 +774,10 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   pointer-events: none;
 }
 
-/* ---------- Turning the page (going to the shop) ----------
+/* ---------- Turning the page (going from one page to another) ----------
    turnPageOut() / turnPageIn() in photoFunctions.js. What's on the sheet
    fades where it is; the sheet itself stays, so the wall never shows
-   through. The shop is put in its place unseen, at the top, then rises a
+   through. The new page is put in its place unseen, at the top, then rises a
    few pixels into view. Never fully transparent: browsers stop drawing at
    0 and need frames to catch up (VIEWER_MIN_OPACITY). */
 #imagesAndContent.page-out > * {
