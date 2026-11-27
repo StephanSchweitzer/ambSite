@@ -1385,13 +1385,13 @@ html:has(#imagesAndContent[data-view="home"]) {
   pointer-events: none;
   filter: drop-shadow(0 1px 1.5px rgba(29, 29, 27, 0.14));
   /* where the scrap sits (--tape-at, per pattern below), then how far it's
-     peeled up (--tape-peel, only while its painting is in the viewer) */
+     folded back (--tape-peel, only while its painting is in the viewer) */
   /* (flat at rest: a 3D transform, even one doing nothing, would give every
      scrap on the page its own layer, which phones pay for in memory) */
   transform: var(--tape-at) var(--tape-peel, translate(0, 0));
   /* Laying back down: a touch past flat and back, as if pressed on with a
      finger. The second scrap follows the first. */
-  transition: transform 0.55s cubic-bezier(0.3, 1.45, 0.5, 1), filter 0.4s ease;
+  transition: transform 0.5s cubic-bezier(0.3, 1.22, 0.5, 1);
 }
 
 .projectWorks .work-card:after {
@@ -1434,23 +1434,46 @@ html:has(#imagesAndContent[data-view="home"]) {
   --tape-at: translate(50%, 50%) rotate(-42deg);
 }
 
-/* Opening a painting peels its tape up (liftTape() in photoFunctions.js):
-   each scrap lifts one end off the paper, hinged on the other end, the
-   first scrap its left end and the second its right. Putting the painting
-   back lays the tape down again (the transition above). */
+/* Opening a painting folds its tape back off it (liftTape() in
+   photoFunctions.js), so the painting can lift off the page without passing
+   through the tape. Each scrap turns over about its outer long edge, the
+   one furthest from the middle of the painting, and lies on the paper
+   beyond it: the strip along the top folds up, a corner scrap folds back
+   away from its corner. Putting the painting back folds it over again and
+   presses it down (the transition above).
+   --tape-hinge: that edge, as a share of the scrap's height from its
+   middle (-50% the top edge, 50% the bottom); --tape-fold: which way over,
+   always up towards the viewer, never through the paper; --tape-clear: a
+   few pixels further out once folded, because on narrow screens a corner
+   scrap's outer edge still lies a little inside the painting's corner. */
+.projectWorks .work-card:before,
+.projectWorks .work-card:after {
+  --tape-hinge: -50%;
+  --tape-fold: 180deg;
+  --tape-clear: -9px;
+}
+
+.projectWorks .work-card:nth-child(3n+2):after,
+.projectWorks .work-card:nth-child(3n+3):after {
+  --tape-hinge: 50%;
+  --tape-fold: -180deg;
+  --tape-clear: 9px;
+}
+
+/* (.tape-ready: the fold's own steps at nothing, set just before it, so the
+   fold turns about its edge instead of being guessed between two unlike
+   transforms; taken off again once the tape is back down) */
+.projectWorks .work-card.tape-ready:before,
+.projectWorks .work-card.tape-ready:after {
+  --tape-peel: translateY(0) translateY(var(--tape-hinge)) perspective(400px) rotateX(0deg) translateY(calc(var(--tape-hinge) * -1));
+}
+
+/* Quick, so the painting isn't kept waiting: TAPE_FOLD_MS in
+   photoFunctions.js is this duration */
 .projectWorks .work-card.tape-up:before,
 .projectWorks .work-card.tape-up:after {
-  filter: drop-shadow(0 7px 6px rgba(29, 29, 27, 0.26));
-  transition: transform 0.26s cubic-bezier(0.3, 0.7, 0.4, 1), filter 0.26s ease;
-}
-
-.projectWorks .work-card.tape-up:before {
-  --tape-peel: translateX(calc(var(--tape-w) / 2)) perspective(320px) rotateY(40deg) translateX(calc(var(--tape-w) / -2));
-}
-
-.projectWorks .work-card.tape-up:after {
-  --tape-peel: translateX(calc(var(--tape-w) / -2)) perspective(320px) rotateY(-40deg) translateX(calc(var(--tape-w) / 2));
-  transition-delay: 0.05s;
+  --tape-peel: translateY(var(--tape-clear)) translateY(var(--tape-hinge)) perspective(400px) rotateX(var(--tape-fold)) translateY(calc(var(--tape-hinge) * -1));
+  transition: transform 0.16s cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

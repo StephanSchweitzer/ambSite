@@ -57,7 +57,8 @@ var viewer = {
     afterOpening: null,      // swap in the sharper copy once the opening has finished
     source: null,            // { index, img }: the picture on the page it grew out of
     hiddenInPage: [],        // pictures on the page hidden while their twin is in the viewer
-    tapeUp: [],              // cards whose tape is peeled up while their painting is out (liftTape)
+    tapeUp: [],              // cards whose tape is folded back while their painting is out (liftTape)
+    tapeWait: null,          // an opening waiting for the tape to finish folding (waitForTape)
     hidingNow: false,        // closeViewer's own final, instant hide
     room: 0,                 // height left for the painting (fitViewerToScreen)
     loading: null            // { work, src }: the copy being shown / loaded
@@ -841,6 +842,10 @@ function openViewer(items, index, options) {
     if (!items.length) {
         return;
     }
+    // A taped-up painting waits for its tape to fold back off it
+    if (!viewer.open && waitForTape(items, index, options)) {
+        return;
+    }
     if (viewer.closing) {
         finishClosing();
     }
@@ -857,7 +862,6 @@ function openViewer(items, index, options) {
         if (!preopened) {
             document.getElementById('popUpImage').removeAttribute('src');
             source = pageImageToGrowFrom(options.from);
-            liftTape(options.from);
         }
         var here = parseRoute(location.pathname);
         viewer.basePath = here.workId ? '/select-works' : here.path;
@@ -977,33 +981,106 @@ function showInPage() {
     viewer.hiddenInPage = [];
 }
 
-// The tape holding a painting to the page peels up as the painting comes off
-// it, and is pressed back down once it's back (the motion itself is CSS:
-// .work-card.tape-up in ambar.css). Only the Works galleries have tape.
+// ---------- The tape lets go of the painting ----------
+// The viewer's copy of a painting is drawn over the whole page, tape
+// included, so if it grew out of a taped-up painting it would pass straight
+// through the tape. Instead the tape folds back off the painting first, onto
+// the paper round it, and the painting lifts off only once it's clear. When
+// the painting is put back the tape folds over it again and is pressed down.
+// The motion itself is CSS (.work-card.tape-up in ambar.css); only the Works
+// galleries have tape.
+var TAPE_FOLD_MS = 160; // = the .tape-up transition in ambar.css
+
+// Folds a card's tape back. Returns the card (also when it's already folded),
+// or null where there's no tape to fold.
 function liftTape(el) {
     if (!el || prefersReducedMotion() || VT.noAnim) {
-        return;
+        return null;
     }
     var card = $(el).closest('.projectWorks .work-card')[0];
-    if (!card || viewer.tapeUp.indexOf(card) !== -1) {
-        return;
+    if (!card) {
+        return null;
     }
-    card.classList.add('tape-up');
-    viewer.tapeUp.push(card);
+    if (viewer.tapeUp.indexOf(card) === -1) {
+        clearTimeout(card.tapeRestTimer);
+        // The tape is flat (2D) at rest; give it the fold's own steps at
+        // nothing first, so the fold turns about its edge rather than
+        // being guessed between two unlike transforms
+        card.classList.add('tape-ready');
+        void getComputedStyle(card, '::before').transform;
+        card.classList.add('tape-up');
+        card.tapeFoldedAt = performance.now();
+        viewer.tapeUp.push(card);
+    }
+    return card;
 }
 
-function pressTapeDown() {
-    var cards = viewer.tapeUp;
-    viewer.tapeUp = [];
+// Lays the tape back down: all of it, or all but `keep`
+function pressTapeDown(keep) {
+    var cards = viewer.tapeUp.filter(function (card) {
+        return card !== keep;
+    });
+    viewer.tapeUp = keep && viewer.tapeUp.indexOf(keep) !== -1 ? [keep] : [];
     // A moment after the painting has landed, not in the same instant
     setTimeout(function () {
         cards.forEach(function (card) {
-            if (viewer.tapeUp.indexOf(card) === -1) { // (unless it's out again)
-                card.classList.remove('tape-up');
+            if (viewer.tapeUp.indexOf(card) !== -1) {
+                return; // (it's out again)
             }
+            card.classList.remove('tape-up');
+            // ...and back to flat once it has settled
+            card.tapeRestTimer = setTimeout(function () {
+                card.classList.remove('tape-ready');
+            }, 800);
         });
     }, 40);
 }
+
+// Before a painting opens: true when the opening has to wait for its tape
+// to finish folding back (openViewer is called again when it has)
+function waitForTape(items, index, options) {
+    var waiting = viewer.tapeWait;
+    clearTimeout(waiting);
+    viewer.tapeWait = null;
+    var card = liftTape(options.from);
+    if (waiting) {
+        pressTapeDown(card); // a painting clicked while another was waiting
+    }
+    if (!card) {
+        return false;
+    }
+    var left = TAPE_FOLD_MS - (performance.now() - card.tapeFoldedAt);
+    if (left < 16) {
+        return false;
+    }
+    viewer.tapeWait = setTimeout(function () {
+        viewer.tapeWait = null;
+        openViewer(items, index, options);
+    }, left);
+    return true;
+}
+
+// With a mouse, the tape starts folding as the button goes down, so most of
+// the fold is over by the time the click arrives. If it turns out not to be
+// a click (the mouse is dragged off), the tape goes back down.
+$(document).on('pointerdown', '.projectWorks .work-card', function (event) {
+    if (event.pointerType !== 'mouse' || event.button !== 0 ||
+        event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || viewer.open) {
+        return;
+    }
+    var card = liftTape(this);
+    if (!card) {
+        return;
+    }
+    $(document).one('pointerup pointercancel', function () {
+        // (the click, if there is one, comes straight after the pointerup)
+        setTimeout(function () {
+            if (!viewer.open && !viewer.tapeWait) {
+                pressTapeDown();
+            }
+        }, 0);
+    });
+});
 
 // delay: change it part-way through the fade, when the screen is about as
 // dark (or light) as the colour, rather than with a jump at the start
