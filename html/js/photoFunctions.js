@@ -569,7 +569,9 @@ function setView(view) {
     leaveCheckout(view); // shop.js: a payment left unfinished is given up
     leaveShopPanel(view); // shop.js: an item's panel closes when the shop does
     pageTurn = null; // (a turn under way is overtaken by whatever is drawn now)
-    endPageTurn();
+    if (!drawingUnderTurn) {
+        endPageTurn();
+    }
     var main = document.getElementById('imagesAndContent');
     pageIsServerDrawn = main.getAttribute('data-server-view') === view;
     main.removeAttribute('data-server-view');
@@ -611,6 +613,8 @@ var PAGE_SLOW_MS = 700;           // a page still loading this long after the fa
 var pageTurnTimer = null;
 var pageTurnToken = 0; // a rise only starts for the latest page put in place
 var pageTurn = null;   // the page being turned to while the old one fades: { view, path, promise }
+var drawingUnderTurn = false; // turnToPage() is drawing the new page: setView() leaves the classes on
+var afterTurnWaiting = [];    // afterPageTurn()
 
 // The data each page draws from, asked for as the old page starts fading
 // (each is fetched once a visit, so this costs nothing when it's here)
@@ -635,10 +639,16 @@ function turnToPage(view, route, options) {
         if (pageTurn !== turn) {
             return; // (another page was asked for meanwhile)
         }
-        // The new page is drawn under the faded sheet: setView() takes the
-        // classes off, so they go straight back on before anything is painted
-        var drawing = drawView(view, route, {});
-        content.addClass('page-in');
+        // The new page is drawn under the faded sheet, already waiting to
+        // rise, so whatever it starts (the clouds on the home page) can tell
+        content.removeClass('page-out').addClass('page-in');
+        drawingUnderTurn = true;
+        var drawing;
+        try {
+            drawing = drawView(view, route, {});
+        } finally {
+            drawingUnderTurn = false;
+        }
         var stillHere = function () {
             return !pageTurn && currentView === view && (!isShopView(view) || shownPath === route.path);
         };
@@ -700,6 +710,20 @@ function endPageTurn() {
     clearTimeout(pageTurnTimer);
     pageTurnToken++;
     $('#imagesAndContent').removeClass('page-out page-in page-rising');
+    var waiting = afterTurnWaiting;
+    afterTurnWaiting = [];
+    waiting.forEach(function (fn) {
+        fn();
+    });
+}
+
+// Runs fn once the page has finished turning (straight away if it isn't)
+function afterPageTurn(fn) {
+    if (/\bpage-(out|in|rising)\b/.test(document.getElementById('imagesAndContent').className)) {
+        afterTurnWaiting.push(fn);
+    } else {
+        fn();
+    }
 }
 
 // Resolves once the pictures on screen are ready to draw, or after `wait`
@@ -2935,15 +2959,20 @@ function startHomeReveal() {
         first.classList.add('is-settling');
     }
     pauseSlideshow(true);
-    homeRevealTimer = setTimeout(function () {
-        if (first) {
-            first.classList.remove('is-settling');
-        }
-        // (not while a painting is open: closing it starts the slideshow again)
-        if (currentView === 'home' && !viewer.open) {
-            pauseSlideshow(false);
-        }
-    }, HOME_CLOUDS_MS);
+    // Arriving from another page, the cloud holds (ambar.css: paused while
+    // the page turns) and only starts to part once the page has risen
+    afterPageTurn(function () {
+        clearTimeout(homeRevealTimer);
+        homeRevealTimer = setTimeout(function () {
+            if (first) {
+                first.classList.remove('is-settling');
+            }
+            // (not while a painting is open: closing it starts the slideshow again)
+            if (currentView === 'home' && !viewer.open) {
+                pauseSlideshow(false);
+            }
+        }, HOME_CLOUDS_MS);
+    });
 }
 
 function createCarousel(works) {

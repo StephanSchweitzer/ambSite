@@ -1217,6 +1217,18 @@ html:has(#imagesAndContent[data-view="home"]) {
   animation: homeCloudSettle 2400ms var(--ease-out-soft);
 }
 
+/* Arriving from another page, the weather holds still, thick, while the
+   page turns, and only starts to leave once the page has risen
+   (startHomeReveal waits for it too) */
+#imagesAndContent.page-in .home-clouds-veil,
+#imagesAndContent.page-in .home-clouds-bank,
+#imagesAndContent.page-in .carousel-item.is-settling .carousel-pic,
+#imagesAndContent.page-rising .home-clouds-veil,
+#imagesAndContent.page-rising .home-clouds-bank,
+#imagesAndContent.page-rising .carousel-item.is-settling .carousel-pic {
+  animation-play-state: paused;
+}
+
 @keyframes homeCloudVeil {
   0% { opacity: 1; }
   15% { opacity: 0.88; }
