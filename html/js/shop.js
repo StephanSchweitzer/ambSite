@@ -156,6 +156,7 @@ function renderShopPage(view, path) {
     // is being given up: it was drawn with that payment's items as sold)
     if (pageIsServerDrawn && givingUp.state() !== 'pending') {
         adoptPanel(content);
+        fetchCardsInSight();
         var name = panelLayer().find('.shop-item').attr('data-name');
         if (name && view === 'shop-item') {
             setPageTitle(name + ' - Shop - Ambar Velasco');
@@ -180,6 +181,7 @@ function renderShopPage(view, path) {
         }
         content.html(page.html);
         adoptPanel(content);
+        fetchCardsInSight();
         setPageTitle(page.title);
         panelLayer().find('[data-shop-buy]').each(function () {
             updateBuyForm($(this));
@@ -246,6 +248,8 @@ var shopItemCache = {}; // item address -> { at, request }
 var panelToken = 0; // only the latest item asked for is put in the panel
 var panelOpener = null; // the card clicked: it gets the focus back on closing
 var panelTidyTimer = null;
+var panelSlideFrame = null; // the frame the slide in starts on (showPanel)
+var panelSlideEnds = 0; // when the slide in ends: the item waits till then
 
 function panelLayer() {
     return $('body > .shop-panel-layer');
@@ -328,6 +332,48 @@ $(document).on('pointerover focusin', 'a[data-shop-item]', function () {
     }
 });
 
+// Phones have no pointer arriving first (pointerover comes with the tap
+// itself), so there a card's item is fetched as the card comes into sight,
+// and again as the finger lands if a minute has passed
+document.addEventListener('touchstart', function (event) {
+    var card = event.target.closest && event.target.closest('a[data-shop-item]');
+    if (card && shopIndexShowing()) {
+        shopItemRequest(card.getAttribute('href'));
+    }
+}, { passive: true });
+
+var shopCardWatcher = null;
+
+// Called once the shop's list is on screen
+function fetchCardsInSight() {
+    if (shopCardWatcher) {
+        shopCardWatcher.disconnect();
+    }
+    if (!('IntersectionObserver' in window) || window.matchMedia('(hover: hover)').matches) {
+        return; // (computers fetch on hover)
+    }
+    shopCardWatcher = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting && shopIndexShowing()) {
+                shopCardWatcher.unobserve(entry.target);
+                shopItemRequest(entry.target.getAttribute('href'));
+            }
+        });
+    }, { threshold: 0.5 });
+    $('#imagesAndContent a[data-shop-item]').each(function () {
+        shopCardWatcher.observe(this);
+    });
+}
+
+// The picture on the card for the item at `path`, if it's showing
+function cardPicture(path) {
+    var card = $('a[data-shop-item]').filter(function () {
+        return this.getAttribute('href') === path;
+    }).first();
+    var img = card.find('img')[0];
+    return img && img.complete && img.naturalWidth ? img : null;
+}
+
 function openPanel(path) {
     var layer = panelLayer();
     var token = ++panelToken;
@@ -341,11 +387,21 @@ function openPanel(path) {
     // (.done, not .then: an item already fetched goes in straight away,
     // before the panel shows, so the last item is never seen in it)
     request.done(function (page) {
-        if (token === panelToken) {
-            fillPanel(layer, page);
+        var fill = function () {
+            if (token === panelToken) {
+                fillPanel(layer, page, path);
+            }
+            viewReady = true;
+            drawn.resolve();
+        };
+        // (arriving while the panel slides in, it waits for the slide to
+        // end: redrawing the panel mid-slide makes phones stutter)
+        var wait = panelSlideEnds - performance.now();
+        if (wait > 0) {
+            setTimeout(fill, wait);
+        } else {
+            fill();
         }
-        viewReady = true;
-        drawn.resolve();
     }).fail(function (xhr) {
         delete shopItemCache[path];
         if (token === panelToken) {
@@ -371,13 +427,13 @@ function drawStandIn(layer, path) {
     var card = $('a[data-shop-item]').filter(function () {
         return this.getAttribute('href') === path;
     }).first();
-    var img = card.find('img')[0];
+    var img = cardPicture(path);
     if (!card.length) {
         body.html(loadingHtml(''));
         return;
     }
     var picture = '';
-    if (img && img.complete && img.naturalWidth) {
+    if (img) {
         picture = '<div class="shop-item-pictures"><div class="shop-item-picture" style="--w: ' + img.naturalWidth + '; --h: ' + img.naturalHeight + ';">' +
             '<div class="img-container"><img src="' + shopEscape(img.currentSrc || img.src) + '" alt="" decoding="sync"></div></div></div>';
     }
@@ -386,13 +442,14 @@ function drawStandIn(layer, path) {
         '<div class="loading-spinner"></div></div></article>');
 }
 
-function fillPanel(layer, page) {
+function fillPanel(layer, page, path) {
     var body = layer.find('.shop-panel-body');
-    var standIn = body.find('.is-standin img')[0];
+    var standIn = body.find('.is-standin img')[0] || cardPicture(path);
     var shown = standIn ? standIn.currentSrc || standIn.src : null;
     body.html(page.panel);
     // The card's picture, already on screen, shows until the panel's sharper
-    // copy has arrived (same painting, same shape)
+    // copy has arrived (same painting, same shape; on phones usually the
+    // same copy, so there's nothing to wait for)
     var img = body.find('.shop-item-picture img')[0];
     if (shown && img && !img.complete) {
         img.style.backgroundImage = 'url("' + shown + '")';
@@ -411,14 +468,29 @@ function fillPanel(layer, page) {
     }
 }
 
+// The layer is shown first (is-open) with the panel still off screen, and the
+// slide (is-in) starts two frames later, once the panel has been drawn there.
+// Starting both at once left the phone drawing the panel while the slide's
+// clock ran, so the first thing seen was the sheet already part way up.
 function showPanel(layer) {
     clearTimeout(panelTidyTimer);
-    layer.removeClass('is-instant');
+    cancelAnimationFrame(panelSlideFrame);
+    layer.removeClass('is-instant is-in');
     layer[0].inert = false;
     layer.addClass('is-open');
     holdPage(true);
     layer.find('.shop-panel')[0].focus({ preventScroll: true });
     drawBasketPill();
+    panelSlideEnds = performance.now() + 40 + SHOP_PANEL_MS;
+    panelSlideFrame = requestAnimationFrame(function () {
+        panelSlideFrame = requestAnimationFrame(function () {
+            panelSlideFrame = null;
+            if (layer.hasClass('is-open')) {
+                layer.addClass('is-in');
+                panelSlideEnds = performance.now() + SHOP_PANEL_MS;
+            }
+        });
+    });
 }
 
 // instantly: no slide (another page is about to be drawn)
@@ -432,7 +504,10 @@ function closePanel(instantly) {
     panel.style.transform = '';
     panel.style.transition = '';
     layer.toggleClass('is-instant', !!instantly || prefersReducedMotion());
-    layer.removeClass('is-open');
+    cancelAnimationFrame(panelSlideFrame);
+    panelSlideFrame = null;
+    panelSlideEnds = 0;
+    layer.removeClass('is-open is-in');
     layer[0].inert = true;
     holdPage(false);
     if (layer[0].contains(document.activeElement)) {

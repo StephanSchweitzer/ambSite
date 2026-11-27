@@ -2696,7 +2696,9 @@ body:has(.navLinksBoxMobile.active) .basket-pill {
   transition: opacity 0.42s ease;
 }
 
-.is-open > .shop-panel-backdrop {
+/* is-open shows the layer; is-in, added a frame later (shop.js: showPanel),
+   starts the slide, so it starts from the bottom rather than part way up */
+.is-in > .shop-panel-backdrop {
   opacity: 1;
 }
 
@@ -2712,10 +2714,11 @@ body:has(.navLinksBoxMobile.active) .basket-pill {
   box-shadow: -16px 0 44px rgba(29, 29, 27, 0.14);
   transform: translateX(calc(100% + 50px));
   transition: transform 0.42s var(--ease-out-soft);
+  will-change: transform;
   outline: none;
 }
 
-.is-open > .shop-panel {
+.is-in > .shop-panel {
   transform: none;
 }
 

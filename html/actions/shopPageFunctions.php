@@ -14,8 +14,11 @@
 include_once __DIR__ . '/publicPageFunctions.php';
 include_once __DIR__ . '/shopFunctions.php';
 
-define('SHOP_GRID_SIZES', '(max-width: 992px) 45vw, 30vw');
-define('SHOP_ITEM_SIZES', '(max-width: 767px) 92vw, 500px'); // the side panel's picture
+// Phones (one card to a row, ambar.css): the card and the panel ask for the
+// same width, so they pick the same copy and the panel's picture is the one
+// already on screen, with nothing new to download
+define('SHOP_GRID_SIZES', '(max-width: 600px) 90vw, (max-width: 992px) 45vw, 30vw');
+define('SHOP_ITEM_SIZES', '(max-width: 600px) 90vw, (max-width: 767px) 92vw, 500px'); // the side panel's picture
 
 // Everything about the shop page at $path: which view it is, its title and
 // description, its HTML (null when the script draws it), and for an item the
@@ -187,7 +190,7 @@ function shopRenderCommissionLine($product, $settings)
 function shopRenderPanel($itemHtml = '')
 {
     $open = $itemHtml !== '';
-    return '<div class="shop-panel-layer' . ($open ? ' is-open' : '') . '" data-shop-panel' . ($open ? '' : ' inert') . '>'
+    return '<div class="shop-panel-layer' . ($open ? ' is-open is-in' : '') . '" data-shop-panel' . ($open ? '' : ' inert') . '>'
         . '<div class="shop-panel-backdrop" data-shop-panel-close></div>'
         . '<aside class="shop-panel" role="dialog" aria-modal="true" aria-labelledby="shopItemTitle" tabindex="-1">'
         . '<div class="shop-panel-bar"><span class="shop-panel-handle" aria-hidden="true"></span>'
