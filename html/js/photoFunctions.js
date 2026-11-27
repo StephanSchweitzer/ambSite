@@ -1888,7 +1888,7 @@ function setupViewer() {
         }
         var scrollbar = window.innerWidth - document.documentElement.clientWidth;
         $('html').addClass('no-scroll');
-        $('body').css('padding-right', scrollbar > 0 ? scrollbar + 'px' : '');
+        $('body').css({ 'padding-right': scrollbar > 0 ? scrollbar + 'px' : '', '--held-gap': scrollbar > 0 ? scrollbar + 'px' : '' });
     });
 
     // A finger dragging on the viewer scrolls the viewer (a very tall
@@ -1932,7 +1932,7 @@ function setupViewer() {
         $('#spinner').hide();
         $('html').removeClass('no-scroll');
         if (!$('html').hasClass('shop-panel-open')) {
-            $('body').css('padding-right', ''); // (a shop item's panel still needs it)
+            $('body').css({ 'padding-right': '', '--held-gap': '' }); // (a shop item's panel still needs it)
         }
         if (Math.abs(window.pageYOffset - scrollPosition) > 1) {
             instantScrollTo(scrollPosition);

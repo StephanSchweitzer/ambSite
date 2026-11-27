@@ -385,10 +385,10 @@ function holdPage(hold) {
     if (hold && !isTouchScreen() && !html.hasClass('shop-panel-open')) {
         var scrollbar = window.innerWidth - document.documentElement.clientWidth;
         html.addClass('shop-panel-open');
-        $('body').css('padding-right', scrollbar > 0 ? scrollbar + 'px' : '');
+        $('body').css({ 'padding-right': scrollbar > 0 ? scrollbar + 'px' : '', '--held-gap': scrollbar > 0 ? scrollbar + 'px' : '' });
     } else if (!hold && html.hasClass('shop-panel-open')) {
         html.removeClass('shop-panel-open');
-        $('body').css('padding-right', '');
+        $('body').css({ 'padding-right': '', '--held-gap': '' });
     }
 }
 

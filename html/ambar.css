@@ -111,12 +111,13 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Computers: the warm ground (the menu column and the strip of wall on the
-   right) is a still layer of its own behind everything, painted once.
-   Laid on the page itself it slid under the fixed menu with every scroll,
-   so scrolling the works quickly - with paintings arriving and the
-   browser busy - had that strip redrawn non-stop, and the menu column
-   flickered. The plain colour stays on html for anything past the edges. */
+/* Computers: what's behind the page is two still layers of their own,
+   painted once: the warm ground (the menu column and the strip of wall on
+   the right), and a white sheet just inside the real one (body::after).
+   Scrolling the works very fast - paintings arriving, the browser busy -
+   the browser can fall a moment behind drawing the page, and shows what's
+   behind it for that moment: it was the beige ground, which flashed beside
+   the menu. The plain colour stays on html for anything past the edges. */
 @media (min-width: 993px) {
   html {
     background-color: var(--color-surround);
@@ -134,6 +135,29 @@ body {
     background-color: var(--color-surround);
     background-image: var(--surround-dots);
     background-size: 22px 22px;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  /* ...and a still white sheet on it, right behind the real one (which
+     always runs from the top of the screen to the bottom, between the menu
+     column and the strip of wall). Scrolled very fast, the browser can fall
+     a moment behind drawing the page; what it shows for that moment is
+     what's behind, and beige there flashed beside the menu. Now it's
+     white, which nobody can tell from the sheet. It stops 10px inside
+     each long edge, so the tear (at most 10px deep) is the real sheet's
+     alone. While a painting or a shop item is open the scrollbar goes and
+     body gets its room as padding (--held-gap, set beside it in the JS),
+     so this sheet keeps the same right edge as the real one. */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--menu-col) + 10px);
+    right: calc(var(--wall-side) + 10px + var(--held-gap, 0px));
+    z-index: -1;
+    background-color: var(--color-background);
     pointer-events: none;
     will-change: transform;
   }
