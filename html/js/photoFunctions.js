@@ -614,7 +614,7 @@ var pageTurnTimer = null;
 var pageTurnToken = 0; // a rise only starts for the latest page put in place
 var pageTurn = null;   // the page being turned to while the old one fades: { view, path, promise }
 var drawingUnderTurn = false; // turnToPage() is drawing the new page: setView() leaves the classes on
-var afterTurnWaiting = [];    // afterPageTurn()
+var riseWaiting = [];         // whenPageRises()
 
 // The data each page draws from, asked for as the old page starts fading
 // (each is fetched once a visit, so this costs nothing when it's here)
@@ -701,6 +701,7 @@ function turnPageIn(content, scrollY) {
         void content[0].offsetWidth; // (starts from the faded, lowered place)
         content.removeClass('page-in').addClass('page-rising');
         pageTurnTimer = setTimeout(endPageTurn, PAGE_IN_MS + 50);
+        runRiseWaiting();
     });
 }
 
@@ -710,20 +711,25 @@ function endPageTurn() {
     clearTimeout(pageTurnTimer);
     pageTurnToken++;
     $('#imagesAndContent').removeClass('page-out page-in page-rising');
-    var waiting = afterTurnWaiting;
-    afterTurnWaiting = [];
-    waiting.forEach(function (fn) {
-        fn();
-    });
+    runRiseWaiting();
 }
 
-// Runs fn once the page has finished turning (straight away if it isn't)
-function afterPageTurn(fn) {
-    if (/\bpage-(out|in|rising)\b/.test(document.getElementById('imagesAndContent').className)) {
-        afterTurnWaiting.push(fn);
+// Runs fn as the new page starts rising into view (straight away if the
+// page isn't turning)
+function whenPageRises(fn) {
+    if (/\bpage-(out|in)\b/.test(document.getElementById('imagesAndContent').className)) {
+        riseWaiting.push(fn);
     } else {
         fn();
     }
+}
+
+function runRiseWaiting() {
+    var waiting = riseWaiting;
+    riseWaiting = [];
+    waiting.forEach(function (fn) {
+        fn();
+    });
 }
 
 // Resolves once the pictures on screen are ready to draw, or after `wait`
@@ -2959,9 +2965,9 @@ function startHomeReveal() {
         first.classList.add('is-settling');
     }
     pauseSlideshow(true);
-    // Arriving from another page, the cloud holds (ambar.css: paused while
-    // the page turns) and only starts to part once the page has risen
-    afterPageTurn(function () {
+    // Arriving from another page, the cloud holds while the new page waits
+    // unseen (ambar.css: paused) and starts to part as the page rises
+    whenPageRises(function () {
         clearTimeout(homeRevealTimer);
         homeRevealTimer = setTimeout(function () {
             if (first) {
