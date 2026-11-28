@@ -514,8 +514,7 @@ function getAllWorks(theYear) {
       highlightStatCard();
       currentWorks = data;
       originalWorks = [...data]; // Store a copy of the original dataset
-      insertData(data);
-      updateResultsInfo(data.length);
+      applyFilters(); // keep the search, medium and tag still set on screen
       $('#loadingSpinner').hide();
 
       // Update statistics after loading works
@@ -630,8 +629,7 @@ function makeProjectCards(projects) {
 
     currentWorks = allWorks;
     originalWorks = [...allWorks]; // Store original project works
-    insertData(allWorks);
-    updateResultsInfo(allWorks.length);
+    applyFilters(); // keep the search, medium and tag still set on screen
   }).catch(error => {
     console.error('Error processing project data:', error);
     showToast("An error occurred while processing project data.", "error");
@@ -797,12 +795,12 @@ function sortItemsByCurrentCriteria(items) {
   }
 }
 
-// Modify the applyFilters function to always start with the original dataset
+// Show the loaded works through the search, medium and tag filters. Every
+// reload of the list comes through here, so a filter left on screen (after
+// saving a work, say) still applies to what's shown.
 function applyFilters() {
-  if (!originalWorks || originalWorks.length === 0) return;
-
   // Start with the original dataset every time
-  let filteredWorks = [...originalWorks];
+  let filteredWorks = [...(originalWorks || [])];
 
   // Apply search filter
   if (currentFilters.search && currentFilters.search.trim() !== '') {
