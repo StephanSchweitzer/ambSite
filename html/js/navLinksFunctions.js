@@ -170,15 +170,10 @@ function projectCategoryLink(sectionId, text) {
 }
 
 // Shows a project (or one of its year groups) on the Works page; on phones
-// the drawer closes first so the works are visible
+// the drawer closes as the works come in (photoFunctions.js)
 function openProjectSection(sectionId) {
-    if (window.innerWidth <= 992) {
-        $('#hamburgerMenu').removeClass('active').attr({ 'aria-expanded': 'false', 'aria-label': 'Open menu' });
-        $('#navLinksBox').removeClass('active');
-        $('.nav-overlay').removeClass('active');
-        $('#sideBySide').removeClass('menu-open');
-    }
     loadProjectSection(sectionId);
+    closeMenuAsPageTurns();
 }
 
 // A project's name in the "Works" dropdown, when it has years folded away

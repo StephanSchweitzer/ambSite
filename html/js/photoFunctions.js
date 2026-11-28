@@ -670,7 +670,7 @@ function turnToPage(view, route, options) {
         }
         // The new page is drawn under the faded sheet, already waiting to
         // rise, so whatever it starts (the clouds on the home page) can tell
-        content.removeClass('page-out').addClass('page-in');
+        content.removeClass('page-out page-out-now').addClass('page-in');
         drawingUnderTurn = true;
         var drawing;
         try {
@@ -708,11 +708,16 @@ function turnToPage(view, route, options) {
     return turn.promise;
 }
 
+// Under the phone menu (it covers the whole screen) the old page is put
+// away at once rather than faded: nobody can see it, and the new one can
+// start being drawn straight away. closeMenuAsPageTurns() then keeps the
+// menu up until the new page rises, so the two go together.
 function turnPageOut(content) {
     endPageTurn();
-    content.addClass('page-out');
+    var covered = menuCoversPage();
+    content.addClass('page-out').toggleClass('page-out-now', covered);
     var faded = $.Deferred();
-    pageTurnTimer = setTimeout(faded.resolve, prefersReducedMotion() ? 0 : PAGE_OUT_MS);
+    pageTurnTimer = setTimeout(faded.resolve, covered || prefersReducedMotion() ? 0 : PAGE_OUT_MS);
     return faded.promise();
 }
 
@@ -721,7 +726,7 @@ function turnPageOut(content) {
 function turnPageIn(content, scrollY) {
     clearTimeout(pageTurnTimer);
     var token = ++pageTurnToken;
-    content.removeClass('page-out page-rising').addClass('page-in');
+    content.removeClass('page-out page-out-now page-rising').addClass('page-in');
     instantScrollTo(scrollY || 0);
     return picturesInSight(content[0], PAGE_PICTURES_WAIT_MS).then(function () {
         if (token !== pageTurnToken) {
@@ -739,9 +744,57 @@ function turnPageIn(content, scrollY) {
 function endPageTurn() {
     clearTimeout(pageTurnTimer);
     pageTurnToken++;
-    $('#imagesAndContent').removeClass('page-out page-in page-rising');
+    $('#imagesAndContent').removeClass('page-out page-out-now page-in page-rising');
     runRiseWaiting();
 }
+
+// --------------------------------------------------------------------------
+// The phone menu
+// --------------------------------------------------------------------------
+var MENU_HOLD_MS = 650;  // the longest the menu waits for the new page before it goes anyway
+var menuClosing = null;  // closeMenuAsPageTurns() waiting for the page to rise
+
+function setMenuOpen(open) {
+    if (menuClosing) {
+        clearTimeout(menuClosing);
+        menuClosing = null;
+    }
+    $('#hamburgerMenu').toggleClass('active', open).attr({
+        'aria-expanded': open ? 'true' : 'false',
+        'aria-label': open ? 'Close menu' : 'Open menu'
+    });
+    $('#navLinksBox').toggleClass('active', open).removeClass('is-leaving');
+    $('.nav-overlay').toggleClass('active', open);
+    $('#sideBySide').toggleClass('menu-open', open);
+}
+window.setMenuOpen = setMenuOpen;
+
+function menuCoversPage() {
+    return window.innerWidth <= BREAKPOINT && $('#navLinksBox').hasClass('active');
+}
+
+// A menu link was tapped (call it after the link has asked for its page).
+// The menu stays over the screen while the new page is put in place, and
+// slides and fades away as that page rises in, so the reveal is one
+// movement: never a glimpse of the old page, never an empty sheet.
+// The link tapped gets its tape at once (ambar.css), so the tap is seen.
+function closeMenuAsPageTurns() {
+    if (!menuCoversPage()) {
+        return;
+    }
+    if (menuClosing) {
+        return; // (already on its way)
+    }
+    $('#navLinksBox').addClass('is-leaving');
+    var close = function () {
+        if (menuClosing) {
+            setMenuOpen(false);
+        }
+    };
+    menuClosing = setTimeout(close, MENU_HOLD_MS);
+    whenPageRises(close);
+}
+window.closeMenuAsPageTurns = closeMenuAsPageTurns;
 
 // Runs fn as the new page starts rising into view (straight away if the
 // page isn't turning)
@@ -3941,17 +3994,6 @@ $(function () {
     setupResponsiveLayout();
     setupViewer();
 
-    // Mobile menu
-    function setMenuOpen(open) {
-        $('#hamburgerMenu').toggleClass('active', open).attr({
-            'aria-expanded': open ? 'true' : 'false',
-            'aria-label': open ? 'Close menu' : 'Open menu'
-        });
-        $('#navLinksBox').toggleClass('active', open);
-        $('.nav-overlay').toggleClass('active', open);
-        $('#sideBySide').toggleClass('menu-open', open);
-    }
-
     $('#hamburgerMenu').on('click', function (e) {
         e.stopPropagation();
         setMenuOpen(!$(this).hasClass('active'));
@@ -3970,7 +4012,7 @@ $(function () {
         if ($(this).text() === 'Newsletter') {
             e.stopPropagation();
         } else if (!$(this).closest('#selectProjectCategories, #newsletterSignUp').length) {
-            setMenuOpen(false);
+            closeMenuAsPageTurns(); // (the link's own click has already asked for its page)
         }
     });
 
@@ -3986,10 +4028,8 @@ $(function () {
             return;
         }
         event.preventDefault();
-        if (window.innerWidth <= BREAKPOINT) {
-            setMenuOpen(false);
-        }
         goTo('/');
+        closeMenuAsPageTurns();
     });
 
     // First page of the visit

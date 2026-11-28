@@ -686,6 +686,13 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   clip-path: inset(0 0 0 0);
 }
 
+/* A link has been tapped and the menu waits for the new page to rise
+   (closeMenuAsPageTurns() in photoFunctions.js): the tape moves to the
+   new page's link at once, so the tap is seen to have done something */
+.navLinksBoxMobile.active.is-leaving .mainLinkGenres:after {
+  transition-delay: 0s;
+}
+
 /* Behind the menu the page turns into the table it's laid on: the warm
    ground, opaque, with a few drops of paint on it in the logo's colours,
    the kind a brush throws off round a canvas (stand-ins in
@@ -784,6 +791,11 @@ body:has(#imagesAndContent[data-view^="shop"]) .navLinksBoxMobile.active .mainLi
   opacity: 0.003;
   transition: opacity 0.2s ease;
   pointer-events: none;
+}
+
+/* Under the phone menu, which hides it anyway: put away at once */
+#imagesAndContent.page-out-now > * {
+  transition: none;
 }
 
 #imagesAndContent.page-in > * {
