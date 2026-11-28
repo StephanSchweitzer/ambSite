@@ -316,51 +316,96 @@ a:link, a:active, a:visited, a:hover { color: inherit; }
   max-width: none;
 }
 
+/* On the phone bar the home link is only as wide as the logo. (As a block
+   in a flex: 1 heading it ran the whole width of the bar, under the menu
+   button, so a tap that just missed the button went to the home page.) */
+.blockForHeaderMobile .site-title a {
+  display: inline-block;
+}
+
 /* ---------- Hamburger ---------- */
+/* On the phone bar the button is the whole right end of the bar, full
+   height (see the 992px block), so a thumb can't miss it. The three
+   lines are drawn from its centre: each sits on the middle and is moved
+   up or down, so folding into an X only moves them back to the middle
+   and turns them, and both strokes cross exactly at their halves. */
 .hamburger-menu {
   display: none;
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 12px;
+  padding: 0;
+  width: 48px;
+  height: 42px;
   z-index: 1001;
   position: absolute;
   right: 14px;
   top: 16px;
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* no wait for a double tap */
+}
+
+/* A soft round shadow under the lines while a finger is on the button, so
+   the tap is seen (the browser's own grey box is switched off above) */
+.hamburger-menu::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.25s ease, transform 0.35s var(--ease-out-soft);
+}
+
+.hamburger-menu:active::before {
+  opacity: 0.08;
+  transform: scale(1);
+  transition-duration: 0.08s;
+}
+
+.hamburger-menu:focus-visible {
+  outline: none;
+}
+
+.hamburger-menu:focus-visible::before {
+  opacity: 0.08;
+  transform: scale(1);
+  box-shadow: 0 0 0 2px var(--color-ink);
 }
 
 .hamburger-menu span {
-  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 24px;
   height: 2px;
-  margin-bottom: 6px;
-  position: relative;
-  background: var(--color-ink);
+  margin: -1px 0 0 -12px;
+  background: currentColor;
   border-radius: 2px;
-  transform-origin: 4px 0px;
   transition: transform 0.45s var(--ease-out-soft),
-              background 0.45s var(--ease-out-soft),
-              opacity 0.4s ease;
+              opacity 0.3s ease;
 }
 
-.hamburger-menu span:first-child { transform-origin: 0% 0%; }
+.hamburger-menu span:nth-child(1) { transform: translateY(-8px); }
+.hamburger-menu span:nth-child(3) { transform: translateY(8px); }
 
-.hamburger-menu span:nth-last-child(1) {
-  transform-origin: 0% 100%;
-  margin-bottom: 0;
-}
-
-.hamburger-menu.active span:first-child {
-  transform: rotate(45deg) translate(2px, -2px);
+.hamburger-menu.active span:nth-child(1) {
+  transform: translateY(0) rotate(45deg);
 }
 
 .hamburger-menu.active span:nth-child(2) {
   opacity: 0;
-  transform: rotate(0deg) scale(0.2, 0.2);
+  transform: scaleX(0.2);
 }
 
-.hamburger-menu.active span:nth-last-child(1) {
-  transform: rotate(-45deg) translate(0, 1px);
+.hamburger-menu.active span:nth-child(3) {
+  transform: translateY(0) rotate(-45deg);
 }
 
 /* ==========================================================================
@@ -4567,14 +4612,18 @@ html.no-scroll {
     gap: 10px;
   }
 
-  /* centred in the bar (42px: 12px padding each side of 18px of lines) */
+  /* The right end of the bar, top to bottom. The lines stay where they
+     were (their middle 38px in from the edge); only what takes the tap
+     grew, from 48 x 42 to 76 x the bar. */
   .hamburger-menu {
-    top: calc((var(--bar-h) - 42px) / 2);
+    top: 0;
+    right: 0;
+    width: 76px;
+    height: var(--bar-h);
   }
 
   .hamburger-menu.active {
     position: fixed;
-    right: 14px;
   }
 
   /* Drawer sub-sections. Always open on a phone: Works itself goes to the
