@@ -1318,7 +1318,9 @@ var STRIPE_APPEARANCE = {
         '.Tab': { border: '1px solid #d5d3cd', boxShadow: 'none' }
     }
 };
-var STRIPE_FONTS = [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap' }];
+// The site's own copy of Lato (vendor/fonts/), not Google's: Stripe's boxes
+// fetch it from here (.htaccess lets them)
+var STRIPE_FONTS = [{ cssSrc: location.origin + '/vendor/fonts/fonts.css' }];
 
 function readCheckoutToken() {
     try {

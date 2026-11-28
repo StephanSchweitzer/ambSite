@@ -60,6 +60,7 @@ $ambNavLinks = array(
     'shop'       => array('shopAdmin.php', 'fa-cart-shopping', 'Shop'),
     'navbar'     => array('navbarAdmin.php', 'fa-bars', 'Navbar'),
     'newsletter' => array('newsletterAdmin.php', 'fa-envelope-open-text', 'Newsletter'),
+    'visitors'   => array('visitorsAdmin.php', 'fa-chart-simple', 'Visitors'),
 );
 ?>
 <header class="amb-topbar">

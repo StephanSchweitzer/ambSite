@@ -276,15 +276,6 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-        })(window,document,'script','dataLayer','GTM-NHCWWZZJ');</script>
-    <!-- End Google Tag Manager -->
-
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <script>
@@ -333,32 +324,25 @@ $mainPadding = $view === 'home' || $content === null ? '' : ' style="padding-top
 
     <link rel="icon" type="image/x-icon" href="/miscIcons/favicon.ico">
 
-    <!-- Preconnect to external resources -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://ajax.googleapis.com">
-    <link rel="preconnect" href="https://maxcdn.bootstrapcdn.com">
-
-    <!-- Fonts: Lato for UI/body, Cormorant Garamond for display headings -->
-    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Everything the page needs comes from this site (vendor/README.md):
+         no other company's server is contacted, and nothing waits on one.
+         Fonts: Lato for UI/body, Cormorant Garamond for display headings;
+         the two used on every page are fetched straight away. -->
+    <link rel="preload" href="/vendor/fonts/lato-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/vendor/fonts/cormorant-garamond-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="/vendor/fonts/fonts.css?v=<?php echo filemtime(__DIR__ . '/vendor/fonts/fonts.css'); ?>">
+    <link rel="stylesheet" href="/vendor/bootstrap/bootstrap-4.5.2.min.css?v=4.5.2">
     <link rel="stylesheet" href="/ambar.css?v=<?php echo filemtime(__DIR__ . '/ambar.css'); ?>">
 
     <!-- Scripts load in this order without holding up the page -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js" integrity="sha384-NXgwF8Kv9SSAr+jemKKcbvQsz+teULH/a5UNJvZc6kP47hZgl62M1vGnw6gHQhb1" crossorigin="anonymous" defer></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous" defer></script>
+    <script src="/vendor/jquery/jquery-3.7.0.min.js?v=3.7.0" defer></script>
+    <script src="/vendor/bootstrap/bootstrap-4.5.2.min.js?v=4.5.2" defer></script>
     <!-- (shop.js before photoFunctions.js, whose start-up calls into it) -->
     <script src="/js/shop.js?v=<?php echo filemtime(__DIR__ . '/js/shop.js'); ?>" defer></script>
     <script src="/js/photoFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/photoFunctions.js'); ?>" defer></script>
     <script src="/js/navLinksFunctions.js?v=<?php echo filemtime(__DIR__ . '/js/navLinksFunctions.js'); ?>" defer></script>
 </head>
 <body data-status="<?= (int) $status ?>"<?= $work ? ' class="modal-open"' : '' ?>>
-
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NHCWWZZJ"
-                  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
 
 <div class="page-container">
     <!-- Header -->

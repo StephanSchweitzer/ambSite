@@ -88,6 +88,7 @@ jobs:
           mysql -h 127.0.0.1 -uroot -pci amb_ci < database/schema.sql
           mysql -h 127.0.0.1 -uroot -pci amb_ci < database/shop.sql
           mysql -h 127.0.0.1 -uroot -pci amb_ci < database/projectWorkOrder.sql
+          mysql -h 127.0.0.1 -uroot -pci amb_ci < database/visits.sql
           mysql -h 127.0.0.1 -uroot -pci amb_ci < .github/ci/fixtures.sql
 
       - name: Run the site's own queries against it

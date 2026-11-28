@@ -1,4 +1,5 @@
 <?php
+$ambStartSession = true; // signing in: the one place a session is started from nothing
 include_once __DIR__ . '/../database/session.php';
 include '../database/pdo.php';
 

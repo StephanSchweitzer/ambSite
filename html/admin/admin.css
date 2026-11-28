@@ -2752,3 +2752,44 @@ body.page-projects .arrange-item .order-position {
         padding: 15px;
     }
 }
+
+
+/* ======================================================================
+ * Visitors page (body.page-visitors)
+ * ====================================================================== */
+/* Only what is particular to this page: its boxes side by side on wide
+   screens, and the numbers lined up on the right. Sidebar, panel, boxes,
+   tables and colours come from the sections above. */
+
+body.page-visitors .visitors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0 20px;
+    align-items: start;
+}
+
+body.page-visitors .visitors-table {
+    margin-bottom: 0;
+}
+
+body.page-visitors .visitors-table .num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+body.page-visitors .visitors-table thead th {
+    color: var(--amb-muted);
+    font-weight: 400;
+}
+
+body.page-visitors .visitors-none,
+body.page-visitors .visitors-note {
+    margin: 0;
+    color: var(--amb-muted);
+}
+
+body.page-visitors .visitors-note {
+    margin-top: 10px;
+    font-size: 0.85rem;
+}

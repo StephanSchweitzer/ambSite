@@ -231,6 +231,27 @@ function ambRenderNav($links, $projects)
 
 define('AMB_GALLERY_SIZES', '(max-width: 992px) 92vw, 62vw');
 
+// The Works page shows two paintings across on computers, three on very wide
+// screens (ambar.css, .projectWorks), so each needs a much lighter copy than
+// the slideshow. Same as WORKS_SIZES in photoFunctions.js.
+define('AMB_WORKS_SIZES', '(max-width: 992px) 92vw, (min-width: 1700px) 24vw, 36vw');
+
+// The row of project names at the top of the Works page, each a link to its
+// section; the script marks the one being looked at (photoFunctions.js,
+// worksTabs()). Only when there's more than one project to choose between.
+function ambRenderWorksTabs($projects)
+{
+    if (count($projects) < 2) {
+        return '';
+    }
+    $html = '<nav class="works-tabs" aria-label="Kinds of work">';
+    foreach ($projects as $project) {
+        $html .= '<a class="mainLinkGenres works-tab" href="/select-works#' . ambHtml(ambSectionId($project['title'])) . '">'
+            . ambHtml($project['title']) . '</a>';
+    }
+    return $html . '</nav>';
+}
+
 // ---------------------------------------------------------------------------
 // Year groups inside a project
 //
@@ -340,7 +361,7 @@ function ambWorkGroups($project)
 
 function ambRenderWorks($projects)
 {
-    $html = '';
+    $html = ambRenderWorksTabs($projects);
     $index = 0;
     $last = count($projects) - 1;
     foreach ($projects as $projectIndex => $project) {
@@ -363,9 +384,9 @@ function ambRenderWorks($projects)
             $html .= '<div class="projectWorks">';
             foreach ($group['works'] as $work) {
                 $html .= '<a class="card work-card" href="' . ambHtml($work['path']) . '" data-index="' . $index . '" aria-label="' . ambHtml($work['name']) . '">'
-                    . '<div class="img-container">' . ambWorkImage($work, $index > 1, AMB_GALLERY_SIZES, null, $index === 0)
-                    . '<div class="img-overlay" aria-hidden="true"><h3 class="overlay-title">' . ambHtml($work['name']) . '</h3></div>'
-                    . '</div></a>';
+                    . '<div class="img-container">' . ambWorkImage($work, $index > 1, AMB_WORKS_SIZES, null, $index === 0) . '</div>'
+                    . '<span class="work-card-name" aria-hidden="true">' . ambHtml($work['name']) . '</span>'
+                    . '</a>';
                 $index++;
             }
             $html .= '</div>' . ($grouped ? '</div>' : '');

@@ -1309,10 +1309,111 @@ html:has(#imagesAndContent[data-view="home"]) {
   margin: 0.6rem auto 0;
 }
 
+/* Two paintings across on computers, three on very wide screens, laid out
+   as the shop's items are (.shop-grid); one under another on phones and
+   tablets. Each keeps its own proportions, so the tops line up and the
+   bottoms don't. */
 .projectWorks {
   min-width: 51vw;
-  /* Keep the original single-column layout — do not use grid */
   margin-top: 40px;
+  --work-name-room: calc(16px + 2.8rem); /* the title under each: up to two lines */
+}
+
+@media (min-width: 993px) {
+  .projectWorks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.6rem 3.4vw;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1700px) {
+  .projectWorks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ---------- The tabs above the works ----------
+   The project names in a row, in the menu's own words and sizes
+   (.mainLinkGenres), staying at the top of the sheet as the works scroll
+   by. The project on the screen wears the menu's strip of tape, which on
+   this site means "you are here" (watchWorksTabs() in photoFunctions.js).
+   Drawn by ambRenderWorksTabs() (publicPageFunctions.php) and
+   createWorksTabs() (photoFunctions.js). */
+.works-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 34px;
+  align-self: stretch;
+  width: 100%;
+  margin: -34px 0 40px;
+  padding: 16px 0 12px;
+  background: var(--color-background);
+  box-shadow: 0 1px 0 var(--color-line);
+}
+
+/* (the white reaches across the sheet's side margins too, so tape on the
+   paintings scrolling underneath doesn't show beside it) */
+.works-tabs:before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: -5vw;
+  right: -5vw;
+  background: var(--color-background);
+}
+
+.works-tabs .works-tab {
+  padding: 8px 4px;
+  color: var(--color-text);
+}
+
+.works-tabs .works-tab:hover,
+.works-tabs .works-tab:focus {
+  color: var(--color-ink);
+}
+
+.works-tabs .works-tab.is-current:after {
+  clip-path: inset(0 0 0 0);
+}
+
+.works-tab:nth-child(4n+2):after { --tape-menu: var(--tape-pink); transform: rotate(1deg); }
+.works-tab:nth-child(4n+3):after { --tape-menu: var(--tape-blue); }
+.works-tab:nth-child(4n+4):after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
+
+/* Phones: one line under the bar, slid sideways if the names don't fit */
+@media (max-width: 992px) {
+  .works-tabs {
+    top: var(--bar-h);
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0 22px;
+    width: auto;
+    margin: -30px -4vw 32px; /* (the sheet's side padding on phones) */
+    padding: 10px 4vw 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .works-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .works-tabs:before {
+    display: none; /* (it already reaches the sheet's edges) */
+  }
+
+  .works-tabs .works-tab {
+    flex: 0 0 auto;
+    padding: 12px 4px; /* a finger's height to tap, as .home-links */
+    font-size: 0.74rem;
+    letter-spacing: 0.18em;
+  }
 }
 
 /* ---------- Year groups inside a project ----------
@@ -1366,14 +1467,45 @@ html:has(#imagesAndContent[data-view="home"]) {
   text-decoration: none;
 }
 
-/* Keyboard focus on a work: show the title as on hover */
 .work-card:focus-visible {
   outline-offset: 6px;
 }
 
-.work-card:focus-visible .img-overlay {
-  transform: translateY(0);
-  opacity: 1;
+/* Its title, under the painting, as the shop writes an item's name
+   (.shop-card-name), a size smaller. It hangs below the card rather than
+   inside it, so the tape (on the card, below) keeps to the painting's
+   corners; the card keeps the room for it underneath. */
+.projectWorks .work-card {
+  margin-bottom: calc(var(--work-name-room) + 2.4rem);
+}
+
+.work-card-name {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  padding-top: 16px;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1.25;
+  color: var(--color-ink);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+@media (min-width: 993px) {
+  .projectWorks .work-card {
+    margin-bottom: var(--work-name-room);
+  }
+
+  /* (smaller tape for the smaller paintings) */
+  .project .projectWorks .work-card {
+    --tape-w: clamp(56px, 6vw, 104px);
+  }
 }
 
 .img-container {
@@ -1447,38 +1579,6 @@ html:has(#imagesAndContent[data-view="home"]) {
   .img-container:hover img {
     transform: scale(1.015);
   }
-}
-
-/* Title reveal on hover — soft dark gradient, serif caption */
-.img-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(20, 20, 18, 0.72), rgba(20, 20, 18, 0));
-  padding: 34px 16px 12px;
-  transform: translateY(30%);
-  transition: transform 0.35s var(--ease-out-soft), opacity 0.35s ease;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Hover effects only where there's a mouse: on a phone a tap would set them
-   off (and leave them stuck) just as the viewer opens */
-@media (hover: hover) {
-  .img-container:hover .img-overlay {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.overlay-title {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  margin: 0;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  color: #ffffff;
 }
 
 /* ---------- Sparkle separators between projects ---------- */

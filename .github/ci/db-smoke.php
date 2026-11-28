@@ -252,6 +252,36 @@ check('a shop item page renders', function () use ($conn) {
     return nonEmptyHtml($page['html'], 'Fixture Print');
 });
 
+// --- visitor counting (actions/visitFunctions.php, database/visits.sql) -------
+// The one place this script writes, into the throwaway database: a counted
+// visit, then the Visitors page's numbers read back from it.
+
+include_once $root . '/html/actions/visitFunctions.php';
+
+check('a visit is recorded', function () use ($conn) {
+    $work = $conn->query("SELECT workId FROM allWorks WHERE name = 'Fixture One'")->fetchColumn();
+    $agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148';
+    $counted = ambRecordVisit($conn, '/work/' . $work . '/fixture-one', 'https://l.instagram.com/?u=x', $agent, '203.0.113.9')
+        && ambRecordVisit($conn, '/about', '', $agent, '203.0.113.9');
+    if (!$counted) {
+        return 'ambRecordVisit() did not count an ordinary visit';
+    }
+    return ambRecordVisit($conn, '/about', '', 'Googlebot/2.1', '203.0.113.9') === false
+        ? true : 'a robot was counted';
+});
+
+check('the Visitors numbers load', function () use ($conn) {
+    $stats = ambVisitStats($conn, 30);
+    if ($stats['views'] !== 2 || $stats['visitors'] !== 1) {
+        return 'expected 2 views by 1 visitor, got ' . $stats['views'] . ' by ' . $stats['visitors'];
+    }
+    if (!$stats['works'] || $stats['works'][0]['name'] !== 'Fixture One') {
+        return 'the painting opened was not named';
+    }
+    return $stats['from'] && $stats['from'][0]['referrer'] === 'instagram.com'
+        ? true : 'where the visitor came from was not kept as a site name';
+});
+
 // --- result -----------------------------------------------------------------
 
 printf("\n%d passed, %d failed\n", $passed, count($failures));

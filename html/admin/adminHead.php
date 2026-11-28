@@ -33,9 +33,8 @@ $ambAdminDir = __DIR__;
     <title><?php echo htmlspecialchars($ambPageTitle); ?> · Ambar Velasco</title>
     <link rel="icon" type="image/x-icon" href="/miscIcons/favicon.ico">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+    <!-- the site's own copy of its typefaces (vendor/README.md) -->
+    <link rel="stylesheet" href="/vendor/fonts/fonts.css?v=<?php echo filemtime($ambAdminDir . '/../vendor/fonts/fonts.css'); ?>">
 <?php if ($ambBootstrap): ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <?php endif; ?>

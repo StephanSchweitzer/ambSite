@@ -15,6 +15,9 @@
 
 var BREAKPOINT = 992;
 var GALLERY_SIZES = '(max-width: 992px) 92vw, 62vw';
+// The Works page's two (or three) across. Same as AMB_WORKS_SIZES in
+// publicPageFunctions.php.
+var WORKS_SIZES = '(max-width: 992px) 92vw, (min-width: 1700px) 24vw, 36vw';
 var WEB_VARIANT_WIDTHS = [800, 1200]; // same as AMB_WEB_VARIANT_WIDTHS in imageManipulationFunctions.php
 var PAGE_TITLES = {
     'home': 'Ambar Velasco Portfolio',
@@ -504,6 +507,7 @@ function goTo(path, options) {
     if (path !== location.pathname) {
         rememberScroll();
         history.pushState($.extend({}, options.state, { path: path }), '', path);
+        countVisit();
     }
 
     var ready = renderView(view, route, { turn: turning, section: options.section });
@@ -519,6 +523,31 @@ function goTo(path, options) {
     return ready;
 }
 window.goTo = goTo;
+
+// ---------------------------------------------------------------------------
+// Counting visits, the site's own way (actions/visit.php; the numbers are on
+// the admin's Visitors page). No cookie and nothing kept in the visitor's
+// browser: each address seen is sent once per visit (until the page is
+// reloaded), with where the visitor came from on the first. The server keeps
+// neither the IP address nor the browser's details.
+// ---------------------------------------------------------------------------
+var countedPaths = {};
+var countedAny = false;
+
+function countVisit() {
+    var path = location.pathname;
+    if (countedPaths[path] || VT.id || !navigator.sendBeacon) {
+        return;
+    }
+    countedPaths[path] = true;
+    var body = JSON.stringify({ path: path, from: countedAny ? '' : document.referrer });
+    countedAny = true;
+    try {
+        // (plain text, so it goes as a simple request)
+        navigator.sendBeacon('/actions/visit.php', new Blob([body], { type: 'text/plain' }));
+    } catch (e) { /* not counted: never matters to the visitor */ }
+}
+window.addEventListener('popstate', countVisit);
 
 // Back / Forward
 window.addEventListener('popstate', function (event) {
@@ -853,11 +882,13 @@ function renderWorks() {
         if (keepServerDrawn) {
             galleryItems = worksInDrawnOrder(projects);
             prepareArrivals(content);
+            watchWorksTabs();
             viewReady = true;
             return;
         }
         content.empty();
         var items = [];
+        content.append(createWorksTabs(projects));
 
         projects.forEach(function (project, projectIndex) {
             var section = createProjectElement(project);
@@ -891,6 +922,7 @@ function renderWorks() {
 
         galleryItems = items;
         prepareArrivals(content);
+        watchWorksTabs();
         viewReady = true;
     }, function () {
         if (currentView === 'works') {
@@ -1037,17 +1069,84 @@ function showPreview(card) {
 // tab, copied and shared; a normal click opens the viewer instead
 function createWorkCard(work, index, lazy) {
     var container = $('<div>').addClass('img-container');
-    container.append(workImage(work, { sizes: GALLERY_SIZES, lazy: lazy, priority: index === 0 }));
-    container.append(
-        $('<div>').addClass('img-overlay').attr('aria-hidden', 'true')
-            .append($('<h3>').addClass('overlay-title').text(work.name))
-    );
+    container.append(workImage(work, { sizes: WORKS_SIZES, lazy: lazy, priority: index === 0 }));
     return $('<a>').addClass('card work-card').attr({
         href: work.path,
         'data-index': index,
         'aria-label': work.name
-    }).append(container);
+    }).append(container, $('<span>').addClass('work-card-name').attr('aria-hidden', 'true').text(work.name));
 }
+
+// The row of project names at the top of the Works page (mirrors
+// ambRenderWorksTabs() in publicPageFunctions.php - change both)
+function createWorksTabs(projects) {
+    if (projects.length < 2) {
+        return null;
+    }
+    var nav = $('<nav>').addClass('works-tabs').attr('aria-label', 'Kinds of work');
+    projects.forEach(function (project) {
+        nav.append($('<a>').addClass('mainLinkGenres works-tab')
+            .attr('href', '/select-works#' + projectSectionId(project.title)).text(project.title));
+    });
+    return nav;
+}
+
+// The tabs take you to their project, and the one whose works are on the
+// screen wears the tape. "On the screen": the last project whose top has
+// passed a line a third of the way down.
+var worksTabsWatch = null;
+
+function watchWorksTabs() {
+    if (worksTabsWatch) {
+        $(window).off('scroll resize', worksTabsWatch);
+        worksTabsWatch = null;
+    }
+    var tabs = $('.works-tabs .works-tab');
+    if (!tabs.length) {
+        return;
+    }
+    var pending = false;
+    worksTabsWatch = function () {
+        if (pending) {
+            return;
+        }
+        pending = true;
+        requestAnimationFrame(function () {
+            pending = false;
+            if (!onPage('works')) {
+                return;
+            }
+            var line = window.innerHeight / 3;
+            var current = 0;
+            tabs.each(function (i) {
+                var id = this.getAttribute('href').split('#')[1];
+                var section = document.getElementById(id);
+                if (section && section.getBoundingClientRect().top <= line) {
+                    current = i;
+                }
+            });
+            tabs.each(function (i) {
+                var on = i === current;
+                $(this).toggleClass('is-current', on);
+                if (on) {
+                    this.setAttribute('aria-current', 'true');
+                } else {
+                    this.removeAttribute('aria-current');
+                }
+            });
+        });
+    };
+    $(window).on('scroll resize', worksTabsWatch);
+    worksTabsWatch();
+}
+
+$(document).on('click', '.works-tab', function (event) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+    }
+    event.preventDefault();
+    scrollToSection(this.getAttribute('href').split('#')[1], !prefersReducedMotion());
+});
 
 $(document).on('click', '.work-card', function (event) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
@@ -1077,7 +1176,9 @@ function scrollToSection(sectionId, smooth) {
     if (!section) {
         return;
     }
-    var top = section.getBoundingClientRect().top + window.pageYOffset - 100;
+    // (clear of the Works page's tabs, which stay at the top as it scrolls)
+    var tabs = document.querySelector('.works-tabs');
+    var top = section.getBoundingClientRect().top + window.pageYOffset - 100 - (tabs ? tabs.offsetHeight : 0);
     if (smooth) {
         window.scrollTo({ top: top, behavior: 'smooth' });
     } else {
@@ -1180,6 +1281,7 @@ function openViewer(items, index, options) {
     if (!options.addressIsSet && location.pathname !== work.path && !VT.noHistory) {
         rememberScroll();
         history.pushState({ path: work.path, viewer: true }, '', work.path);
+        countVisit();
     }
 
     if (wasOpen) {
@@ -1188,6 +1290,7 @@ function openViewer(items, index, options) {
     }
 
     viewer.open = true;
+    viewer.returnFocus = document.activeElement;
     viewer.source = source ? { index: index, img: source } : null;
     // The picture on the page is already loaded: it stands in until the
     // sharper copy is ready, so the painting is there from the first frame
@@ -1958,6 +2061,33 @@ function finishClosing() {
     img.style.transition = 'none';
     img.style.transform = '';
     img.style.opacity = '';
+    returnFocusFromViewer();
+}
+
+// Closing the viewer puts the keyboard back on the painting last looked at
+// (or whatever opened it), so someone using Tab carries on from there
+// instead of from the top of the page. Not on phones and tablets: nothing
+// on the page may change there as the viewer closes (see setupViewer).
+function returnFocusFromViewer() {
+    var back = viewer.returnFocus;
+    viewer.returnFocus = null;
+    if (isTouchScreen()) {
+        return;
+    }
+    var active = document.activeElement;
+    if (active && active !== document.body && !document.getElementById('bigPicModal').contains(active)) {
+        return; // the focus is already somewhere sensible
+    }
+    var target = null;
+    if (viewer.items === galleryItems) {
+        target = document.querySelector('.work-card[data-index="' + viewer.index + '"]');
+    }
+    if (!target || !target.getClientRects().length) {
+        target = back;
+    }
+    if (target && target !== document.body && target.isConnected && target.getClientRects().length && target.focus) {
+        target.focus({ preventScroll: true });
+    }
 }
 
 // Kept for anything that still calls it by its old name
@@ -3868,6 +3998,9 @@ $(function () {
     var section = location.hash && location.hash.indexOf('#section-') === 0 ? location.hash.slice(1) : null;
 
     history.replaceState($.extend({}, history.state, { path: location.pathname }), '');
+    if (view !== 'notfound') {
+        countVisit();
+    }
 
     renderView(view, route).then(function () {
         if (VT.menu) {

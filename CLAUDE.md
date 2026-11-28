@@ -379,13 +379,15 @@ split out of `pdo.php`.
 
 | Area | Files |
 |---|---|
-| Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet) |
+| Public site shell | `html/index.php`, `html/ambar.css` (the only stylesheet of our own) |
+| Outside libraries | `html/vendor/` (jQuery, Bootstrap 4.5.2, the Lato and Cormorant Garamond `.woff2` files + `fonts/fonts.css`; `vendor/README.md` lists sources and licences). The public page contacts no other server: no CDN, no Google Fonts, no Tag Manager. |
+| Visitor counting | `actions/visit.php` (beacon endpoint), `actions/visitFunctions.php`, `countVisit()` in `photoFunctions.js`, `admin/visitorsAdmin.php`. Table: `database/visits.sql`. |
 | Frontend logic | `html/js/photoFunctions.js` (galleries, modal, layout), `js/navLinksFunctions.js` (navbar, newsletter), `js/aboutMe.js` (admin About editor) |
 | Shop | Pages: `actions/shopPageFunctions.php` (all the markup) + `js/shop.js` (basket, checkout, viewer hook-up). Catalogue: `actions/shopFunctions.php`. Orders and payment: `actions/shopOrderFunctions.php`, `actions/stripeFunctions.php`, `actions/stripeWebhook.php`. Emails: `actions/shopEmailFunctions.php`. Public API `actions/shopAPI.php`; admin `admin/shopAdmin.php` + its section of `admin/admin.css` + `js/shopAdminFunctions.js` + `actions/shopAdminAPI.php`. Tables: `database/shop.sql`. |
 | JSON APIs | `html/actions/*API.php` — one per feature (pictures, projects, navLinks, newsletter, shop, aboutMe). The public pages read artwork only through `publicWorksAPI.php` (visible works only; helpers in `publicWorksFunctions.php`). Lists that include hidden/trashed items, and the newsletter list, require the admin session. |
 | SEO | `index.php` + `actions/publicPageFunctions.php` (server-drawn pages, meta tags), `sitemap.php` (served as `/sitemap.xml`, lists every work), `robots.txt`; compression and browser-cache rules in `.htaccess` |
 | Admin CMS | `html/admin/*.php` + matching `html/js/*Admin*.js` — Ambar manages artworks, projects, nav links, newsletter, shop through these pages. Every admin page (and `signIn.php`) puts `admin/adminHead.php` in its `<head>` (the libraries, the fonts, `admin.css` — the admin's only stylesheet, one section per page scoped to `body.page-<name>`, Bootstrap 5.3 dark mode via `data-bs-theme="dark"` pointed at the `--amb-*` colours) and `admin/adminNav.php` first in `<body>` (the top bar). The Works page is the layout the others follow: sidebar + panel. Never give the top bar's links `.nav-link`: `photoAdminFunctions.js` clears `.active` from every `.nav-link`. adminHead also loads `js/adminSession.js` (keeps the sign-in alive, shows a "signed out" banner on any 401). Uploads go through `js/imagePrep.js` first (converts HEIC/WebP/oversized photos to a JPEG under 1.2 MB and 4000px). |
-| Auth | `html/signIn/` — session-based; every entry point includes `database/session.php` (cookie flags) instead of calling `session_start()`; admin pages check `$_SESSION["ambar"] === "connected"`, admin APIs call `requireAdminApi()` from `actions/adminAuth.php` (401 JSON, never a redirect); `login_attempts` rate-limits (5 per hour, cleared on success) |
+| Auth | `html/signIn/` — session-based; every entry point includes `database/session.php` (cookie flags) instead of calling `session_start()`. It only starts a session when the browser already sent the session cookie, or when `$ambStartSession` is set (only `verifySignIn.php`): otherwise `$_SESSION` is an empty array and no cookie is set, so public visitors never get one; admin pages check `$_SESSION["ambar"] === "connected"`, admin APIs call `requireAdminApi()` from `actions/adminAuth.php` (401 JSON, never a redirect); `login_attempts` rate-limits (5 per hour, cleared on success) |
 | DB connection | `html/database/pdo.php` — loads `.env` from project root, exposes global `$conn` (PDO) and `env()` helper. Every entry point `include`s it. |
 | Images | `html/img/` (full size), `imgMid/`, `thumbnails/` (400px wide), `baseImages/` (originals) + `baseImages/web/` (web-sized copies), `miscIcons/` (design assets: logo, favicon, newsletter leaf, `tape/` scraps). Uploads are resized/converted by `actions/imageManipulationFunctions.php`. |
 
@@ -398,7 +400,8 @@ this Mac.
 `allWorks` (artworks: fileLocation, name, desc2/desc3, medium, year, visible,
 isSelectWork, carousel, orderOfDisplay…), `projects`, `worksInProjects`
 (join table; `sortOrder` once `database/projectWorkOrder.sql` has run), `navLinks`, `newsletterEmailList`, `aboutMe`,
-`users`, `login_attempts`, `admin_last_visit`.
+`users`, `login_attempts`, `admin_last_visit`, `siteVisits` (once
+`database/visits.sql` has run — another file for Stephan, like shop.sql).
 
 The shop: `shopProducts`, `shopVariants` (what's actually bought: a print's
 sizes, or an original's single price; `stock` NULL = no limit),
@@ -604,15 +607,52 @@ back to Stripe's hosted page (`success_url`/`cancel_url`).
   others `{status, data}` wrappers. Match whatever the consuming JS expects.
 - Query results are often read by numeric column index (`$result[$i][3]`), so
   reordering columns in a SELECT silently breaks the JSON output.
-- jQuery 3.7.0 (Google) everywhere. Public page: Bootstrap 4.5.2. Admin
-  pages: Bootstrap 5.3.3 (not the shop admin, which has none), all from
-  `admin/adminHead.php`, with Lato + Cormorant Garamond (the public site's
-  typefaces) and Font Awesome 6.2.1.
+- jQuery 3.7.0 everywhere. **Public page: jQuery, Bootstrap 4.5.2 and the
+  fonts come from `html/vendor/`**, linked with `?v=<version>` (so they're
+  cached for a year); a new version is a new file name, checked against its
+  published sha384 before it's kept (`vendor/README.md`). Admin pages:
+  Bootstrap 5.3.3 (not the shop admin, which has none), jQuery and Font
+  Awesome 6.2.1 still from CDNs, all from `admin/adminHead.php`; their fonts
+  are the site's own `vendor/fonts/fonts.css`.
   On the public page all scripts load with `defer`, in order.
-  **Every CDN `<script>` carries `integrity` + `crossorigin="anonymous"`**
-  (sha384 of the exact file). Changing a version means a new hash:
+  **Every CDN `<script>` (admin) carries `integrity` +
+  `crossorigin="anonymous"`** (sha384 of the exact file). Changing a version
+  means a new hash:
   `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
   Stripe.js is the exception: Stripe changes it, so it never gets one.
+  Stripe's card boxes take the site's own Lato (`STRIPE_FONTS` in
+  `shop.js` → `vendor/fonts/fonts.css`; `.htaccess` lets other origins load
+  the fonts for that).
+- **No cookies for visitors, and no analytics but our own.** Google Tag
+  Manager is gone. The basket, promo code and country are `localStorage`,
+  the checkout token `sessionStorage`; the only cookies are the admin's
+  session and Stripe's own while paying. Visits are counted by
+  `countVisit()` (`photoFunctions.js`): a `sendBeacon` to
+  `actions/visit.php` once per address per page load (startup, `goTo`, the
+  viewer's `pushState`, `popstate`), the referrer on the first only.
+  `visitFunctions.php` keeps the address normalised (`/work/<id>`,
+  `/shop/<id>`, the known pages; anything else isn't counted), the other
+  site's host name, phone/tablet/computer, and a 16-character HMAC of IP +
+  user agent under a secret that is replaced daily and the old one deleted
+  (`sys_get_temp_dir()/amb-visit-secret`). No IP, no user agent, no query
+  string is stored. Robots (by user agent) and other origins aren't counted;
+  300 an hour per IP (`rateLimit.php`). It always answers 204. Until
+  `siteVisits` exists, nothing is counted and the Visitors page says so.
+  The CI query check creates the table and records/reads a visit.
+- **The Works gallery** (`.projectWorks`) is a grid like `.shop-grid` above
+  992px: 2 columns, 3 from 1700px, `align-items: start`; one column below.
+  Each card's title is `.work-card-name`, positioned *below* the card
+  (`top: 100%`) with the card's margin keeping room for two lines, so the
+  tape pseudo-elements on `.work-card` still sit on the painting's corners.
+  There's no hover title any more. Above the first project, `.works-tabs`
+  (`ambRenderWorksTabs()` / `createWorksTabs()`) is a sticky row of
+  `.mainLinkGenres` links; `watchWorksTabs()` tapes the one on screen, and
+  `scrollToSection()` allows for its height. Gallery images use
+  `AMB_WORKS_SIZES` / `WORKS_SIZES`, not `GALLERY_SIZES` (still the
+  slideshow's fallback).
+- Closing the viewer gives keyboard focus back to the card of the painting
+  last shown, or what opened it (`returnFocusFromViewer()`), except on
+  touch screens.
 - The menu links come from the `navLinks` table; their `onclick` column holds
   `;`-separated names that `navLinksFunctions.js` maps to functions
   (`getProjectsAndWorks`, `openInfo`, `toggleSublinks`, ...). Those names now

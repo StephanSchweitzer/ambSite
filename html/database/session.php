@@ -34,7 +34,15 @@ if (!function_exists('ambRefuseOtherSites')) {
 }
 ambRefuseOtherSites();
 
-if (session_status() === PHP_SESSION_NONE) {
+// A session (and its cookie) only for someone signed in, or signing in
+// (verifySignIn.php sets $ambStartSession). A visitor to the public site
+// reaches endpoints that include this file (the newsletter sign-up, the
+// menu), and must not be handed a cookie for it: without the cookie
+// there's no session, so $_SESSION is just empty and nothing is saved.
+$ambHasSessionCookie = isset($_COOKIE[session_name()]) && $_COOKIE[session_name()] !== '';
+if (session_status() === PHP_SESSION_NONE && !$ambHasSessionCookie && empty($ambStartSession)) {
+    $_SESSION = array();
+} elseif (session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
