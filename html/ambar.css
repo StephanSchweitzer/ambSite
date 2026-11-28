@@ -1443,18 +1443,42 @@ html:has(#imagesAndContent[data-view="home"]) {
 .works-tab:nth-child(4n+3):after { --tape-menu: var(--tape-blue); }
 .works-tab:nth-child(4n+4):after { --tape-menu: var(--tape-green); transform: rotate(1.5deg); }
 
-/* Phones: one line under the bar, slid sideways if the names don't fit */
+/* Phones: one line under the bar, slid sideways if the names don't fit.
+   Pinned to the screen like the bar itself (position: fixed), not sticky:
+   on phones a sticky row that is also slid sideways bobbed up and down as
+   the page scrolled, while the fixed bar above it held still. Out of the
+   page's flow, so the sheet keeps its room at the top instead
+   (--works-tabs-h; the row is one line, so its height is known). */
 @media (max-width: 992px) {
+  :root {
+    --works-tabs-h: 62px;
+  }
+
   .works-tabs {
+    position: fixed;
     top: var(--bar-h);
+    left: var(--wall-side);
+    right: var(--wall-side);
+    height: var(--works-tabs-h);
+    box-sizing: border-box;
     flex-wrap: nowrap;
     justify-content: flex-start;
+    align-items: center;
     gap: 0 22px;
     width: auto;
-    margin: -30px -4vw 32px; /* (the sheet's side padding on phones) */
-    padding: 10px 4vw 8px;
+    margin: 0;
+    padding: 10px clamp(15px, 4vw, 32px) 8px; /* (the sheet's side padding) */
     overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
+  }
+
+  /* The room it leaves: the sheet tucks a pixel under the bar, then the
+     row, then the same 32px it always had beneath it. (!important: the
+     page's own padding-top is set inline by renderWorks().) */
+  #imagesAndContent.imagesAndContentMobile:has(> .works-tabs) {
+    padding-top: calc(1px + var(--works-tabs-h) + 32px) !important;
   }
 
   .works-tabs::-webkit-scrollbar {

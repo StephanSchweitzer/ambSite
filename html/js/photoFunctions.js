@@ -1159,6 +1159,7 @@ function watchWorksTabs() {
         return;
     }
     var pending = false;
+    var shown = -1; // (the tab wearing the tape; the page is only touched when it changes)
     worksTabsWatch = function () {
         if (pending) {
             return;
@@ -1178,6 +1179,10 @@ function watchWorksTabs() {
                     current = i;
                 }
             });
+            if (current === shown) {
+                return;
+            }
+            shown = current;
             tabs.each(function (i) {
                 var on = i === current;
                 $(this).toggleClass('is-current', on);
